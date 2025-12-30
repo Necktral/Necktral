@@ -1,0 +1,35 @@
+# Framework + API
+Django==5.2.9
+djangorestframework==3.16.1
+
+# Auth JWT (login para PWA)
+djangorestframework-simplejwt==5.5.1
+
+# CORS (PWA en dominio/puerto distinto)
+django-cors-headers==4.9.0
+
+# API schema / docs (útil para front y validación)
+drf-spectacular==0.29.0
+drf-spectacular-sidecar==2025.12.1
+
+# Filtros para endpoints (roles/permisos y listados reales)
+django-filter==25.2
+
+# Variables de entorno (.env) y settings limpios
+django-environ==0.12.0
+
+# Seguridad anti-fuerza bruta para login
+django-axes==8.1.0
+
+# Cabeceras CSP (endurecimiento de seguridad, especialmente si sirves algo web)
+django-csp==4.0
+
+# Static files (admin, y despliegue simple sin nginx al inicio)
+whitenoise==6.11.0
+
+
+# Hashing fuerte de passwords (recomendado en vez del default PBKDF2)
+argon2-cffi==25.1.0
+
+# Driver PostgreSQL
+psycopg[binary]==3.3.2

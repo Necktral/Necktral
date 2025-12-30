@@ -1,0 +1,11 @@
+ -r base.txt
+
+pytest==9.0.2
+pytest-django==4.11.1
+coverage==7.13.0
+
+factory-boy==3.3.3
+freezegun==1.5.5
+Faker==39.0.0
+
+ruff==0.14.10

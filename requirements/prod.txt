@@ -1,0 +1,7 @@
+# Dependencias de producción
+psycopg2-binary==2.9.9
+# Dependencias de producción
+gunicorn==23.0.0
+# Dependencias de producción
+psycopg2-binary==2.9.9
+gunicorn==23.0.0
