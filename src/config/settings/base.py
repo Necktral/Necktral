@@ -1,10 +1,11 @@
 # RBAC (modo transición): incluye roles globales legacy (UserRole) además de RoleAssignment scoped
 RBAC_INCLUDE_GLOBAL_USERROLES = True
 AXES_RESET_ON_SUCCESS = True
-# Configuración DRF: handler de excepciones contractual
-REST_FRAMEWORK = {
-    "EXCEPTION_HANDLER": "config.drf_exception_handler.custom_exception_handler",
-}
+"""
+NOTA:
+- REST_FRAMEWORK se define UNA sola vez más abajo para evitar shadowing.
+- AXES_* se define UNA sola vez en base (prod-safe) y se sobreescribe en dev.py.
+"""
 
 
 
@@ -39,15 +40,7 @@ LOGGING = {
         },
     },
 }
-# --- Configuración realista de AXES ---
-# En desarrollo: tolerante para no bloquearte
-AXES_FAILURE_LIMIT = 15  # dev: 10–15
-AXES_COOLOFF_TIME = 5  # dev: 5 minutos (puedes subirlo si molesta)
-
-# En producción: más estricto
-# Para prod, sobreescribe en settings/prod.py:
-# AXES_FAILURE_LIMIT = 5  # prod: 5–10
-# AXES_COOLOFF_TIME = 15  # prod: 15 minutos
+ # (AXES_* se define abajo en formato correcto con timedelta)
 
 from datetime import timedelta
 from pathlib import Path
@@ -215,6 +208,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # DRF
 REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": "config.drf_exception_handler.custom_exception_handler",
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "apps.iam.authentication.JWTAuthWithOrgContext",
     ),
