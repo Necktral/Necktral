@@ -8,14 +8,25 @@ from datetime import datetime
 from typing import Any
 
 from django.conf import settings
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
 from .contracts import (validate_event_type, validate_reason_code,
                         validate_subject)
-from .models import AuditChainHead, AuditEvent
+from .models import AuditChainHeadV2, AuditEvent
+
+
+def _chain_partition_key(request) -> str:
+    if request is None:
+        return "SYSTEM"
+    company = getattr(request, "company", None)
+    if company is None and hasattr(request, "_request"):
+        company = getattr(request._request, "company", None)
+    if company is not None and getattr(company, "id", None):
+        return f"COMPANY:{company.id}"
+    return "SYSTEM"
 
 
 def _client_ip(request) -> str | None:
@@ -74,6 +85,8 @@ def write_event(
     validate_subject(subject_type, subject_id)
 
     metadata = metadata or {}
+    partition_key = _chain_partition_key(request)
+    metadata.setdefault("_chain_partition", partition_key)
     before_snapshot = before_snapshot or {}
     after_snapshot = after_snapshot or {}
 
@@ -86,7 +99,15 @@ def write_event(
     method = (request.method if request else "") or ""
 
     with transaction.atomic():
-        head, _ = AuditChainHead.objects.select_for_update().get_or_create(id=1)
+        try:
+            head, _ = AuditChainHeadV2.objects.select_for_update().get_or_create(
+                partition_key=partition_key
+            )
+        except IntegrityError:
+            # Carrera rara: otro worker creó el head a la vez
+            head = AuditChainHeadV2.objects.select_for_update().get(
+                partition_key=partition_key
+            )
         prev_hash = head.last_event_hash or ""
 
         # Payload canónico base (sin signature)

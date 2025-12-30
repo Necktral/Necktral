@@ -2,18 +2,13 @@ from __future__ import annotations
 
 from django.contrib import admin
 
-from .models import AuditChainHead, AuditEvent
+from .models import AuditChainHeadV2, AuditEvent
 
 
-@admin.register(AuditChainHead)
-class AuditChainHeadAdmin(admin.ModelAdmin):
-	list_display = ("id", "last_event_hash", "updated_at")
 
-	def has_add_permission(self, request):
-		return False
-
-	def has_delete_permission(self, request, obj=None):
-		return False
+@admin.register(AuditChainHeadV2)
+class AuditChainHeadV2Admin(admin.ModelAdmin):
+	list_display = ("partition_key", "last_event_hash", "updated_at")
 
 
 @admin.register(AuditEvent)

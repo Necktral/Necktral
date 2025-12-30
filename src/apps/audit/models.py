@@ -18,6 +18,18 @@ class AuditChainHead(models.Model):
 	updated_at = models.DateTimeField(auto_now=True)
 
 
+class AuditChainHeadV2(models.Model):
+		"""
+		Cabezal de cadena particionado para reducir contención del lock.
+		partition_key ejemplo:
+			- SYSTEM
+			- COMPANY:123
+		"""
+		partition_key = models.CharField(max_length=64, primary_key=True)
+		last_event_hash = models.CharField(max_length=64, blank=True, default="")
+		updated_at = models.DateTimeField(auto_now=True)
+
+
 class AuditEvent(models.Model):
 	"""
 	EAU v1 (mínimo contractual):
