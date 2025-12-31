@@ -63,6 +63,3 @@ class AuditEventAdmin(admin.ModelAdmin):
 
 	def has_delete_permission(self, request, obj=None):
 		return False
-from django.contrib import admin
-
-# Register your models here.

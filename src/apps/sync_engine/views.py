@@ -151,6 +151,8 @@ class DeviceEnrollView(APIView):
             },
         )
 
+        from apps.sync_engine.services import get_policy
+        policy = get_policy()
         return Response(
             {
                 "device_id": str(device.id),
@@ -159,7 +161,10 @@ class DeviceEnrollView(APIView):
                 "branch_id": device.branch_id,
                 "server_time": timezone.now().isoformat(),
                 "policy": {
-                    "max_commands_per_batch": int(getattr(request, "SYNC_MAX_COMMANDS_PER_BATCH", 100)),
+                    "max_commands_per_batch": policy.max_commands_per_batch,
+                    "max_payload_bytes": policy.max_payload_bytes,
+                    "max_device_clock_skew_seconds": policy.max_device_clock_skew_seconds,
+                    "seq_tolerant": policy.seq_tolerant,
                 },
             },
             status=201,

@@ -51,6 +51,7 @@ class AuditEvent(models.Model):
 	subject_id = models.CharField(max_length=128, blank=True, default="")
 
 	# Contexto / actor
+	partition_key = models.CharField(max_length=64, default="", blank=True, db_index=True)
 	timestamp_server = models.DateTimeField()
 	actor_user = models.ForeignKey(
 		settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
@@ -81,6 +82,9 @@ class AuditEvent(models.Model):
 			models.Index(fields=["module", "event_type"]),
 			models.Index(fields=["actor_user", "timestamp_server"]),
 			models.Index(fields=["subject_type", "subject_id"]),
+			models.Index(fields=["partition_key", "-timestamp_server"], name="audit_pk_ts_idx"),
+			models.Index(fields=["partition_key", "event_type", "-timestamp_server"], name="audit_pk_type_ts_idx"),
+			models.Index(fields=["partition_key", "reason_code", "-timestamp_server"], name="audit_pk_reason_ts_idx"),
 		]
 
 	def __str__(self) -> str:
