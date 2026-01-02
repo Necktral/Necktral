@@ -88,3 +88,49 @@ npm run dev
 
 ## Contacto
 Para soporte o dudas, contacta a los administradores del repositorio.
+
+# Módulo ORG/HR + RBAC + Auditoría
+
+## Endpoints principales
+
+### ORG (Organización)
+- `GET /api/org/company/profile/` — Ver perfil de la empresa
+- `PUT /api/org/company/profile/` — Actualizar perfil de la empresa
+- `GET /api/org/branches/` — Listar sucursales
+- `POST /api/org/branches/` — Crear sucursal
+- `PATCH /api/org/branches/{branch_id}/` — Actualizar sucursal
+
+### HR (Recursos Humanos)
+- `GET /api/hr/positions/` — Listar puestos
+- `POST /api/hr/positions/` — Crear puesto
+- `PATCH /api/hr/positions/{id}/` — Actualizar puesto
+- `PUT /api/hr/positions/{id}/roles/` — Mapear puesto a roles
+- `GET /api/hr/employees/` — Listar empleados
+- `POST /api/hr/employees/` — Crear empleado
+- `PATCH /api/hr/employees/{id}/` — Actualizar empleado
+- `POST /api/hr/employees/{id}/assignments/` — Asignar puesto/sucursal
+
+## Comandos de gestión
+- `python manage.py seed_rbac_v01` — Siembra roles, permisos y mapeos estándar (idempotente, auditable)
+- `python manage.py bootstrap_company --company-name ... --branch-name ... --admin-username ...` — Bootstrap de empresa, sucursal y admin
+
+## Auditoría contractual
+- Todos los endpoints de escritura generan eventos en apps.audit con reason_code y event_type según contrato.
+- Ejemplo: `HR_POSITION_CREATED`, `ORG_BRANCH_CREATED`, `RBAC_SEEDED_V01`.
+
+## Tests automáticos
+- `tests/test_hr_position_role_automation.py`: Valida automatización de roles por puesto y auditoría.
+- `tests/test_seed_rbac_v01_command.py`: Valida comando seed_rbac_v01, creación de permisos y evento de auditoría.
+
+## Permisos y roles
+- Catálogo estándar en apps/rbac/seed_v01.py
+- Roles: company_admin, branch_manager, hr_manager, etc.
+- Permisos: hr.position.create, org.branch.create, etc.
+
+## Buenas prácticas
+- Siempre ejecutar los comandos de seed y bootstrap en entornos nuevos.
+- Validar con tests antes de desplegar.
+- Consultar la auditoría para trazabilidad de cambios críticos.
+
+---
+Actualizado al 2026-01-02.
