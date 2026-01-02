@@ -1,4 +1,7 @@
+
 from __future__ import annotations
+import uuid
+from django.db.models import Q
 
 from datetime import timedelta
 
@@ -205,6 +208,79 @@ class DeviceRevokeView(APIView):
 
 
 class SyncBatchView(APIView):
+    import uuid
+    from django.db.models import Q
+
+class DeviceListView(APIView):
+    """
+    GET /api/sync/devices/?q=...&status=ACTIVE|REVOKED|QUARANTINED&limit=50&offset=0
+    Requiere JWT + permiso.
+    Política recomendada: quien puede revocar, puede listar.
+    """
+    permission_classes = [rbac_permission("sync.device.revoke")]
+
+    def get(self, request):
+        company = getattr(request, "company", None)
+        if company is None:
+            raise ParseError("Falta contexto company (X-Company-Id).")
+
+        qs = Device.objects.filter(company=company).order_by("-created_at")
+
+        # filtros opcionales
+        status_param = (request.query_params.get("status") or "").strip()
+        if status_param:
+            qs = qs.filter(status=status_param)
+
+        q = (request.query_params.get("q") or "").strip()
+        if q:
+            filt = Q(label__icontains=q)
+            try:
+                filt |= Q(id=uuid.UUID(q))
+            except Exception:
+                pass
+            qs = qs.filter(filt)
+
+        # paginación simple
+        try:
+            limit = int(request.query_params.get("limit") or 50)
+        except Exception:
+            limit = 50
+        try:
+            offset = int(request.query_params.get("offset") or 0)
+        except Exception:
+            offset = 0
+
+        limit = max(1, min(limit, 200))
+        offset = max(0, offset)
+
+        total = qs.count()
+        rows = qs[offset : offset + limit]
+
+        results = []
+        for d in rows:
+            results.append(
+                {
+                    "id": str(d.id),
+                    "label": d.label,
+                    "status": d.status,
+                    "company_id": d.company_id,
+                    "branch_id": d.branch_id,
+                    "created_at": d.created_at.isoformat() if d.created_at else None,
+                    "revoked_at": d.revoked_at.isoformat() if d.revoked_at else None,
+                    "last_seen_at": d.last_seen_at.isoformat() if d.last_seen_at else None,
+                    "last_accepted_sequence": d.last_accepted_sequence,
+                }
+            )
+
+        return Response(
+            {
+                "count": total,
+                "limit": limit,
+                "offset": offset,
+                "results": results,
+            },
+            status=200,
+        )
     """
     POST /api/sync/batch/
     Device-auth (X-Device-Id) + firma por comando.

@@ -20,7 +20,20 @@ from .serializers import (
     PositionRoleMapUpdateSerializer,
     PositionUpdateSerializer,
 )
-from .services import reconcile_employee_roles, set_position_role_maps
+from .services import end_assignment, reconcile_employee_roles, set_position_role_maps
+class EmployeeAssignmentEndView(APIView):
+    """
+    Acción idempotente: si la asignación ya está finalizada, responde 200.
+    """
+    permission_classes = [rbac_permission("hr.assignment.end")]
+
+    def post(self, request, employee_id: int, assignment_id: int):
+        company: OrgUnit = request.company
+        emp = get_object_or_404(Employee, id=employee_id, company=company)
+        assignment = get_object_or_404(EmploymentAssignment, id=assignment_id, employee=emp)
+
+        end_assignment(assignment=assignment, request=request, actor=request.user)
+        return Response({"ok": True}, status=status.HTTP_200_OK)
 
 User = get_user_model()
 

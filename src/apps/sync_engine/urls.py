@@ -7,6 +7,7 @@ from .views import (
     DeviceRevokeView,
     EnrollmentChallengeCreateView,
     SyncBatchView,
+    DeviceListView,
 )
 
 urlpatterns = [
@@ -14,4 +15,5 @@ urlpatterns = [
     path("enroll/", DeviceEnrollView.as_view(), name="sync_device_enroll"),
     path("devices/<uuid:device_id>/revoke/", DeviceRevokeView.as_view(), name="sync_device_revoke"),
     path("batch/", SyncBatchView.as_view(), name="sync_batch"),
+    path("devices/", DeviceListView.as_view(), name="sync_device_list"),
 ]

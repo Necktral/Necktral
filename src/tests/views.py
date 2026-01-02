@@ -1,11 +1,11 @@
 
-
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
+from rest_framework import status, generics
 
 from apps.common.permissions import rbac_permission
 from .models import Role, Permission
+from .serializers import RoleSerializer, PermissionSerializer
 
 # --- Listado de roles y permisos (read-only, protegidos) ---
 
@@ -56,8 +56,15 @@ class PermissionListView(APIView):
         ]
         return Response({"count": len(results), "results": results}, status=status.HTTP_200_OK)
 
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import generics
 
-# --- Demo contractual ---
+from apps.common.permissions import rbac_permission
+from .models import Role, Permission
+from .serializers import RoleSerializer, PermissionSerializer
+
+
 class InventoryReadDemoView(APIView):
     """
     Endpoint demo para validar 403 contractual con required_permission.
@@ -68,3 +75,16 @@ class InventoryReadDemoView(APIView):
     def get(self, request):
         return Response({"ok": True, "required_permission": "inventory.read"})
 
+
+class RoleListView(generics.ListAPIView):
+    queryset = Role.objects.all()
+    serializer_class = RoleSerializer
+    permission_classes = [rbac_permission("rbac.roles.read")]
+
+
+class PermissionListView(generics.ListAPIView):
+    queryset = Permission.objects.all()
+    serializer_class = PermissionSerializer
+    permission_classes = [rbac_permission("rbac.permissions.read")]
+
+# Create your views here.
