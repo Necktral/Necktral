@@ -105,6 +105,8 @@ INSTALLED_APPS = [
     "apps.rbac",
     "apps.accounts.apps.AccountsConfig",
     "apps.iam.apps.IamConfig",
+    "apps.org.apps.OrgConfig",   # <-- NUEVO
+    "apps.hr.apps.HrConfig",     # <-- NUEVO
     "apps.sync_engine",
 ]
 

@@ -68,6 +68,7 @@ def write_event(
     metadata: dict | None = None,
     before_snapshot: dict | None = None,
     after_snapshot: dict | None = None,
+    module: str | None = None,   # <-- NUEVO
 ) -> AuditEvent:
     """
     Writer contractual EAU v1:
@@ -103,6 +104,9 @@ def write_event(
     path = (request.path if request else "") or ""
     method = (request.method if request else "") or ""
 
+
+    resolved_module = module or settings.AUDIT_MODULE_NAME
+
     with transaction.atomic():
         try:
             head, _ = AuditChainHeadV2.objects.select_for_update().get_or_create(
@@ -117,7 +121,7 @@ def write_event(
         payload = {
             "event_id": None,
             "schema_version": settings.AUDIT_SCHEMA_VERSION,
-            "module": settings.AUDIT_MODULE_NAME,
+            "module": resolved_module,
             "event_type": event_type,
             "reason_code": reason_code,
             "subject_type": subject_type,
@@ -139,7 +143,7 @@ def write_event(
 
         ev = AuditEvent(
             schema_version=settings.AUDIT_SCHEMA_VERSION,
-            module=settings.AUDIT_MODULE_NAME,
+            module=resolved_module,
             event_type=event_type,
             reason_code=reason_code,
             subject_type=subject_type,

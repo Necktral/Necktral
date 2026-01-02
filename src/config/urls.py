@@ -37,5 +37,9 @@ urlpatterns = [
     path("api/sync/", include("apps.sync_engine.urls")),
     # Auditoría
     path("api/audit/", include("apps.audit.urls")),
+    # ORG
+    path("api/org/", include("apps.org.urls")),
+    # HR
+    path("api/hr/", include("apps.hr.urls")),
 ]
 

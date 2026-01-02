@@ -19,6 +19,8 @@ ALLOWED_EVENT_TYPES: set[str] = {
     "SYNC_COMMAND_APPLIED",
     "SYNC_COMMAND_REJECTED",
     "SYNC_COMMAND_DUPLICATE",
+    # RBAC
+    "RBAC_SEEDED_V01",
 }
 
 ALLOWED_REASON_CODES: set[str] = {
@@ -37,6 +39,8 @@ ALLOWED_REASON_CODES: set[str] = {
     # Bloque 2 (Sync)
     "SYNC_OK",
     "SYNC_DUPLICATE",
+    # Genéricos
+    "OK",
     "SYNC_INVALID_SIGNATURE",
     "SYNC_FORBIDDEN_SCOPE",
     "SYNC_SCHEMA_INVALID",

@@ -7,19 +7,29 @@ from django.utils import timezone
 from apps.iam.models import OrgUnit
 
 
+
 # --- Asignación de roles por alcance (empresa/sucursal) ---
 class RoleAssignment(models.Model):
 	"""
 	Asignación de rol por alcance (scope):
 	  - org_unit: COMPANY o BRANCH
-	  - is_active: permite revocar sin borrar
+	  - is_active: revocar sin borrar
+	  - origin: trazabilidad (MANUAL / POSITION / SYSTEM)
 	"""
+
+	class Origin(models.TextChoices):
+		MANUAL = "MANUAL", "Manual"
+		POSITION = "POSITION", "Position automation"
+		SYSTEM = "SYSTEM", "System bootstrap"
 
 	user = models.ForeignKey(
 		settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="role_assignments"
 	)
 	role = models.ForeignKey("rbac.Role", on_delete=models.PROTECT, related_name="assignments")
 	org_unit = models.ForeignKey(OrgUnit, on_delete=models.PROTECT, related_name="role_assignments")
+
+	origin = models.CharField(max_length=16, choices=Origin.choices, default=Origin.MANUAL)
+	origin_ref = models.CharField(max_length=128, blank=True, default="")
 
 	is_active = models.BooleanField(default=True)
 
@@ -35,23 +45,23 @@ class RoleAssignment(models.Model):
 	class Meta:
 		constraints = [
 			models.UniqueConstraint(
-				fields=["user", "role", "org_unit"],
-				name="uq_roleassignment_user_role_orgunit",
+				fields=["user", "role", "org_unit", "origin"],
+				name="uq_roleassignment_user_role_orgunit_origin",
 			),
 		]
 		indexes = [
 			models.Index(fields=["user", "is_active"]),
 			models.Index(fields=["org_unit", "is_active"]),
 			models.Index(fields=["role", "is_active"]),
+			models.Index(fields=["origin", "is_active"]),
 		]
 
 	def clean(self):
-		# Solo COMPANY o BRANCH, nunca HOLDING en esta fase.
 		if self.org_unit.unit_type not in (OrgUnit.UnitType.COMPANY, OrgUnit.UnitType.BRANCH):
 			raise ValidationError("RoleAssignment.org_unit debe ser COMPANY o BRANCH.")
 
 	def __str__(self) -> str:
-		return f"{self.user_id} -> {self.role_id} @ {self.org_unit_id}"
+		return f"{self.user_id} -> {self.role_id} @ {self.org_unit_id} ({self.origin})"
 
 
 class Role(models.Model):
