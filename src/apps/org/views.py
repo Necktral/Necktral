@@ -17,7 +17,19 @@ from .serializers import (
 )
 
 class BranchListCreateView(APIView):
-    permission_classes = [rbac_permission("org.branch.read")]
+    """
+    Permisos por método (robusto):
+      - GET  -> org.branch.read
+      - POST -> org.branch.create
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [rbac_permission("org.branch.read")()]
+        if self.request.method == "POST":
+            return [rbac_permission("org.branch.create")()]
+        # Fallback seguro: negar por defecto a quien no tenga al menos read
+        return [rbac_permission("org.branch.read")()]
 
     def get(self, request):
         company: OrgUnit = request.company
@@ -25,26 +37,25 @@ class BranchListCreateView(APIView):
         data = []
         for b in qs:
             prof = getattr(b, "branch_profile", None)
-            data.append({
-                "id": b.id,
-                "name": b.name,
-                "code": b.code,
-                "is_active": b.is_active,
-                "address": getattr(prof, "address", ""),
-                "phone": getattr(prof, "phone", ""),
-                "email": getattr(prof, "email", ""),
-            })
+            data.append(
+                {
+                    "id": b.id,
+                    "name": b.name,
+                    "code": b.code,
+                    "is_active": b.is_active,
+                    "address": getattr(prof, "address", ""),
+                    "phone": getattr(prof, "phone", ""),
+                    "email": getattr(prof, "email", ""),
+                }
+            )
         return Response({"results": data}, status=status.HTTP_200_OK)
 
     def post(self, request):
-        self.permission_classes = [rbac_permission("org.branch.create")]
-        for perm in self.permission_classes:
-            if not perm().has_permission(request, self):
-                return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
         company: OrgUnit = request.company
         serializer = BranchCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         v = serializer.validated_data
         branch = OrgUnit.objects.create(
             unit_type=OrgUnit.UnitType.BRANCH,
@@ -59,6 +70,7 @@ class BranchListCreateView(APIView):
             phone=v.get("phone", ""),
             email=v.get("email", ""),
         )
+
         write_event(
             request=request,
             module="ORG",
