@@ -9,19 +9,44 @@ ALLOWED_EVENT_TYPES: set[str] = {
     "AUTH_LOGOUT_FAILURE",
     "AUTH_LOCKOUT_TRIGGERED",
     # Fase 2.2 (Ruta A):
-    "AUTH_ACCESS_DENIED",
+        "AUTH_ACCESS_DENIED",
 
-    # Bloque 2 (Offline-first Sync)
-    "SYNC_ENROLL_CHALLENGE_CREATED",
-    "SYNC_DEVICE_ENROLLED",
-    "SYNC_DEVICE_REVOKED",
-    "SYNC_BATCH_RECEIVED",
-    "SYNC_COMMAND_APPLIED",
-    "SYNC_COMMAND_REJECTED",
-    "SYNC_COMMAND_DUPLICATE",
-    # RBAC
-    "RBAC_SEEDED_V01",
-}
+        # AUTH
+        "AUTH_LOGIN_SUCCESS",
+        "AUTH_LOGIN_FAILURE",
+        "AUTH_TOKEN_REFRESH",
+        "AUTH_TOKEN_REFRESH_FAILURE",
+        "AUTH_LOGOUT",
+        "AUTH_LOGOUT_FAILURE",
+        "AUTH_LOCKOUT_TRIGGERED",
+        "AUTH_ACCESS_DENIED",
+
+        # SYNC
+        "SYNC_ENROLL_CHALLENGE_CREATED",
+        "SYNC_DEVICE_ENROLLED",
+        "SYNC_DEVICE_REVOKED",
+        "SYNC_BATCH_RECEIVED",
+        "SYNC_COMMAND_APPLIED",
+        "SYNC_COMMAND_REJECTED",
+        "SYNC_COMMAND_DUPLICATE",
+        # RBAC
+        "RBAC_SEEDED_V01",
+
+        # ORG
+        "ORG_BRANCH_CREATED",
+        "ORG_BRANCH_UPDATED",
+        "ORG_COMPANY_PROFILE_UPDATED",
+
+        # HR
+        "HR_POSITION_CREATED",
+        "HR_POSITION_UPDATED",
+        "HR_POSITION_ROLEMAP_UPDATED",
+        "HR_EMPLOYEE_CREATED",
+        "HR_EMPLOYEE_UPDATED",
+        "HR_ASSIGNMENT_CREATED",
+        "HR_ASSIGNMENT_ENDED",
+        "HR_RECONCILE_APPLIED",
+    }
 
 ALLOWED_REASON_CODES: set[str] = {
     # Auth/login
@@ -56,6 +81,11 @@ ALLOWED_SUBJECT_TYPES: set[str] = {
     "USER",
     "SESSION",
     "DEVICE",
+    # ORG/HR subjects
+    "COMPANY",
+    "BRANCH",
+    "POSITION",
+    "EMPLOYEE",
     "",
 }
 

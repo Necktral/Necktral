@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Iterable
 
 from django.db import transaction
 
@@ -132,7 +133,16 @@ def seed_rbac_v01() -> SeedResult:
             if created:
                 roles_created += 1
             else:
-                roles_updated += 1
+                update_fields: list[str] = []
+                if obj.description != desc:
+                    obj.description = desc
+                    update_fields.append("description")
+                if not obj.is_active:
+                    obj.is_active = True
+                    update_fields.append("is_active")
+                if update_fields:
+                    obj.save(update_fields=update_fields)
+                    roles_updated += 1
             role_objs[name] = obj
 
         perm_objs: dict[str, Permission] = {}
@@ -141,12 +151,28 @@ def seed_rbac_v01() -> SeedResult:
             if created:
                 perms_created += 1
             else:
-                perm_objs[code] = obj
+                update_fields: list[str] = []
+                if obj.description != desc:
+                    obj.description = desc
+                    update_fields.append("description")
+                if not obj.is_active:
+                    obj.is_active = True
+                    update_fields.append("is_active")
+                if update_fields:
+                    obj.save(update_fields=update_fields)
+                    perms_updated += 1
+            perm_objs[code] = obj
 
         for role_name, perm_codes in role_to_perms.items():
             role = role_objs[role_name]
             for code in perm_codes:
-                pass  # Aquí iría la lógica de asignación de permisos a roles
+                perm = perm_objs.get(code)
+                if perm is None:
+                    # Catálogo inconsistente => fallo duro
+                    raise ValueError(f"Permiso no existe en seed permissions: {code}")
+                _, rp_created = RolePermission.objects.get_or_create(role=role, permission=perm)
+                if rp_created:
+                    roleperms_created += 1
     return SeedResult(
         roles_created=roles_created,
         roles_updated=roles_updated,

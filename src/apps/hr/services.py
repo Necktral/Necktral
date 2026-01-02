@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from apps.audit.writer import write_event
 from apps.iam.models import OrgUnit, UserMembership
-from apps.rbac.models import RoleAssignment
+from apps.rbac.models import Role, RoleAssignment
 
 from .models import Employee, EmploymentAssignment, JobPosition, PositionRoleMap
 
@@ -23,7 +23,11 @@ def _company_branches(company: OrgUnit) -> list[int]:
     )
 
 def _ensure_membership(user, org_unit: OrgUnit) -> None:
-    UserMembership.objects.get_or_create(user=user, org_unit=org_unit, defaults={"is_active": True})
+    mem, created = UserMembership.objects.get_or_create(user=user, org_unit=org_unit, defaults={"is_active": True})
+    if not created and not mem.is_active:
+        mem.is_active = True
+        mem.left_at = None
+        mem.save(update_fields=["is_active", "left_at"])
 
 def reconcile_employee_roles(*, employee: Employee, request=None, actor=None) -> ReconcileResult:
     """
@@ -58,7 +62,11 @@ def reconcile_employee_roles(*, employee: Employee, request=None, actor=None) ->
 
     for a in active_assignments:
         for m in maps_by_position.get(a.position_id, []):
-            pass  # Aquí iría la lógica de grants
+            if m.scope_mode == PositionRoleMap.ScopeMode.COMPANY:
+                desired.add((m.role_id, company.id))
+            elif m.scope_mode == PositionRoleMap.ScopeMode.BRANCH:
+                if a.branch_id:
+                    desired.add((m.role_id, a.branch_id))
     created = reactivated = deactivated = 0
 
     with transaction.atomic():
@@ -71,13 +79,45 @@ def reconcile_employee_roles(*, employee: Employee, request=None, actor=None) ->
 
         # create/reactivate desired
         for (role_id, org_unit_id) in desired:
-            pass  # Aquí iría la lógica de creación/reactivación
+            ra = existing.get((role_id, org_unit_id))
+            if ra is None:
+                RoleAssignment.objects.create(
+                    user=user,
+                    role_id=role_id,
+                    org_unit_id=org_unit_id,
+                    origin=RoleAssignment.Origin.POSITION,
+                    origin_ref=f"employee:{employee.id}",
+                    granted_by=actor,
+                    is_active=True,
+                )
+                created += 1
+            else:
+                if not ra.is_active:
+                    ra.is_active = True
+                    ra.origin_ref = f"employee:{employee.id}"
+                    if actor:
+                        ra.granted_by = actor
+                    ra.save(update_fields=["is_active", "origin_ref", "granted_by"])
+                    reactivated += 1
+
         # deactivate obsolete POSITION grants
-        for (k, ra) in existing.items():
-            pass  # Aquí iría la lógica de desactivación
+        for ((role_id, org_unit_id), ra) in existing.items():
+            if (role_id, org_unit_id) in desired:
+                continue
+            if ra.is_active:
+                ra.is_active = False
+                ra.save(update_fields=["is_active"])
+                deactivated += 1
+
         # memberships: agregar, no remover (robustez)
-        for (_, org_unit_id) in desired:
-            pass  # Aquí iría la lógica de membresía
+        _ensure_membership(user, company)
+        orgunit_ids = {org_unit_id for (_, org_unit_id) in desired}
+        if orgunit_ids:
+            org_map = OrgUnit.objects.in_bulk(list(orgunit_ids))
+            for oid in orgunit_ids:
+                ou = org_map.get(oid)
+                if ou is not None:
+                    _ensure_membership(user, ou)
 
     # audit
     write_event(
@@ -126,7 +166,22 @@ def set_position_role_maps(*, position: JobPosition, maps: list[dict], request=N
         PositionRoleMap.objects.filter(position=position).update(is_active=False)
 
         for m in maps:
-            pass  # Aquí iría la lógica de activación/creación
+            role_id = int(m["role_id"])
+            scope_mode = str(m.get("scope_mode", PositionRoleMap.ScopeMode.BRANCH)).upper().strip()
+            if scope_mode not in PositionRoleMap.ScopeMode.values:
+                raise ValueError(f"scope_mode inválido: {scope_mode}")
+            if not Role.objects.filter(id=role_id).exists():
+                raise ValueError(f"role_id no existe: {role_id}")
+
+            obj, created = PositionRoleMap.objects.get_or_create(
+                position=position,
+                role_id=role_id,
+                scope_mode=scope_mode,
+                defaults={"is_active": True},
+            )
+            if not created and not obj.is_active:
+                obj.is_active = True
+                obj.save(update_fields=["is_active"])
     write_event(
         request=request,
         module="HR",

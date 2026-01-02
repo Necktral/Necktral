@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from apps.audit.writer import write_event
 from apps.common.permissions import rbac_permission
 from apps.iam.models import OrgUnit
+from apps.rbac.models import RoleAssignment
 
 from .models import Employee, EmploymentAssignment, JobPosition
 from .serializers import (
@@ -24,17 +25,21 @@ from .services import reconcile_employee_roles, set_position_role_maps
 User = get_user_model()
 
 class PositionListCreateView(APIView):
-    permission_classes = [rbac_permission("hr.position.read")]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [rbac_permission("hr.position.create")()]
+        return [rbac_permission("hr.position.read")()]
 
     def get(self, request):
         company: OrgUnit = request.company
         qs = JobPosition.objects.filter(company=company).order_by("name")
-        return Response([], status=status.HTTP_200_OK)  # Placeholder
+        data = [
+            {"id": p.id, "name": p.name, "code": p.code, "is_active": p.is_active}
+            for p in qs
+        ]
+        return Response(data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        self.permission_classes = [rbac_permission("hr.position.create")]
-        for perm in self.permission_classes:
-            pass  # Aquí iría la lógica de permisos
         company: OrgUnit = request.company
         serializer = PositionCreateSerializer(data=request.data)
         if not serializer.is_valid():
@@ -97,22 +102,57 @@ class PositionRoleMapUpdateView(APIView):
         maps = serializer.validated_data.get("maps", [])
         normalized = []
         for m in maps:
-            pass  # Aquí iría la lógica de normalización
-        set_position_role_maps(position=pos, maps=normalized, request=request, actor=request.user)
+            if not isinstance(m, dict):
+                return Response({"maps": "Cada item debe ser un objeto"}, status=status.HTTP_400_BAD_REQUEST)
+            if "role_id" not in m:
+                return Response({"maps": "Falta role_id"}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                role_id = int(m["role_id"])
+            except Exception:
+                return Response({"maps": "role_id inválido"}, status=status.HTTP_400_BAD_REQUEST)
+
+            scope_mode = str(m.get("scope_mode", "BRANCH")).upper().strip()
+            if scope_mode not in ("BRANCH", "COMPANY"):
+                return Response({"maps": f"scope_mode inválido: {scope_mode}"}, status=status.HTTP_400_BAD_REQUEST)
+            normalized.append({"role_id": role_id, "scope_mode": scope_mode})
+
+        # dedupe estable
+        seen = set()
+        deduped = []
+        for x in normalized:
+            k = (x["role_id"], x["scope_mode"])
+            if k in seen:
+                continue
+            seen.add(k)
+            deduped.append(x)
+        set_position_role_maps(position=pos, maps=deduped, request=request, actor=request.user)
         return Response({"ok": True}, status=status.HTTP_200_OK)
 
 class EmployeeListCreateView(APIView):
-    permission_classes = [rbac_permission("hr.employee.read")]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [rbac_permission("hr.employee.create")()]
+        return [rbac_permission("hr.employee.read")()]
 
     def get(self, request):
         company: OrgUnit = request.company
         qs = Employee.objects.filter(company=company).order_by("first_name", "last_name")
-        return Response([], status=status.HTTP_200_OK)  # Placeholder
+        data = [
+            {
+                "id": e.id,
+                "employee_code": e.employee_code,
+                "first_name": e.first_name,
+                "last_name": e.last_name,
+                "phone": e.phone,
+                "email": e.email,
+                "is_active": e.is_active,
+                "linked_user_id": e.linked_user_id,
+            }
+            for e in qs
+        ]
+        return Response(data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        self.permission_classes = [rbac_permission("hr.employee.create")]
-        for perm in self.permission_classes:
-            pass  # Aquí iría la lógica de permisos
         company: OrgUnit = request.company
         serializer = EmployeeCreateSerializer(data=request.data)
         if not serializer.is_valid():
@@ -120,7 +160,9 @@ class EmployeeListCreateView(APIView):
         v = serializer.validated_data
         linked_user = None
         if "linked_user_id" in v:
-            pass  # Aquí iría la lógica de usuario vinculado
+            linked_user = User.objects.filter(id=int(v["linked_user_id"])).first()
+            if not linked_user:
+                return Response({"linked_user_id": "Usuario no existe"}, status=status.HTTP_400_BAD_REQUEST)
         emp = Employee.objects.create(
             company=company,
             employee_code=v.get("employee_code", ""),
@@ -141,7 +183,7 @@ class EmployeeListCreateView(APIView):
             metadata={"employee_name": emp.first_name},
         )
         if emp.linked_user_id:
-            pass  # Aquí iría la lógica de reconciliación
+            reconcile_employee_roles(employee=emp, request=request, actor=request.user)
         return Response({"id": emp.id}, status=status.HTTP_201_CREATED)
 
 class EmployeeDetailView(APIView):
@@ -155,11 +197,19 @@ class EmployeeDetailView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         before = {"employee_code": emp.employee_code, "first_name": emp.first_name, "last_name": emp.last_name, "phone": emp.phone, "email": emp.email, "is_active": emp.is_active, "linked_user_id": emp.linked_user_id}
         v = serializer.validated_data
+        old_linked_user_id = emp.linked_user_id
         for f in ["employee_code", "first_name", "last_name", "phone", "email", "is_active"]:
             if f in v:
                 setattr(emp, f, v[f])
         if "linked_user_id" in v:
-            pass  # Aquí iría la lógica de usuario vinculado
+            new_val = v["linked_user_id"]
+            if new_val is None:
+                emp.linked_user = None
+            else:
+                u = User.objects.filter(id=int(new_val)).first()
+                if not u:
+                    return Response({"linked_user_id": "Usuario no existe"}, status=status.HTTP_400_BAD_REQUEST)
+                emp.linked_user = u
         emp.save()
         after = {"employee_code": emp.employee_code, "first_name": emp.first_name, "last_name": emp.last_name, "phone": emp.phone, "email": emp.email, "is_active": emp.is_active, "linked_user_id": emp.linked_user_id}
         write_event(
@@ -173,8 +223,20 @@ class EmployeeDetailView(APIView):
             before_snapshot=before,
             after_snapshot=after,
         )
+        # si cambió el vínculo, limpiamos roles POSITION del usuario anterior dentro del scope de la company
+        if old_linked_user_id and old_linked_user_id != emp.linked_user_id:
+            branch_ids = list(
+                OrgUnit.objects.filter(parent=company, unit_type=OrgUnit.UnitType.BRANCH).values_list("id", flat=True)
+            )
+            scoped_ids = [company.id] + branch_ids
+            RoleAssignment.objects.filter(
+                user_id=old_linked_user_id,
+                org_unit_id__in=scoped_ids,
+                origin=RoleAssignment.Origin.POSITION,
+                is_active=True,
+            ).update(is_active=False)
         if emp.linked_user_id:
-            pass  # Aquí iría la lógica de reconciliación
+            reconcile_employee_roles(employee=emp, request=request, actor=request.user)
         return Response({"ok": True}, status=status.HTTP_200_OK)
 
 class EmployeeAssignmentCreateView(APIView):
@@ -190,7 +252,12 @@ class EmployeeAssignmentCreateView(APIView):
         position = get_object_or_404(JobPosition, id=int(v["position_id"]), company=company)
         branch = None
         if v.get("branch_id") is not None:
-            pass  # Aquí iría la lógica de branch
+            branch = get_object_or_404(
+                OrgUnit,
+                id=int(v["branch_id"]),
+                parent=company,
+                unit_type=OrgUnit.UnitType.BRANCH,
+            )
         a = EmploymentAssignment.objects.create(
             employee=emp,
             position=position,
@@ -207,5 +274,5 @@ class EmployeeAssignmentCreateView(APIView):
             metadata={"assignment_id": a.id},
         )
         if emp.linked_user_id:
-            pass  # Aquí iría la lógica de reconciliación
+            reconcile_employee_roles(employee=emp, request=request, actor=request.user)
         return Response({"id": a.id}, status=status.HTTP_201_CREATED)

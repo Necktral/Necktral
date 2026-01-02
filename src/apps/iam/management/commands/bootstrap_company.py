@@ -32,6 +32,10 @@ class Command(BaseCommand):
         branch_name = options["branch_name"]
         admin_username = options["admin_username"]
 
+        if no_input:
+            missing = [k for k, v in [("company_name", company_name), ("branch_name", branch_name), ("admin_username", admin_username)] if not v]
+            if missing:
+                raise CommandError(f"--no-input requiere parámetros: {', '.join(missing)}")
         if not company_name:
             company_name = self._ask("Nombre de la empresa: ")
         if not branch_name:
@@ -72,7 +76,11 @@ class Command(BaseCommand):
         BranchProfile.objects.get_or_create(branch=branch)
 
         # 5) Membership + RoleAssignment (company_admin)
-        UserMembership.objects.get_or_create(user=admin_user, org_unit=company, defaults={"is_active": True})
+        mem, mem_created = UserMembership.objects.get_or_create(user=admin_user, org_unit=company, defaults={"is_active": True})
+        if not mem_created and not mem.is_active:
+            mem.is_active = True
+            mem.left_at = None
+            mem.save(update_fields=["is_active", "left_at"])
 
         role = Role.objects.filter(name="company_admin").first()
         if not role:
@@ -88,7 +96,16 @@ class Command(BaseCommand):
 
         # 6) AdminGrants (capabilities)
         for cap, _ in AdminGrant.Capability.choices:
-            AdminGrant.objects.get_or_create(user=admin_user, capability=cap)
+            ag, created = AdminGrant.objects.get_or_create(
+                user=admin_user,
+                org_unit=company,
+                capability=cap,
+                defaults={"applies_to_subtree": True, "is_active": True},
+            )
+            if not created and not ag.is_active:
+                ag.is_active = True
+                ag.applies_to_subtree = True
+                ag.save(update_fields=["is_active", "applies_to_subtree"])
 
         self.stdout.write(self.style.SUCCESS("Bootstrap OK"))
         self.stdout.write(f"HOLDING: {holding.id} {holding.name}")
