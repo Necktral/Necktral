@@ -1,11 +1,11 @@
 
 from __future__ import annotations
-import uuid
-from django.db.models import Q
 
 from datetime import timedelta
 
 from django.utils import timezone
+from django.db.models import Q
+import uuid
 from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -207,15 +207,11 @@ class DeviceRevokeView(APIView):
         return Response({"device_id": str(device.id), "status": device.status}, status=200)
 
 
-class SyncBatchView(APIView):
-    import uuid
-    from django.db.models import Q
-
 class DeviceListView(APIView):
     """
-    GET /api/sync/devices/?q=...&status=ACTIVE|REVOKED|QUARANTINED&limit=50&offset=0
+    GET /api/sync/devices/
     Requiere JWT + permiso.
-    Política recomendada: quien puede revocar, puede listar.
+    Política: quien puede revocar, puede listar.
     """
     permission_classes = [rbac_permission("sync.device.revoke")]
 
@@ -226,7 +222,6 @@ class DeviceListView(APIView):
 
         qs = Device.objects.filter(company=company).order_by("-created_at")
 
-        # filtros opcionales
         status_param = (request.query_params.get("status") or "").strip()
         if status_param:
             qs = qs.filter(status=status_param)
@@ -240,7 +235,6 @@ class DeviceListView(APIView):
                 pass
             qs = qs.filter(filt)
 
-        # paginación simple
         try:
             limit = int(request.query_params.get("limit") or 50)
         except Exception:
@@ -256,31 +250,25 @@ class DeviceListView(APIView):
         total = qs.count()
         rows = qs[offset : offset + limit]
 
-        results = []
-        for d in rows:
-            results.append(
-                {
-                    "id": str(d.id),
-                    "label": d.label,
-                    "status": d.status,
-                    "company_id": d.company_id,
-                    "branch_id": d.branch_id,
-                    "created_at": d.created_at.isoformat() if d.created_at else None,
-                    "revoked_at": d.revoked_at.isoformat() if d.revoked_at else None,
-                    "last_seen_at": d.last_seen_at.isoformat() if d.last_seen_at else None,
-                    "last_accepted_sequence": d.last_accepted_sequence,
-                }
-            )
-
-        return Response(
+        results = [
             {
-                "count": total,
-                "limit": limit,
-                "offset": offset,
-                "results": results,
-            },
-            status=200,
-        )
+                "id": str(d.id),
+                "label": d.label,
+                "status": d.status,
+                "company_id": d.company_id,
+                "branch_id": d.branch_id,
+                "created_at": d.created_at.isoformat() if d.created_at else None,
+                "revoked_at": d.revoked_at.isoformat() if d.revoked_at else None,
+                "last_seen_at": d.last_seen_at.isoformat() if getattr(d, "last_seen_at", None) else None,
+                "last_accepted_sequence": getattr(d, "last_accepted_sequence", None),
+            }
+            for d in rows
+        ]
+
+        return Response({"count": total, "limit": limit, "offset": offset, "results": results}, status=200)
+
+
+class SyncBatchView(APIView):
     """
     POST /api/sync/batch/
     Device-auth (X-Device-Id) + firma por comando.
@@ -295,7 +283,6 @@ class DeviceListView(APIView):
         hdr_device_id = request.headers.get("X-Device-Id")
         body_device_id = data.get("device_id")
 
-        device_id = None
         if hdr_device_id:
             device_id = hdr_device_id.strip()
         elif body_device_id:
@@ -305,7 +292,6 @@ class DeviceListView(APIView):
 
         device = resolve_device(device_id=device_id)
 
-        # commands ya vienen validados por serializer
         out = process_batch(
             request=request._request if hasattr(request, "_request") else request,
             actor_user=getattr(request, "user", None),
