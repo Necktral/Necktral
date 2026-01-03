@@ -108,6 +108,11 @@ Para soporte o dudas, contacta a los administradores del repositorio.
 ### RBAC (Roles y permisos)
 - `/api/rbac/` — Roles, permisos, asignaciones
 
+
+### Sincronización de dispositivos
+- `GET /api/sync/devices/` — Listar dispositivos registrados (requiere permiso: sync.device.revoke)
+	- [Ver documentación detallada](../ops/docs/api/sync_devices_list.md)
+
 ### Auditoría
 - `GET /api/audit/bitacora/` — Listar eventos de auditoría
 - `GET /api/audit/events/<uuid:event_id>/` — Detalle de evento de auditoría
