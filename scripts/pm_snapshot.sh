@@ -50,9 +50,49 @@ HEAD_REF="${GITHUB_HEAD_REF:-}"
   git branch -r | sed 's/^  *//' | head -n 50 | sed 's/^/- /'
 
   echo
-  echo "## Últimos commits (top 30)"
+  echo "## Últimos commits (rama actual, top 30)"
   echo
   git --no-pager log -n 30 --date=short --pretty=format:'- %h %ad %s (%an)'
+
+  echo
+  echo
+  echo "## Ramas canónicas (main/master)"
+
+  # Mostrar commits recientes por rama remota clave para que el PM
+  # pueda ver cambios aunque el conector solo esté leyendo una rama.
+  if git show-ref --verify --quiet refs/remotes/origin/master; then
+    echo
+    echo "### origin/master (top 20)"
+    echo
+    git --no-pager log -n 20 origin/master --date=short --pretty=format:'- %h %ad %s (%an)'
+  else
+    echo
+    echo "- origin/master: (no existe)"
+  fi
+
+  if git show-ref --verify --quiet refs/remotes/origin/main; then
+    echo
+    echo "### origin/main (top 20)"
+    echo
+    git --no-pager log -n 20 origin/main --date=short --pretty=format:'- %h %ad %s (%an)'
+  else
+    echo
+    echo "- origin/main: (no existe)"
+  fi
+
+  if git show-ref --verify --quiet refs/remotes/origin/main && git show-ref --verify --quiet refs/remotes/origin/master; then
+    echo
+    echo "### Divergencia main ↔ master"
+    echo
+    COUNTS="$(git rev-list --left-right --count origin/main...origin/master 2>/dev/null || true)"
+    if [[ -n "$COUNTS" ]]; then
+      # Formato: "<behind_main> <behind_master>"
+      BEHIND_MAIN="$(echo "$COUNTS" | awk '{print $1}')"
+      BEHIND_MASTER="$(echo "$COUNTS" | awk '{print $2}')"
+      echo "- Commits solo en origin/main: ${BEHIND_MAIN}"
+      echo "- Commits solo en origin/master: ${BEHIND_MASTER}"
+    fi
+  fi
 
   echo
   echo
