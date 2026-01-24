@@ -117,6 +117,27 @@ Para soporte o dudas, contacta a los administradores del repositorio.
 - `GET /api/audit/bitacora/` — Listar eventos de auditoría
 - `GET /api/audit/events/<uuid:event_id>/` — Detalle de evento de auditoría
 
+## PM Snapshot (para seguimiento por ChatGPT/PM)
+
+Para que un Product Manager (o un LLM) pueda ponerse al día sin leer todo el repo, se genera un snapshot en Markdown con:
+
+- rama/commit actual,
+- lista de ramas remotas (top 50),
+- últimos commits,
+- diff de PR cuando aplica.
+
+### En GitHub
+
+- Workflow: `PM Snapshot`
+- Artefacto: `pm-snapshot` (archivo `pm_snapshot.md`)
+
+### En local
+
+```bash
+bash scripts/pm_snapshot.sh
+cat pm_snapshot.md
+```
+
 ### ORG (Organización)
 - `GET /api/org/company/profile/` — Ver perfil de la empresa
 - `PUT /api/org/company/profile/` — Actualizar perfil de la empresa

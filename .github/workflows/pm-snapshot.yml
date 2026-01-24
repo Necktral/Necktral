@@ -1,0 +1,35 @@
+name: PM Snapshot
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *" # diario 03:00 UTC
+
+concurrency:
+  group: pm-snapshot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate PM snapshot
+        run: |
+          bash scripts/pm_snapshot.sh
+
+      - name: Upload snapshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pm-snapshot
+          path: pm_snapshot.md
+          if-no-files-found: error
