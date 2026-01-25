@@ -24,110 +24,145 @@ BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 SHA="$(git rev-parse HEAD)"
 NOW_UTC="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-# Si es PR en GitHub Actions, calcula diff contra base.
-BASE_REF="${GITHUB_BASE_REF:-}"
-HEAD_REF="${GITHUB_HEAD_REF:-}"
+SERVER_URL="${GITHUB_SERVER_URL:-https://github.com}"
+REPO_SLUG="${GITHUB_REPOSITORY:-}"
+RUN_ID="${GITHUB_RUN_ID:-}"
+RUN_NUMBER="${GITHUB_RUN_NUMBER:-}"
+WORKFLOW_NAME="${GITHUB_WORKFLOW:-}"
+REF_NAME="${GITHUB_REF_NAME:-}"
+
+# Preferimos PM_* (inyectado por workflow) para que el script sea determinista.
+BASE_REF="${PM_BASE_REF:-${GITHUB_BASE_REF:-}}"
+HEAD_REF="${PM_HEAD_REF:-${GITHUB_HEAD_REF:-}}"
+BASE_SHA="${PM_BASE_SHA:-}"
+HEAD_SHA="${PM_HEAD_SHA:-${GITHUB_SHA:-$SHA}}"
+PR_NUMBER="${PM_PR_NUMBER:-}"
+PR_URL="${PM_PR_URL:-}"
+
+REPO_HTTP=""
+RUN_URL=""
+if [[ -n "$REPO_SLUG" ]]; then
+  REPO_HTTP="${SERVER_URL}/${REPO_SLUG}"
+  if [[ -n "$RUN_ID" ]]; then
+    RUN_URL="${REPO_HTTP}/actions/runs/${RUN_ID}"
+  fi
+fi
+
+_commit_link() {
+  local sha="$1"
+  if [[ -n "$REPO_HTTP" && -n "$sha" ]]; then
+    printf "[%s](%s/commit/%s)" "${sha:0:12}" "$REPO_HTTP" "$sha"
+  else
+    printf "%s" "${sha:0:12}"
+  fi
+}
+
+MERGE_BASE_SHA=""
+if [[ -n "$BASE_SHA" && -n "$HEAD_SHA" ]]; then
+  # asegurar que los SHAs existan en el checkout (por si el runner hizo checkout shallow)
+  git fetch --no-tags --prune --depth=1 origin "$BASE_SHA" "$HEAD_SHA" >/dev/null 2>&1 || true
+  MERGE_BASE_SHA="$(git merge-base "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || true)"
+fi
+
+RANGE_DIFFSTAT=""
+if [[ -n "$BASE_SHA" && -n "$HEAD_SHA" ]]; then
+  RANGE_DIFFSTAT="${BASE_SHA}...${HEAD_SHA}"
+elif [[ -n "$BASE_REF" ]]; then
+  git fetch origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}" >/dev/null 2>&1 || true
+  RANGE_DIFFSTAT="origin/${BASE_REF}...HEAD"
+else
+  RANGE_DIFFSTAT=""
+fi
 
 {
   echo "# PM Snapshot"
   echo
-  echo "- Generated (UTC): ${NOW_UTC}"
-  echo "- Repo: ${REPO_URL:-"(no origin)"}"
-  echo "- Branch: ${BRANCH}"
-  echo "- HEAD: ${SHA}"
-
-  if [[ -n "${GITHUB_WORKFLOW:-}" ]]; then
-    echo "- GitHub workflow: ${GITHUB_WORKFLOW}"
+  echo "## Repo"
+  echo "- generated_at_utc: ${NOW_UTC}"
+  if [[ -n "$REPO_HTTP" ]]; then
+    echo "- repo: ${REPO_HTTP}"
+  else
+    echo "- repo: ${REPO_URL:-"(no origin)"}"
   fi
-  if [[ -n "${GITHUB_REF_NAME:-}" ]]; then
-    echo "- GitHub ref: ${GITHUB_REF_NAME}"
+  if [[ -n "$RUN_URL" ]]; then
+    if [[ -n "$RUN_NUMBER" ]]; then
+      echo "- run: ${RUN_URL} (run_number=${RUN_NUMBER})"
+    else
+      echo "- run: ${RUN_URL}"
+    fi
   fi
+  [[ -n "$WORKFLOW_NAME" ]] && echo "- workflow: ${WORKFLOW_NAME}"
+  [[ -n "$REF_NAME" ]] && echo "- ref: ${REF_NAME}"
 
   echo
-  echo "## Ramas remotas (top 50)"
+  echo "## Head"
+  echo "- branch: ${BRANCH}"
+  echo "- head_ref: ${HEAD_REF:-""}"
+  echo "- head_sha: ${HEAD_SHA} ($(_commit_link "$HEAD_SHA"))"
+
   echo
+  echo "## Branches"
   git fetch --all --prune >/dev/null 2>&1 || true
   git branch -r | sed 's/^  *//' | head -n 50 | sed 's/^/- /'
 
   echo
-  echo "## Últimos commits (rama actual, top 30)"
-  echo
+  echo "## Recent commits"
   git --no-pager log -n 30 --date=short --pretty=format:'- %h %ad %s (%an)'
 
   echo
   echo
-  echo "## Ramas canónicas (main/master)"
-
-  # Mostrar commits recientes por rama remota clave para que el PM
-  # pueda ver cambios aunque el conector solo esté leyendo una rama.
-  if git show-ref --verify --quiet refs/remotes/origin/master; then
-    echo
-    echo "### origin/master (top 20)"
-    echo
-    git --no-pager log -n 20 origin/master --date=short --pretty=format:'- %h %ad %s (%an)'
+  echo "## PR context"
+  if [[ -n "$PR_NUMBER" ]]; then
+    echo "- pr_number: ${PR_NUMBER}"
   else
-    echo
-    echo "- origin/master: (no existe)"
+    echo "- pr_number:"
   fi
-
-  if git show-ref --verify --quiet refs/remotes/origin/main; then
-    echo
-    echo "### origin/main (top 20)"
-    echo
-    git --no-pager log -n 20 origin/main --date=short --pretty=format:'- %h %ad %s (%an)'
+  if [[ -n "$PR_URL" ]]; then
+    echo "- pr_url: ${PR_URL}"
+  elif [[ -n "$REPO_HTTP" && -n "$PR_NUMBER" ]]; then
+    echo "- pr_url: ${REPO_HTTP}/pull/${PR_NUMBER}"
   else
-    echo
-    echo "- origin/main: (no existe)"
+    echo "- pr_url:"
   fi
-
-  if git show-ref --verify --quiet refs/remotes/origin/main && git show-ref --verify --quiet refs/remotes/origin/master; then
-    echo
-    echo "### Divergencia main ↔ master"
-    echo
-    COUNTS="$(git rev-list --left-right --count origin/main...origin/master 2>/dev/null || true)"
-    if [[ -n "$COUNTS" ]]; then
-      # Formato: "<behind_main> <behind_master>"
-      BEHIND_MAIN="$(echo "$COUNTS" | awk '{print $1}')"
-      BEHIND_MASTER="$(echo "$COUNTS" | awk '{print $2}')"
-      echo "- Commits solo en origin/main: ${BEHIND_MAIN}"
-      echo "- Commits solo en origin/master: ${BEHIND_MASTER}"
-    fi
+  echo "- base_ref: ${BASE_REF}"
+  echo "- base_sha: ${BASE_SHA}"
+  echo "- head_ref: ${HEAD_REF}"
+  echo "- head_sha: ${HEAD_SHA}"
+  echo "- merge_base_sha: ${MERGE_BASE_SHA}"
+  if [[ -n "$BASE_SHA" ]]; then
+    echo "- base_commit: $(_commit_link "$BASE_SHA")"
+  fi
+  if [[ -n "$MERGE_BASE_SHA" ]]; then
+    echo "- merge_base_commit: $(_commit_link "$MERGE_BASE_SHA")"
   fi
 
   echo
-  echo
-  if [[ -n "$BASE_REF" && -n "$HEAD_REF" ]]; then
-    echo "## Pull Request diff"
-    echo
-    echo "- Base: ${BASE_REF}"
-    echo "- Head: ${HEAD_REF}"
-    echo
-    # Intentar resolver el merge base.
-    git fetch origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}" >/dev/null 2>&1 || true
-    echo "### Archivos cambiados (name-status)"
-    echo
-    git --no-pager diff --name-status "origin/${BASE_REF}...HEAD" | sed 's/^/- /'
-    echo
-    echo "### Diff stat"
-    echo
-    git --no-pager diff --stat "origin/${BASE_REF}...HEAD"
+  echo "## Diffstat"
+  if [[ -n "$RANGE_DIFFSTAT" ]]; then
+    git --no-pager diff --stat "$RANGE_DIFFSTAT"
   else
-    echo "## Cambios recientes (último commit)"
-    echo
-    echo "### Archivos tocados"
-    echo
-    git --no-pager show --name-status --pretty=format: HEAD | tail -n +2 | sed 's/^/- /'
-    echo
-    echo "### Diff stat"
-    echo
     git --no-pager show --stat --pretty=format: HEAD
   fi
 
   echo
-  echo "## Punteros útiles"
+  echo "## Changed files"
+  if [[ -n "$RANGE_DIFFSTAT" ]]; then
+    git --no-pager diff --name-status "$RANGE_DIFFSTAT" | sed 's/^/- /'
+  else
+    git --no-pager show --name-status --pretty=format: HEAD | sed '/^$/d' | sed 's/^/- /'
+  fi
+
   echo
-  echo "- QA reports (si se ejecuta el workflow QA): artefacto 'qa-reports'"
-  echo "- Este snapshot: artefacto 'pm-snapshot'"
+  echo "## Notes"
+  echo "- artifact: pm-snapshot (pm_snapshot.md)"
+  if git show-ref --verify --quiet refs/remotes/origin/main && git show-ref --verify --quiet refs/remotes/origin/master; then
+    COUNTS="$(git rev-list --left-right --count origin/main...origin/master 2>/dev/null || true)"
+    if [[ -n "$COUNTS" ]]; then
+      BEHIND_MAIN="$(echo "$COUNTS" | awk '{print $1}')"
+      BEHIND_MASTER="$(echo "$COUNTS" | awk '{print $2}')"
+      echo "- divergence: origin/main_only=${BEHIND_MAIN} origin/master_only=${BEHIND_MASTER}"
+    fi
+  fi
 } >"$OUT_FILE"
 
 echo "Wrote: $OUT_FILE"
