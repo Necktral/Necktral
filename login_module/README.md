@@ -136,8 +136,15 @@ docker compose exec -T backend python manage.py audit_verify_chain
 
 ### Sincronización de dispositivos
 
-- `GET /api/sync/devices/` — Listar dispositivos registrados (requiere permiso: sync.device.revoke)
-  - [Ver documentación detallada](../ops/docs/api/sync_devices_list.md)
+- `POST /api/sync/enrollment/challenges/` — Crear `enrollment_code` (requiere JWT + permiso: `sync.device.enroll` + header `X-Company-Id`)
+- `POST /api/sync/enroll/` — Enrolar dispositivo (no requiere JWT; el secreto es `enrollment_code` one-time)
+- `POST /api/sync/batch/` — Enviar batch offline (auth por `X-Device-Id` + firma Ed25519 por comando)
+- `GET /api/sync/devices/` — Listar dispositivos registrados (requiere permiso: `sync.device.revoke`)
+- `POST /api/sync/devices/<device_id>/revoke/` — Revocar dispositivo (requiere permiso: `sync.device.revoke`)
+
+Documentación base (contrato offline-first):
+
+- [../docs/ADDENDUM_OFFLINE_FIRST_v1.0.md](../docs/ADDENDUM_OFFLINE_FIRST_v1.0.md)
 
 ### Auditoría
 

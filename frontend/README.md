@@ -87,14 +87,43 @@ El frontend incluye una base **offline-first** para operaciones de inventario (s
 
 Estado actual:
 
-- Se encolan operaciones hacia endpoints de inventario y se envían luego usando el mismo contrato HTTP (JWT + headers de contexto).
-- Integración con `/api/sync/batch/` (Ed25519 + `X-Device-Id`) está planificada como siguiente paso.
+- Se encolan operaciones de inventario y se sincronizan vía **Sync Engine** usando `POST /api/sync/batch/`.
+- Cada comando se firma (Ed25519) y el batch se autentica con `X-Device-Id`.
+- El flush valida binding estricto a `company/branch/user` (si cambió el scope/actor, el item se rechaza localmente para evitar aplicar con otro contexto).
+
+### Enrollment (requisito para flush)
+
+Antes de poder enviar batches, el cliente debe **enrolar el dispositivo** para obtener `device_id` y generar/guardar su keypair Ed25519.
+
+Flujo recomendado (DEV):
+
+1. Crear un enrollment_code (requiere JWT + permiso `sync.device.enroll` + `X-Company-Id`):
+
+```bash
+curl -sS -X POST http://localhost:8000/api/sync/enrollment/challenges/ \
+  -H 'Authorization: Bearer <ACCESS_TOKEN>' \
+  -H 'Content-Type: application/json' \
+  -H 'X-Company-Id: <COMPANY_ID>' \
+  -d '{"branch_id": <BRANCH_ID>, "label_hint": "Companion Inventario", "expires_in_minutes": 15}'
+```
+
+2. Enrolar el dispositivo con `enrollment_code` (no requiere JWT):
+
+```bash
+curl -sS -X POST http://localhost:8000/api/sync/enroll/ \
+  -H 'Content-Type: application/json' \
+  -d '{"enrollment_code": "<ENROLLMENT_CODE>", "public_key_b64": "<PUBLIC_KEY_B64>", "label": "Companion Inventario"}'
+```
+
+Nota: el frontend ya incluye helper `enrollSyncDevice()` que genera keypair y persiste `device_id`+keys. Aún falta exponer este flujo en UI (por ahora es para integración/DEV).
 
 Archivos clave:
 
 - `src/core/offline/db.ts`
 - `src/core/offline/outbox.ts`
 - `src/core/offline/processor.ts`
+- `src/core/sync/device.ts`
+- `src/core/sync/signing.ts`
 - `src/boot/offline.ts`
 - `src/services/inventory.service.ts`
 

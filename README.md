@@ -8,6 +8,11 @@ Sistema ERP/CRM modular con backend Django + DRF y frontend Quasar. Incluye RBAC
 - **Trazabilidad:** el backend preserva/expone `X-Request-Id` y lo replica en `error.request_id`.
 - **404/500 fuera de DRF:** los handlers de Django devuelven JSON contractual para rutas `/api/*`.
 
+## Offline-first y Sync Engine
+
+- El repo incluye un motor de sincronización (`/api/sync/*`) con enrollment de dispositivos y batch firmado (Ed25519) por comando.
+- Guía normativa: [docs/ADDENDUM_OFFLINE_FIRST_v1.0.md](docs/ADDENDUM_OFFLINE_FIRST_v1.0.md)
+
 ## Estructura del repo
 
 - `login_module/`: backend Django/DRF (código en `login_module/src/`)

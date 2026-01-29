@@ -21,6 +21,10 @@
 - **API (Contrato):** handlers 404/500 para `/api/*` que devuelven JSON contractual con `error.request_id` + header `X-Request-Id`.
 - **API (Contrato):** middleware que normaliza cualquier respuesta `>=400` en `/api/*` a envelope JSON (incluye respuestas no-JSON).
 - **Frontend (Offline):** outbox en IndexedDB (dependencia `idb`) para encolar operaciones de inventario y hacer flush al recuperar conectividad.
+- **Frontend (Offline Sync):** flush real vía `POST /api/sync/batch/` con autenticación por `X-Device-Id` y firma Ed25519 por comando (dependencia `tweetnacl`).
+- **Frontend (Sync):** helper de enrollment de dispositivo (`POST /api/sync/enroll/`) que genera keypair Ed25519 y persiste `device_id`+keys.
+- **Sync Engine (Backend):** handlers de inventario para aplicar comandos offline (receive/issue/adjust/transfer) con idempotencia por `command_id`.
+- **Sync Engine (Tests):** test E2E que enrola → envía batch → verifica efectos e integridad/auditoría.
 
 ### Changed
 
