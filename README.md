@@ -2,6 +2,12 @@
 
 Sistema ERP/CRM modular con backend Django + DRF y frontend Quasar. Incluye RBAC, auditoría contractual, HR, ORG, IAM y sincronización.
 
+## Contratos de API (clientes web/móvil)
+
+- **Errores uniformes en `/api/*`:** cualquier error HTTP (`>= 400`) se entrega con un envelope JSON estable (campo raíz `error`).
+- **Trazabilidad:** el backend preserva/expone `X-Request-Id` y lo replica en `error.request_id`.
+- **404/500 fuera de DRF:** los handlers de Django devuelven JSON contractual para rutas `/api/*`.
+
 ## Estructura del repo
 
 - `login_module/`: backend Django/DRF (código en `login_module/src/`)
@@ -200,6 +206,8 @@ Artefactos generados:
   cd login_module
   pytest
   ```
+
+  Nota: ejecutar `pytest` desde la raíz del repo puede fallar por settings de Django no inicializados; el runner recomendado es desde `login_module/`.
 
 - Tests (dentro de Docker):
   ```bash

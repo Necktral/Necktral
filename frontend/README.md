@@ -76,6 +76,30 @@ npm run dev
 
 ---
 
+## Offline (companion): outbox de inventario
+
+El frontend incluye una base **offline-first** para operaciones de inventario (store-and-forward):
+
+- Persistencia local en IndexedDB (dependencia `idb`).
+- Cola `outbox` con reintentos/backoff.
+- Flush automático al arrancar si hay internet y al evento `online`.
+- Robustez: cada request encolado lleva `X-Request-Id` y queda ligado al `company/branch/user` activo al encolar.
+
+Estado actual:
+
+- Se encolan operaciones hacia endpoints de inventario y se envían luego usando el mismo contrato HTTP (JWT + headers de contexto).
+- Integración con `/api/sync/batch/` (Ed25519 + `X-Device-Id`) está planificada como siguiente paso.
+
+Archivos clave:
+
+- `src/core/offline/db.ts`
+- `src/core/offline/outbox.ts`
+- `src/core/offline/processor.ts`
+- `src/boot/offline.ts`
+- `src/services/inventory.service.ts`
+
+---
+
 ## 🛠 Comandos Útiles
 
 - **Logs Backend**: `docker compose logs -f backend`

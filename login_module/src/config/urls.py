@@ -16,9 +16,43 @@ Including another URLconf
 """
 
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
+from django.views.defaults import page_not_found, server_error
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework.permissions import AllowAny
+
+from config.error_envelope import build_error_envelope
+
+
+def api_handler404(request, exception, template_name="404.html"):
+    path_ = getattr(request, "path", "") or ""
+    if path_.startswith("/api/"):
+        envelope = build_error_envelope(
+            request=request,
+            status_code=404,
+            exc=None,
+            details={"detail": "No encontrado."},
+        )
+        return JsonResponse(envelope, status=404, json_dumps_params={"ensure_ascii": False})
+    return page_not_found(request, exception, template_name=template_name)
+
+
+def api_handler500(request, template_name="500.html"):
+    path_ = getattr(request, "path", "") or ""
+    if path_.startswith("/api/"):
+        envelope = build_error_envelope(
+            request=request,
+            status_code=500,
+            exc=None,
+            details={"detail": "Error interno."},
+        )
+        return JsonResponse(envelope, status=500, json_dumps_params={"ensure_ascii": False})
+    return server_error(request, template_name=template_name)
+
+
+handler404 = api_handler404
+handler500 = api_handler500
 
 urlpatterns = [
     path("admin/", admin.site.urls),

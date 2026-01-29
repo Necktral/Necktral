@@ -67,6 +67,21 @@ Guías de organización:
 - Addendum Offline-first v1.0: [../docs/ADDENDUM_OFFLINE_FIRST_v1.0.md](../docs/ADDENDUM_OFFLINE_FIRST_v1.0.md)
 - Índice de docs: [../docs/README.md](../docs/README.md)
 
+---
+
+## Contrato de errores API (JSON envelope)
+
+Para clientes web/móvil, el backend aplica un contrato de errores consistente en `/api/*`:
+
+- Respuestas `>= 400` se normalizan a un envelope JSON con campo raíz `error`.
+- Se preserva/expone `X-Request-Id` y se replica en `error.request_id`.
+- 404/500 fuera de DRF también devuelven JSON contractual bajo `/api/*`.
+
+Tests contractuales:
+
+- `tests/test_contract_404_envelope.py`
+- `tests/test_contract_error_envelope_middleware.py`
+
 ### Verificar integridad (Gate 3)
 
 El comando valida:

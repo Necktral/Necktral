@@ -18,6 +18,9 @@
 - **FUEL (Tests):** test de flujo (turno → despacho → venta → cierre) + constraint de turno único.
 - **RBAC:** roles `fuel_*` y permisos `fuel.*` en `seed_rbac_v01`.
 - **Auditoría (contrato):** extensión del contrato con `event_type`, `reason_code` y `subject_type` para FUEL.
+- **API (Contrato):** handlers 404/500 para `/api/*` que devuelven JSON contractual con `error.request_id` + header `X-Request-Id`.
+- **API (Contrato):** middleware que normaliza cualquier respuesta `>=400` en `/api/*` a envelope JSON (incluye respuestas no-JSON).
+- **Frontend (Offline):** outbox en IndexedDB (dependencia `idb`) para encolar operaciones de inventario y hacer flush al recuperar conectividad.
 
 ### Changed
 
