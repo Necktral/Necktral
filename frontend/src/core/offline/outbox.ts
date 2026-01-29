@@ -5,11 +5,31 @@ import { getJwtUserId } from 'src/core/auth/jwt';
 import { getOfflineDb, type OutboxItem, type OutboxRequest, type OutboxStatus } from './db';
 
 export function newUuid(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
+  const c = typeof globalThis !== 'undefined' ? globalThis.crypto : undefined;
+  if (c?.randomUUID) {
+    return c.randomUUID();
   }
-  // Fallback best-effort: mantener charset permitido por RequestIdMiddleware
-  return `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  // Fallback UUIDv4 (sin depender de libs). Mantener formato RFC4122.
+  const bytes = new Uint8Array(16);
+  if (c?.getRandomValues) {
+    c.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i += 1) {
+      bytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+
+  // version 4
+  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
+  // variant 10xx
+  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
+
+  const hex = Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 export type EnqueueOutboxInput<Kind extends string> = {
