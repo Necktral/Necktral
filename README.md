@@ -359,13 +359,41 @@ Guías de organización:
 ## Buenas prácticas
 
 - Siempre ejecutar los comandos de seed y bootstrap en entornos nuevos.
-- Validar con tests antes de desplegar.
+- Validar con tests antes de desplegar (recomendado: `make qa-ci-fresh`).
 - Consultar la auditoría para trazabilidad de cambios críticos.
+
+## 🛡️ Robustez y monitoreo Docker
+
+Todos los servicios críticos (backend, frontend, db) están configurados con:
+
+- `restart: unless-stopped` para reinicio automático ante fallos.
+- `healthcheck` activo: si el proceso principal no responde, Docker reinicia el contenedor.
+- Dependencias explícitas (`depends_on` con `condition: service_healthy`) para evitar arranques fuera de orden.
+
+Puedes monitorear el estado de los servicios con:
+
+```bash
+docker compose ps
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f db
+```
+
+Si un servicio se cae repetidamente, revisa los logs y el estado de salud:
+
+```bash
+docker inspect --format='{{json .State.Health}}' <nombre_contenedor>
+```
+
+Para entornos productivos, se recomienda además monitoreo externo (Prometheus, Grafana) y alertas.
+
+## 🧪 CI/QA (robustez)
+
+- Si en CI ves `exit code 137` (OOM kill) en el paso `qa-backend-wait`, el backend ahora fuerza `runserver` cuando detecta `CI=1`/`GITHUB_ACTIONS=1` para reducir consumo de memoria.
+- Los timeouts de arranque (espera de Postgres + wait de backend ready) se aumentaron a 5 minutos para runners lentos.
 
 ## Seguridad y memberships HR
 
-- La reconciliación de memberships ya no fuerza acceso a la empresa (COMPANY) por defecto.
-- Solo se asignan memberships por asignaciones activas y roles mapeados.
 - Mejora la robustez y evita accesos innecesarios.
 
 ## Permisos IAM

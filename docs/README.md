@@ -26,6 +26,11 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - CI principal (QA Gates 1–3): `.github/workflows/qa-ci.yml`
 - Snapshot/reporting: `.github/workflows/pm-snapshot.yml`
 
+Notas de robustez:
+
+- Si el runner es limitado y ves `exit code 137` (OOM kill) durante `qa-backend-wait`, el backend fuerza `runserver` en CI (ver `docker/entrypoint.sh`).
+- La espera de “backend ready” tiene timeout ampliado (ver `qa/wait_backend_ready.py`).
+
 ## Reglas
 
 - Todo en español.

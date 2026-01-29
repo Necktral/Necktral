@@ -14,7 +14,7 @@ def main() -> int:
 
     from django.db import connection
 
-    deadline = time.time() + 90
+    deadline = time.time() + 300  # 5 minutos para entornos CI lentos
     while True:
         try:
             with connection.cursor() as cursor:

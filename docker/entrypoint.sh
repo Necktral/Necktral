@@ -19,7 +19,7 @@ import os, time, socket
 host = os.getenv("POSTGRES_HOST", "db")
 port = int(os.getenv("POSTGRES_PORT", "5432"))
 
-deadline = time.time() + 60
+deadline = time.time() + 300  # 5 minutos para entornos lentos/CI
 while time.time() < deadline:
     try:
         with socket.create_connection((host, port), timeout=2):
@@ -38,7 +38,13 @@ python src/manage.py migrate --noinput
 # Arranque servidor
 # - Por defecto: runserver (DX / hot-reload)
 # - Para carga/QA: Gunicorn (mejor concurrencia y latencias más estables)
-: "${USE_GUNICORN:=0}"
+
+# Si estamos en CI, forzar runserver (menos memoria)
+if [[ "${GITHUB_ACTIONS:-}" == "true" || "${CI:-}" == "true" || "${GITHUB_ACTIONS:-}" == "1" || "${CI:-}" == "1" ]]; then
+    USE_GUNICORN=0
+else
+    : "${USE_GUNICORN:=0}"
+fi
 
 if [[ "${USE_GUNICORN}" == "1" || "${USE_GUNICORN}" == "true" ]]; then
     : "${GUNICORN_WORKERS:=4}"

@@ -13,8 +13,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
-      timeout: 5s
-      retries: 30
+      timeout: 10s
+      retries: 60
+      start_period: 60s
 
   backend:
     build:
@@ -43,8 +44,9 @@ services:
           "curl -fsS http://localhost:8000/api/auth/bootstrap/status/ >/dev/null || exit 1",
         ]
       interval: 10s
-      timeout: 3s
-      retries: 30
+      timeout: 10s
+      retries: 60
+      start_period: 60s
 
   web:
     build:
@@ -53,6 +55,12 @@ services:
       args:
         VITE_API_BASE_URL: /api
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
     depends_on:
       backend:
         condition: service_healthy

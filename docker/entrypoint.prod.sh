@@ -17,7 +17,7 @@ python - <<'PY'
 import os, time, socket
 host = os.getenv("POSTGRES_HOST", "db")
 port = int(os.getenv("POSTGRES_PORT", "5432"))
-deadline = time.time() + 60
+deadline = time.time() + 300  # 5 minutos para entornos lentos/CI
 while time.time() < deadline:
     try:
         with socket.create_connection((host, port), timeout=2):
