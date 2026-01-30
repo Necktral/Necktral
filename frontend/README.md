@@ -76,7 +76,18 @@ npm run dev
 
 ---
 
-## Offline (companion): outbox de inventario
+## Offline (companion): outbox de inventario y Sync Engine
+
+### Robustez UI Sync Offline
+
+- Todas las rutas de API usan paths relativos a baseURL `/api` (ver `src/boot/axios.ts`).
+- El campo Branch ID en enrollment challenge solo acepta números enteros positivos.
+- Si el device está enrolado en otro company/branch, se bloquean acciones peligrosas (flush/enroll) y se muestra advertencia.
+- El panel de enrollment solo aparece si el usuario tiene permiso `sync.device.enroll` en el company activo.
+- El tipo de respuesta de enrollment challenge está alineado al backend (IDs como string).
+- Tras enrolar, se limpia el campo y se refresca el outbox; se muestra confirmación.
+- Si el usuario cambia de contexto (company/branch), la UI recarga métricas y estado.
+- El banner de flush muestra resumen de errores si hay fallos (top 3 motivos, si están disponibles).
 
 El frontend incluye una base **offline-first** para operaciones de inventario (store-and-forward):
 

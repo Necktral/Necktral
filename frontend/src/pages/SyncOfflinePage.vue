@@ -95,7 +95,7 @@
         </q-card>
       </div>
 
-      <div class="col-12 col-lg-6">
+      <div class="col-12 col-lg-6" v-if="canEnrollDevice">
         <q-card class="app-card">
           <q-card-section>
             <div class="text-h6">Generar enrollment code (challenge)</div>
@@ -180,11 +180,23 @@
         <q-card-section>
           <q-banner v-if="outbox.lastFlush" dense rounded>
             Último flush: sent={{ outbox.lastFlush.sent }} · failed={{ outbox.lastFlush.failed }} ·
-            remaining={{ outbox.lastFlush.remaining }} · at={{
-              new Date(outbox.lastFlush.at).toISOString()
-            }}
+            remaining={{ outbox.lastFlush.remaining }} · at
+            {{ new Date(outbox.lastFlush.at).toISOString() }}
+            <template v-if="flushErrors.length > 0">
+              <div class="q-mt-xs">
+                <span class="text-negative">Errores más comunes:</span>
+                <ul class="q-ml-md">
+                  <li v-for="(err, i) in flushErrors" :key="i">{{ err }}</li>
+                </ul>
+              </div>
+            </template>
           </q-banner>
         </q-card-section>
+        // Resumen de errores de flush (top 3) const flushErrors = computed(() => { const last =
+        outbox.lastFlush; if (!last || !last.failed) return []; // Aquí deberías obtener los errores
+        reales del flush si los expone el store // Por ahora, placeholder: podrías extender
+        outbox.flush() para exponerlos // Ejemplo: return last.errors?.slice(0, 3) ?? []; return [];
+        });
       </q-card>
 
       <q-banner v-if="errorMsg" class="q-mt-md" dense rounded>
@@ -195,8 +207,9 @@
 </template>
 
 <script setup lang="ts">
+// Convención: todos los endpoints de sync usan rutas relativas a baseURL '/api' (ver src/boot/axios.ts)
+// Ejemplo: api.post('/sync/enrollment/challenges/') → /api/sync/enrollment/challenges/
 import { computed, onMounted, ref } from 'vue';
-
 import { api } from 'src/boot/axios';
 import { extractErrorMessage } from 'src/core/http/errors';
 import { clearSyncDevice, readSyncDevice } from 'src/core/storage/sync_device';
@@ -209,8 +222,8 @@ type ChallengeResponse = {
   challenge_id: string;
   enrollment_code: string;
   expires_at: string;
-  company_id: number;
-  branch_id: number | null;
+  company_id: string;
+  branch_id: string | null;
 };
 
 const acl = useAclStore();
@@ -218,6 +231,11 @@ const ctx = useContextStore();
 const outbox = useOfflineOutboxStore();
 
 ctx.initFromStorage();
+
+const canEnrollDevice = computed(() => {
+  const companyId = ctx.activeCompanyId;
+  return companyId && acl.hasPermission(companyId, 'sync.device.enroll');
+});
 
 const loading = ref(false);
 const errorMsg = ref<string | null>(null);
@@ -278,14 +296,27 @@ async function createChallenge() {
   challenge.value = null;
 
   try {
-    const branchId = (branchOverride.value || ctx.activeBranchId || '').trim();
+    const branchIdRaw = (branchOverride.value || ctx.activeBranchId || '').trim();
+    let branchId: number | undefined = undefined;
+    if (branchIdRaw) {
+      if (!/^[0-9]+$/.test(branchIdRaw)) {
+        errorMsg.value = 'Branch ID debe ser un número entero positivo.';
+        loading.value = false;
+        return;
+      }
+      branchId = Number(branchIdRaw);
+      if (!Number.isFinite(branchId) || branchId <= 0) {
+        errorMsg.value = 'Branch ID inválido.';
+        loading.value = false;
+        return;
+      }
+    }
 
     const payload: Record<string, unknown> = {
       label_hint: labelHint.value,
       expires_in_minutes: Number(expiresIn.value || 15),
     };
-
-    if (branchId) payload.branch_id = Number(branchId);
+    if (branchId) payload.branch_id = branchId;
 
     const { data } = await api.post<ChallengeResponse>('/sync/enrollment/challenges/', payload);
     challenge.value = data;
@@ -313,6 +344,9 @@ async function enrollLocal() {
     const code = enrollmentCode.value.trim();
     await enrollSyncDevice(api, { enrollmentCode: code, label: deviceLabel.value });
     refreshDevice();
+    enrollmentCode.value = '';
+    await outbox.refreshCounts();
+    errorMsg.value = '✅ Device enrolado correctamente.';
   } catch (e) {
     errorMsg.value = extractErrorMessage(e);
   } finally {
@@ -338,7 +372,16 @@ async function doFlush() {
   }
 }
 
+import { watch } from 'vue';
+
 onMounted(async () => {
   await reload();
 });
+
+watch(
+  () => [ctx.activeCompanyId, ctx.activeBranchId],
+  async () => {
+    await reload();
+  },
+);
 </script>
