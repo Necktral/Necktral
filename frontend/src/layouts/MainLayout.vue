@@ -135,6 +135,15 @@
 
         <q-separator spaced />
 
+        <q-item-label header>SYNC</q-item-label>
+
+        <q-item clickable to="/sync/offline">
+          <q-item-section avatar><q-icon name="sync" /></q-item-section>
+          <q-item-section>Offline</q-item-section>
+        </q-item>
+
+        <q-separator spaced />
+
         <q-item-label header>FUEL</q-item-label>
 
         <q-item clickable to="/fuel" :disable="!canFuelRead">

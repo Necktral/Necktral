@@ -24,6 +24,19 @@ export type FlushResult = {
   stoppedByOffline: boolean;
 };
 
+type SyncCommandOut = {
+  command_id: string;
+  command_type: string;
+  company_id: number;
+  branch_id: number | null;
+  occurred_at: string;
+  sequence: number;
+  payload: unknown;
+  payload_hash: string;
+  prev_hash: string;
+  signature: string;
+};
+
 function computeBackoffMs(attemptCount: number): number {
   const exp = Math.min(6, Math.max(0, attemptCount));
   const base = 1_000 * 2 ** exp;
@@ -139,7 +152,7 @@ export async function flushOutbox(api: AxiosInstance, limit = 25): Promise<Flush
   }
 
   let nextSeq = Math.max(0, syncDevice.lastSequence || 0);
-  const commands = [] as any[];
+  const commands: SyncCommandOut[] = [];
 
   for (const item of toSend) {
     const command_type = mapKindToCommandType(item.kind);

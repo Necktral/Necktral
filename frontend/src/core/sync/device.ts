@@ -10,6 +10,13 @@ export type EnrollResult = {
   device_status: string;
   company_id: number;
   branch_id: number | null;
+  server_time?: string;
+  policy?: {
+    max_commands_per_batch: number;
+    max_payload_bytes: number;
+    max_device_clock_skew_seconds: number;
+    seq_tolerant: boolean;
+  };
 };
 
 export function getSyncDeviceOrNull() {

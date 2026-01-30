@@ -112,6 +112,14 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'sync/offline',
+        component: () => import('pages/SyncOfflinePage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+        },
+      },
+      {
         path: 'fuel',
         component: () => import('pages/FuelDashboardPage.vue'),
         meta: {
