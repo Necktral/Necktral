@@ -1,3 +1,16 @@
+# 🛡️ Convención de rutas de API (normalización)
+
+**Todas las llamadas a la API deben usar rutas relativas a la base `/api` y nunca URLs absolutas.**
+
+- Usa siempre: `api.get('/recurso/')`, `api.post('/recurso/')`, etc.
+- La base se define por entorno vía `VITE_API_BASE_URL`:
+  - En desarrollo: `http://localhost:8000/api`
+  - En producción: `/api` (proxy Nginx)
+- Nunca hardcodees hosts ni puertos en el frontend.
+- El archivo fuente de la convención es [`src/boot/axios.ts`](src/boot/axios.ts).
+
+Esto permite que el frontend funcione igual en local, Docker o producción, y facilita el despliegue seguro detrás de proxies.
+
 # Necktral ERP/CRM
 
 Sistema ERP/CRM modular con backend Django + DRF y frontend Quasar. Incluye RBAC, auditoría, HR, ORG, IAM, sincronización y ciclo de arranque profesional con Docker Compose.
