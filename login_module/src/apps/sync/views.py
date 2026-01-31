@@ -42,20 +42,19 @@ class SyncBatchView(APIView):
         if not device:
             return Response({"error": "UNKNOWN_OR_INACTIVE_DEVICE"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # 3) Anti-replay nonce
+        # 3) Firma
+        raw_body = request.body or b""
+        canonical = canonical_string(ts=ts, nonce=nonce, raw_body=raw_body)
+        if not verify_hmac_signature(device.secret_b64, canonical, sig):
+            return Response({"error": "BAD_SIGNATURE"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # 4) Anti-replay nonce (solo si la firma es válida)
         try:
-            # Usamos savepoint para que un nonce duplicado no rompa la transacción del request.
             with transaction.atomic():
                 DeviceRequestNonce.objects.create(device=device, nonce=nonce, ts=ts)
         except IntegrityError:
             # unique constraint => replay
             return Response({"error": "REPLAY_DETECTED"}, status=status.HTTP_401_UNAUTHORIZED)
-
-        # 4) Firma
-        raw_body = request.body or b""
-        canonical = canonical_string(ts=ts, nonce=nonce, raw_body=raw_body)
-        if not verify_hmac_signature(device.secret_b64, canonical, sig):
-            return Response({"error": "BAD_SIGNATURE"}, status=status.HTTP_401_UNAUTHORIZED)
 
         # 5) Parse + apply
         serializer = SyncBatchSerializer(data=request.data)

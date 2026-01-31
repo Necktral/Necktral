@@ -139,8 +139,14 @@ docker compose exec -T backend python manage.py audit_verify_chain
 - `POST /api/sync/enrollment/challenges/` — Crear `enrollment_code` (requiere JWT + permiso: `sync.device.enroll` + header `X-Company-Id`)
 - `POST /api/sync/enroll/` — Enrolar dispositivo (no requiere JWT; el secreto es `enrollment_code` one-time)
 - `POST /api/sync/batch/` — Enviar batch offline (auth por `X-Device-Id` + firma Ed25519 por comando)
+- `POST /api/sync-hmac/batch/` — Enviar batch autenticado por HMAC (anti-replay robusto: el nonce solo se persiste tras validar la firma; ver sección de seguridad abajo)
 - `GET /api/sync/devices/` — Listar dispositivos registrados (requiere permiso: `sync.device.revoke`)
 - `POST /api/sync/devices/<device_id>/revoke/` — Revocar dispositivo (requiere permiso: `sync.device.revoke`)
+
+**Seguridad Sync HMAC:**
+
+- El endpoint `/api/sync-hmac/batch/` implementa anti-replay robusto: el nonce solo se persiste tras validar la firma HMAC, evitando ataques de denegación y garantizando que nonces inválidos no se almacenan. El manejo de replays es transaccional y race-safe (`IntegrityError`).
+- Los tests aseguran que un batch con firma inválida no crea nonce y que los replays son correctamente detectados.
 
 Documentación base (contrato offline-first):
 

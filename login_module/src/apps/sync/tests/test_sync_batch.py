@@ -64,6 +64,9 @@ def test_sync_batch_bad_signature_rejected():
     nonce = "nonce-aaaaaaaaaaaaaaaa"
     url = "/api/sync-hmac/batch/"
 
+    from apps.sync.models import DeviceRequestNonce
+    # Conteo antes
+    nonce_count_before = DeviceRequestNonce.objects.filter(device=device, nonce=nonce).count()
     res = client.post(
         url,
         data=body,
@@ -75,6 +78,9 @@ def test_sync_batch_bad_signature_rejected():
     )
     assert res.status_code == 401
     assert res.json()["error"] == "BAD_SIGNATURE"
+    # Conteo después
+    nonce_count_after = DeviceRequestNonce.objects.filter(device=device, nonce=nonce).count()
+    assert nonce_count_after == nonce_count_before
 
 
 @pytest.mark.django_db

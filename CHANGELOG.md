@@ -1,3 +1,10 @@
+## [2026-01-31] - Endurecimiento Sync HMAC
+
+### Changed
+
+- **Sync Engine (Backend):** El endpoint `/api/sync-hmac/batch/` ahora solo persiste el nonce tras validar la firma HMAC. Esto previene ataques de denegación y asegura que nonces inválidos no se almacenan. El manejo de replays es atómico y seguro usando `IntegrityError`.
+- **Tests:** Se extiende el test de firma inválida para verificar que no se crea nonce en ese caso. Se mantiene la cobertura de replay.
+
 # Changelog
 
 ## [Unreleased]

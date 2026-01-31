@@ -1,4 +1,17 @@
-﻿# Necktral ERP/CRM
+﻿## Ejecutar tests (Docker)
+
+Para ejecutar los tests del backend de forma determinista y sin errores de entorno, usa:
+
+```bash
+docker compose exec backend bash -lc "cd /app/login_module && pytest -q"
+```
+
+**Por qué:** los tests usan `pytest.ini` con `DJANGO_SETTINGS_MODULE=config.settings.test`, `pythonpath=src` y `testpaths=tests src/tests`, por lo que deben ejecutarse desde `login_module/` para que el contexto sea correcto.
+
+**Regla anti-errores:**
+Si `pytest` falla por `DJANGO_SETTINGS_MODULE` al correr localmente, normalmente se está ejecutando fuera de `login_module/`.
+
+# Necktral ERP/CRM
 
 Sistema ERP/CRM modular con backend Django + DRF y frontend Quasar. Incluye RBAC, auditoría contractual, HR, ORG, IAM y sincronización.
 
@@ -11,6 +24,8 @@ Sistema ERP/CRM modular con backend Django + DRF y frontend Quasar. Incluye RBAC
 ## Offline-first y Sync Engine
 
 - El repo incluye un motor de sincronización (`/api/sync/*`) con enrollment de dispositivos y batch firmado (Ed25519) por comando.
+- **Seguridad Sync HMAC:** El endpoint `/api/sync-hmac/batch/` implementa anti-replay robusto: el nonce solo se persiste tras validar la firma HMAC, evitando ataques de denegación y garantizando que nonces inválidos no se almacenan. El manejo de replays es transaccional y race-safe (`IntegrityError`).
+- Los tests aseguran que un batch con firma inválida no crea nonce y que los replays son correctamente detectados.
 - Guía normativa: [docs/ADDENDUM_OFFLINE_FIRST_v1.0.md](docs/ADDENDUM_OFFLINE_FIRST_v1.0.md)
 
 ## Estructura del repo
@@ -238,6 +253,7 @@ Artefactos generados:
 
 - Los eventos de auditoría se emiten con `module=AUTH` y `schema_version=1`.
 - Para trazabilidad: se encadenan hashes y se firma con HMAC.
+- **Sync HMAC:** ver sección "Offline-first y Sync Engine" para detalles de seguridad y anti-replay.
 
 ### FUEL (Estación de Servicios)
 
