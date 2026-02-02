@@ -22,9 +22,10 @@ from apps.common.permissions import rbac_permission
 from apps.iam.models import OrgUnit
 
 from .models import Device, DeviceEnrollmentChallenge
-from .serializers import EnrollmentChallengeCreateIn, DeviceEnrollIn, SyncBatchIn
+from .serializers import EnrollmentChallengeCreateIn, DeviceEnrollIn, SyncBatchIn, SyncV2BatchIn
 from .signing import public_key_from_b64
 from .services import process_batch, resolve_device
+from .v2 import SyncV2Auth, SyncV2Error, process_sync_v2
 
 
 class EnrollmentChallengeCreateView(APIView):
@@ -290,6 +291,41 @@ class SyncBatchView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        if str(request.data.get("protocol_version")) == "2":
+            ser_v2 = SyncV2BatchIn(data=request.data)
+            ser_v2.is_valid(raise_exception=True)
+            data = ser_v2.validated_data
+
+            hdr_device_id = request.headers.get("X-Device-Id")
+            body_device_id = str(data["device_id"])
+            if hdr_device_id and hdr_device_id.strip() != body_device_id:
+                return Response({"error": "DEVICE_ID_MISMATCH"}, status=400)
+            device_id = hdr_device_id.strip() if hdr_device_id else body_device_id
+
+            device = resolve_device(device_id=device_id)
+            auth = data["auth"]
+
+            try:
+                out = process_sync_v2(
+                    request=request._request if hasattr(request, "_request") else request,
+                    device=device,
+                    batch_id=data["batch_id"],
+                    sent_at=data.get("sent_at"),
+                    ts=int(data["ts"]),
+                    nonce=str(data["nonce"]),
+                    auth=SyncV2Auth(
+                        scheme=str(auth["scheme"]),
+                        signature_b64=str(auth["signature"]),
+                        key_id=(str(auth.get("key_id")) if auth.get("key_id") else None),
+                    ),
+                    raw_body=request.data,
+                    commands=data["batch"],
+                )
+            except SyncV2Error as e:
+                return Response({"error": e.error, "details": e.details}, status=e.status_code)
+
+            return Response(out, status=200)
+
         ser = SyncBatchIn(data=request.data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data

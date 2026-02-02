@@ -61,3 +61,37 @@ class SyncBatchIn(serializers.Serializer):
     device_id = serializers.UUIDField(required=False)
     sent_at = serializers.DateTimeField(required=False)
     commands = SyncCommandIn(many=True)
+
+
+class SyncV2AuthIn(serializers.Serializer):
+    scheme = serializers.ChoiceField(choices=["hmac", "ed25519"])
+    signature = serializers.CharField()
+    key_id = serializers.CharField(required=False, allow_blank=True)
+
+
+class SyncV2ScopeIn(serializers.Serializer):
+    company_id = serializers.IntegerField()
+    branch_id = serializers.IntegerField(required=False, allow_null=True)
+
+
+class SyncV2CommandIn(serializers.Serializer):
+    command_id = serializers.UUIDField()
+    type = serializers.CharField(max_length=64)
+    scope = SyncV2ScopeIn()
+    occurred_at = serializers.DateTimeField()
+    sequence = serializers.IntegerField(required=False, allow_null=True)
+    payload = serializers.JSONField()
+    payload_hash = serializers.CharField(required=False, allow_blank=True, max_length=64)
+    prev_hash = serializers.CharField(required=False, allow_blank=True, max_length=64)
+    command_sig = serializers.CharField(required=False, allow_blank=True)
+
+
+class SyncV2BatchIn(serializers.Serializer):
+    protocol_version = serializers.ChoiceField(choices=["2"])
+    device_id = serializers.UUIDField()
+    ts = serializers.IntegerField()
+    nonce = serializers.CharField(max_length=128)
+    auth = SyncV2AuthIn()
+    batch_id = serializers.UUIDField()
+    sent_at = serializers.DateTimeField(required=False)
+    batch = SyncV2CommandIn(many=True)

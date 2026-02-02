@@ -102,7 +102,7 @@ def ensure_scope_matches(*, device: Device, company_id: int, branch_id: int | No
 
 
 def process_batch(
-    *, request, actor_user, device: Device, batch_id, sent_at, commands: list[dict[str, Any]]
+    *, request, actor_user, device: Device, batch_id, sent_at, commands: list[dict[str, Any]], allow_unsigned: bool = False
 ) -> dict[str, Any]:
     policy = get_policy()
     if len(commands) > policy.max_commands_per_batch:
@@ -157,7 +157,14 @@ def process_batch(
 
     for c in commands:
         try:
-            r = process_command(request=request, actor_user=actor_user, device=device, cmd=c, policy=policy)
+            r = process_command(
+                request=request,
+                actor_user=actor_user,
+                device=device,
+                cmd=c,
+                policy=policy,
+                allow_unsigned=allow_unsigned,
+            )
         except Exception as e:
             # 1) auditar
             write_event(
@@ -220,7 +227,15 @@ def process_batch(
     }
 
 
-def process_command(*, request, actor_user, device: Device, cmd: dict[str, Any], policy: SyncPolicy) -> dict[str, Any]:
+def process_command(
+    *,
+    request,
+    actor_user,
+    device: Device,
+    cmd: dict[str, Any],
+    policy: SyncPolicy,
+    allow_unsigned: bool = False,
+) -> dict[str, Any]:
     """Procesa un comando individual.
 
     Precondición:
@@ -242,7 +257,7 @@ def process_command(*, request, actor_user, device: Device, cmd: dict[str, Any],
     occurred_at = cmd["occurred_at"]
     sequence = cmd.get("sequence")
     payload = cmd["payload"]
-    signature = cmd["signature"]
+    signature = cmd.get("signature")
     prev_hash = cmd.get("prev_hash") or ""
 
     # Límite de payload (regla fuerte: evita batches gigantes y firma sobre datos arbitrarios)
@@ -326,18 +341,51 @@ def process_command(*, request, actor_user, device: Device, cmd: dict[str, Any],
                 details={"payload_hash": "mismatch"},
             )
 
-        # Mensaje firmado estable: evita ambigüedad de JSON (orden de keys, espacios, etc.)
-        msg = build_command_signing_message(
-            command_id=str(command_id),
-            command_type=command_type,
-            company_id=int(company_id),
-            branch_id=int(branch_id) if branch_id is not None else None,
-            occurred_at=occurred_at_canonical(occurred_at),
-            sequence=int(sequence) if sequence is not None else None,
-            payload_hash=computed_payload_hash,
-            prev_hash=prev_hash,
-        )
-        if not verify_ed25519_signature(public_key_raw=device.public_key, signature_b64=signature, message=msg):
+        if signature:
+            if not device.public_key:
+                return _reject_with_db(
+                    request=request,
+                    actor_user=actor_user,
+                    device=device,
+                    command_id=command_id,
+                    company_id=company_id,
+                    branch_id=branch_id,
+                    command_type=command_type,
+                    occurred_at=occurred_at,
+                    sequence=sequence,
+                    payload_hash=computed_payload_hash,
+                    prev_hash=prev_hash,
+                    reason="SYNC_INVALID_SIGNATURE",
+                    details={"public_key": "missing"},
+                )
+            # Mensaje firmado estable: evita ambigüedad de JSON (orden de keys, espacios, etc.)
+            msg = build_command_signing_message(
+                command_id=str(command_id),
+                command_type=command_type,
+                company_id=int(company_id),
+                branch_id=int(branch_id) if branch_id is not None else None,
+                occurred_at=occurred_at_canonical(occurred_at),
+                sequence=int(sequence) if sequence is not None else None,
+                payload_hash=computed_payload_hash,
+                prev_hash=prev_hash,
+            )
+            if not verify_ed25519_signature(public_key_raw=device.public_key, signature_b64=signature, message=msg):
+                return _reject_with_db(
+                    request=request,
+                    actor_user=actor_user,
+                    device=device,
+                    command_id=command_id,
+                    company_id=company_id,
+                    branch_id=branch_id,
+                    command_type=command_type,
+                    occurred_at=occurred_at,
+                    sequence=sequence,
+                    payload_hash=computed_payload_hash,
+                    prev_hash=prev_hash,
+                    reason="SYNC_INVALID_SIGNATURE",
+                    details={},
+                )
+        elif not allow_unsigned:
             return _reject_with_db(
                 request=request,
                 actor_user=actor_user,
@@ -351,7 +399,7 @@ def process_command(*, request, actor_user, device: Device, cmd: dict[str, Any],
                 payload_hash=computed_payload_hash,
                 prev_hash=prev_hash,
                 reason="SYNC_INVALID_SIGNATURE",
-                details={},
+                details={"signature": "missing"},
             )
     except (ValueError, TypeError) as e:
         # Errores típicos de canonicalización/firma/base64

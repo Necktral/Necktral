@@ -38,8 +38,11 @@ class Device(models.Model):
     label = models.CharField(max_length=200, default="", blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
 
-    # Ed25519 public key: 32 bytes
-    public_key = models.BinaryField(max_length=64, editable=False)
+    # Ed25519 public key: 32 bytes (nullable para esquema HMAC)
+    public_key = models.BinaryField(max_length=64, editable=False, null=True, blank=True)
+
+    # HMAC secret (base64) para esquema HMAC en Sync v2
+    hmac_secret_b64 = models.CharField(max_length=256, null=True, blank=True)
 
     min_app_version = models.CharField(max_length=32, default="", blank=True)
     meta = models.JSONField(default=dict, blank=True)
@@ -71,6 +74,8 @@ class Device(models.Model):
         if self.branch_id is not None:
             if self.branch.parent_id != self.company_id:
                 raise ValidationError("branch debe pertenecer a company (branch.parent == company).")
+        if not self.public_key and not self.hmac_secret_b64:
+            raise ValidationError("Device debe tener public_key (Ed25519) o hmac_secret_b64 (HMAC).")
 
     def mark_seen(self) -> None:
         self.last_seen_at = timezone.now()
@@ -224,4 +229,25 @@ class SyncReceipt(models.Model):
         app_label = "sync_engine"
         indexes = [
             models.Index(fields=["device", "server_time"]),
+        ]
+
+
+class DeviceRequestNonce(models.Model):
+    """
+    Anti-replay: nonce único por dispositivo en ventana temporal.
+    Persistir solo después de verificar firma.
+    """
+
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name="nonces")
+    nonce = models.CharField(max_length=128)
+    ts = models.BigIntegerField()
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        app_label = "sync_engine"
+        constraints = [
+            models.UniqueConstraint(fields=["device", "nonce"], name="uniq_device_nonce_v2"),
+        ]
+        indexes = [
+            models.Index(fields=["device", "created_at"], name="ix_drnonce_dev_ca_v2"),
         ]
