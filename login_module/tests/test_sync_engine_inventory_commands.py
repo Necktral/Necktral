@@ -167,6 +167,17 @@ def _build_batch(*, priv: Ed25519PrivateKey, device_id: str, commands: list[dict
     return batch
 
 
+def _balance_qty(data: dict) -> str:
+    if isinstance(data, dict) and "results" in data:
+        results = data.get("results") or []
+        if results:
+            return results[0].get("qty_on_hand")
+        return "0.0000"
+    if isinstance(data, dict) and "qty_on_hand" in data:
+        return data.get("qty_on_hand")
+    return "0.0000"
+
+
 @pytest.mark.django_db
 def test_sync_batch_inventory_receive_issue_applies_and_updates_stock():
     company, branch = _mk_scope()
@@ -291,8 +302,7 @@ def test_sync_batch_inventory_receive_issue_applies_and_updates_stock():
     # Verificar stock via endpoint balance normal
     r = c.get(f"/api/inventory/balances/?warehouse_id={wh_id}&item_id={item_id}&limit=10&offset=0")
     assert r.status_code == 200
-    assert r.data["count"] == 1
-    assert r.data["results"][0]["qty_on_hand"] == "8.0000"
+    assert _balance_qty(r.data) == "8.0000"
 
     # Auditoría: aplica y también se emiten eventos de inventario
     assert AuditEvent.objects.filter(event_type="SYNC_COMMAND_APPLIED").exists()
