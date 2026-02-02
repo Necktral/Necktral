@@ -6,6 +6,7 @@ from typing import Any
 from apps.iam.models import OrgUnit
 
 from modulos.inventarios import services as inv_services
+from modulos.inventarios.models import MovementType, StockMovement
 
 from .errors import SyncRejectError
 from .registry import HandlerResult, register
@@ -14,21 +15,21 @@ from .registry import HandlerResult, register
 def _require_int(payload: dict[str, Any], key: str) -> int:
     v = payload.get(key, None)
     if v is None:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {key: "required"})
+        raise SyncRejectError("INVENTORY_SCHEMA_INVALID", {key: "required"})
     try:
         return int(v)
     except Exception:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {key: "invalid"})
+        raise SyncRejectError("INVENTORY_SCHEMA_INVALID", {key: "invalid"})
 
 
 def _require_decimal(payload: dict[str, Any], key: str) -> Decimal:
     v = payload.get(key, None)
     if v is None:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {key: "required"})
+        raise SyncRejectError("INVENTORY_SCHEMA_INVALID", {key: "required"})
     try:
         return Decimal(str(v))
     except Exception:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {key: "invalid"})
+        raise SyncRejectError("INVENTORY_SCHEMA_INVALID", {key: "invalid"})
 
 
 def _optional_str(payload: dict[str, Any], key: str) -> str:
@@ -48,7 +49,7 @@ def _optional_bool(payload: dict[str, Any], key: str, default: bool = False) -> 
 def _attach_scope_to_request(*, request, company_id: int, branch_id: int | None) -> None:
     company = OrgUnit.objects.filter(id=company_id, unit_type=OrgUnit.UnitType.COMPANY, is_active=True).first()
     if not company:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {"company_id": "unknown"})
+        raise SyncRejectError("INVENTORY_INVALID_SCOPE", {"company_id": "unknown"})
 
     request.company = company
 
@@ -63,9 +64,76 @@ def _attach_scope_to_request(*, request, company_id: int, branch_id: int | None)
         is_active=True,
     ).first()
     if not branch:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {"branch_id": "unknown"})
+        raise SyncRejectError("INVENTORY_INVALID_SCOPE", {"branch_id": "unknown"})
 
     request.branch = branch
+
+
+def _map_inventory_error(err: Exception) -> SyncRejectError:
+    msg = str(err).lower()
+    if "stock insuficiente" in msg:
+        return SyncRejectError("INVENTORY_INSUFFICIENT_STOCK", {"detail": str(err)})
+    if "x-branch-id requerido" in msg:
+        return SyncRejectError("INVENTORY_INVALID_SCOPE", {"detail": str(err)})
+    if "warehouse inválido" in msg:
+        return SyncRejectError("INVENTORY_INVALID_SCOPE", {"detail": str(err)})
+    if "from_warehouse_id" in msg and "to_warehouse_id" in msg:
+        return SyncRejectError("INVENTORY_SCHEMA_INVALID", {"detail": str(err)})
+    if "qty debe ser" in msg or "unit_cost" in msg:
+        return SyncRejectError("INVENTORY_SCHEMA_INVALID", {"detail": str(err)})
+    return SyncRejectError("INVENTORY_SCHEMA_INVALID", {"detail": str(err)})
+
+
+def _movement_matches(
+    movement: StockMovement,
+    *,
+    movement_type: str,
+    warehouse_id: int,
+    item_id: int,
+    qty_delta: Decimal | None = None,
+    unit_cost: Decimal | None = None,
+) -> bool:
+    if movement.movement_type != movement_type:
+        return False
+    if movement.warehouse_id != warehouse_id:
+        return False
+    if movement.item_id != item_id:
+        return False
+    if qty_delta is not None and movement.qty_delta != qty_delta:
+        return False
+    if unit_cost is not None and movement.unit_cost != unit_cost:
+        return False
+    return True
+
+
+def _ensure_idempotency_match(
+    *,
+    company_id: int,
+    idempotency_key: str,
+    movement_type: str,
+    warehouse_id: int,
+    item_id: int,
+    qty_delta: Decimal | None = None,
+    unit_cost: Decimal | None = None,
+) -> None:
+    if not idempotency_key:
+        return
+    existing = StockMovement.objects.filter(company_id=company_id, idempotency_key=idempotency_key).first()
+    if not existing:
+        return
+    if _movement_matches(
+        existing,
+        movement_type=movement_type,
+        warehouse_id=warehouse_id,
+        item_id=item_id,
+        qty_delta=qty_delta,
+        unit_cost=unit_cost,
+    ):
+        return
+    raise SyncRejectError(
+        "INVENTORY_IDEMPOTENCY_CONFLICT",
+        {"idempotency_key": idempotency_key, "existing_movement_id": existing.id},
+    )
 
 
 @register("INVENTORY_MOVEMENT_RECEIVE")
@@ -74,7 +142,7 @@ def handle_inventory_receive(ctx: dict[str, Any], payload: dict[str, Any]) -> Ha
     company_id = int(ctx["company_id"])
     branch_id = ctx.get("branch_id")
     if branch_id is None:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {"branch_id": "required"})
+        raise SyncRejectError("INVENTORY_INVALID_SCOPE", {"branch_id": "required"})
 
     _attach_scope_to_request(request=request, company_id=company_id, branch_id=int(branch_id))
 
@@ -84,7 +152,17 @@ def handle_inventory_receive(ctx: dict[str, Any], payload: dict[str, Any]) -> Ha
     unit_cost = _require_decimal(payload, "unit_cost")
 
     note = _optional_str(payload, "note")
-    idempotency_key = _optional_str(payload, "idempotency_key") or str(ctx["command_id"])
+    explicit_idempotency = _optional_str(payload, "idempotency_key")
+    _ensure_idempotency_match(
+        company_id=company_id,
+        idempotency_key=explicit_idempotency,
+        movement_type=MovementType.RECEIVE,
+        warehouse_id=warehouse_id,
+        item_id=item_id,
+        qty_delta=inv_services._q_qty(qty),
+        unit_cost=inv_services._q_cost(unit_cost),
+    )
+    idempotency_key = explicit_idempotency or str(ctx["command_id"])
 
     try:
         res = inv_services.post_receive(
@@ -98,7 +176,7 @@ def handle_inventory_receive(ctx: dict[str, Any], payload: dict[str, Any]) -> Ha
             note=note,
         )
     except ValueError as e:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {"detail": str(e)})
+        raise _map_inventory_error(e)
 
     return {
         "refs": {
@@ -115,7 +193,7 @@ def handle_inventory_issue(ctx: dict[str, Any], payload: dict[str, Any]) -> Hand
     company_id = int(ctx["company_id"])
     branch_id = ctx.get("branch_id")
     if branch_id is None:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {"branch_id": "required"})
+        raise SyncRejectError("INVENTORY_INVALID_SCOPE", {"branch_id": "required"})
 
     _attach_scope_to_request(request=request, company_id=company_id, branch_id=int(branch_id))
 
@@ -125,7 +203,16 @@ def handle_inventory_issue(ctx: dict[str, Any], payload: dict[str, Any]) -> Hand
     allow_negative = _optional_bool(payload, "allow_negative", False)
 
     note = _optional_str(payload, "note")
-    idempotency_key = _optional_str(payload, "idempotency_key") or str(ctx["command_id"])
+    explicit_idempotency = _optional_str(payload, "idempotency_key")
+    _ensure_idempotency_match(
+        company_id=company_id,
+        idempotency_key=explicit_idempotency,
+        movement_type=MovementType.ISSUE,
+        warehouse_id=warehouse_id,
+        item_id=item_id,
+        qty_delta=inv_services._q_qty(Decimal("0") - qty),
+    )
+    idempotency_key = explicit_idempotency or str(ctx["command_id"])
 
     try:
         res = inv_services.post_issue(
@@ -139,7 +226,7 @@ def handle_inventory_issue(ctx: dict[str, Any], payload: dict[str, Any]) -> Hand
             note=note,
         )
     except ValueError as e:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {"detail": str(e)})
+        raise _map_inventory_error(e)
 
     return {
         "refs": {
@@ -156,7 +243,7 @@ def handle_inventory_adjust(ctx: dict[str, Any], payload: dict[str, Any]) -> Han
     company_id = int(ctx["company_id"])
     branch_id = ctx.get("branch_id")
     if branch_id is None:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {"branch_id": "required"})
+        raise SyncRejectError("INVENTORY_INVALID_SCOPE", {"branch_id": "required"})
 
     _attach_scope_to_request(request=request, company_id=company_id, branch_id=int(branch_id))
 
@@ -165,7 +252,15 @@ def handle_inventory_adjust(ctx: dict[str, Any], payload: dict[str, Any]) -> Han
     new_qty_on_hand = _require_decimal(payload, "new_qty_on_hand")
 
     note = _optional_str(payload, "note")
-    idempotency_key = _optional_str(payload, "idempotency_key") or str(ctx["command_id"])
+    explicit_idempotency = _optional_str(payload, "idempotency_key")
+    _ensure_idempotency_match(
+        company_id=company_id,
+        idempotency_key=explicit_idempotency,
+        movement_type=MovementType.ADJUST,
+        warehouse_id=warehouse_id,
+        item_id=item_id,
+    )
+    idempotency_key = explicit_idempotency or str(ctx["command_id"])
 
     try:
         res = inv_services.post_adjust(
@@ -178,7 +273,7 @@ def handle_inventory_adjust(ctx: dict[str, Any], payload: dict[str, Any]) -> Han
             note=note,
         )
     except ValueError as e:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {"detail": str(e)})
+        raise _map_inventory_error(e)
 
     return {
         "refs": {
@@ -195,7 +290,7 @@ def handle_inventory_transfer(ctx: dict[str, Any], payload: dict[str, Any]) -> H
     company_id = int(ctx["company_id"])
     branch_id = ctx.get("branch_id")
     if branch_id is None:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {"branch_id": "required"})
+        raise SyncRejectError("INVENTORY_INVALID_SCOPE", {"branch_id": "required"})
 
     _attach_scope_to_request(request=request, company_id=company_id, branch_id=int(branch_id))
 
@@ -205,7 +300,16 @@ def handle_inventory_transfer(ctx: dict[str, Any], payload: dict[str, Any]) -> H
     qty = _require_decimal(payload, "qty")
 
     note = _optional_str(payload, "note")
-    idempotency_key = _optional_str(payload, "idempotency_key") or str(ctx["command_id"])
+    explicit_idempotency = _optional_str(payload, "idempotency_key")
+    _ensure_idempotency_match(
+        company_id=company_id,
+        idempotency_key=explicit_idempotency,
+        movement_type=MovementType.TRANSFER_OUT,
+        warehouse_id=from_warehouse_id,
+        item_id=item_id,
+        qty_delta=inv_services._q_qty(Decimal("0") - qty),
+    )
+    idempotency_key = explicit_idempotency or str(ctx["command_id"])
 
     try:
         res = inv_services.post_transfer(
@@ -219,7 +323,14 @@ def handle_inventory_transfer(ctx: dict[str, Any], payload: dict[str, Any]) -> H
             note=note,
         )
     except ValueError as e:
-        raise SyncRejectError("SYNC_SCHEMA_INVALID", {"detail": str(e)})
+        raise _map_inventory_error(e)
+
+    if res.get("idempotent"):
+        return {
+            "refs": {
+                "transfer_out_movement_id": res.get("movement_id"),
+            }
+        }
 
     return {
         "refs": {
@@ -228,3 +339,23 @@ def handle_inventory_transfer(ctx: dict[str, Any], payload: dict[str, Any]) -> H
             "avg_cost": res.get("avg_cost"),
         }
     }
+
+
+@register("INVENTORY.MOVEMENT.RECEIVE")
+def handle_inventory_receive_v2(ctx: dict[str, Any], payload: dict[str, Any]) -> HandlerResult:
+    return handle_inventory_receive(ctx, payload)
+
+
+@register("INVENTORY.MOVEMENT.ISSUE")
+def handle_inventory_issue_v2(ctx: dict[str, Any], payload: dict[str, Any]) -> HandlerResult:
+    return handle_inventory_issue(ctx, payload)
+
+
+@register("INVENTORY.MOVEMENT.ADJUST")
+def handle_inventory_adjust_v2(ctx: dict[str, Any], payload: dict[str, Any]) -> HandlerResult:
+    return handle_inventory_adjust(ctx, payload)
+
+
+@register("INVENTORY.TRANSFER")
+def handle_inventory_transfer_v2(ctx: dict[str, Any], payload: dict[str, Any]) -> HandlerResult:
+    return handle_inventory_transfer(ctx, payload)
