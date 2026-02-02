@@ -471,3 +471,124 @@ def test_sync_inventory_insufficient_stock_rejected():
     assert rr.data["results"][0]["status"] == "APPLIED"
     assert rr.data["results"][1]["status"] == "REJECTED"
     assert rr.data["results"][1]["reason"] == "INVENTORY_INSUFFICIENT_STOCK"
+
+
+@pytest.mark.django_db
+def test_sync_inventory_invalid_signature_rejected():
+    env = _setup_inventory_device()
+    company = env["company"]
+    branch = env["branch"]
+    device_client = env["device_client"]
+    device_id = env["device_id"]
+    priv = env["priv"]
+    wh_id = env["warehouse_id"]
+    item_id = env["item_id"]
+
+    occurred = occurred_at_canonical(timezone.now())
+    payload = {"warehouse_id": wh_id, "item_id": item_id, "qty": "1.0000", "unit_cost": "1.000000"}
+
+    cmd = _build_command(
+        priv=priv,
+        command_id=str(uuid.uuid4()),
+        command_type="INVENTORY_MOVEMENT_RECEIVE",
+        company_id=company.id,
+        branch_id=branch.id,
+        occurred_at=occurred,
+        sequence=1,
+        payload=payload,
+    )
+    cmd["command_sig"] = "AAAA"  # firma inválida
+
+    batch = _build_batch(priv=priv, device_id=device_id, commands=[cmd])
+    rr = device_client.post("/api/sync/batch/", batch, format="json", HTTP_X_DEVICE_ID=device_id)
+    assert rr.status_code == 200
+    assert rr.data["results"][0]["status"] == "REJECTED"
+    assert rr.data["results"][0]["reason"] == "SYNC_INVALID_SIGNATURE"
+
+
+@pytest.mark.django_db
+def test_sync_inventory_payload_mismatch_rejected():
+    env = _setup_inventory_device()
+    company = env["company"]
+    branch = env["branch"]
+    device_client = env["device_client"]
+    device_id = env["device_id"]
+    priv = env["priv"]
+    wh_id = env["warehouse_id"]
+    item_id = env["item_id"]
+
+    occurred = occurred_at_canonical(timezone.now())
+    cmd_id = str(uuid.uuid4())
+
+    payload1 = {"warehouse_id": wh_id, "item_id": item_id, "qty": "2.0000", "unit_cost": "1.000000"}
+    payload2 = {"warehouse_id": wh_id, "item_id": item_id, "qty": "3.0000", "unit_cost": "1.000000"}
+
+    cmd1 = _build_command(
+        priv=priv,
+        command_id=cmd_id,
+        command_type="INVENTORY_MOVEMENT_RECEIVE",
+        company_id=company.id,
+        branch_id=branch.id,
+        occurred_at=occurred,
+        sequence=1,
+        payload=payload1,
+    )
+    cmd2 = _build_command(
+        priv=priv,
+        command_id=cmd_id,
+        command_type="INVENTORY_MOVEMENT_RECEIVE",
+        company_id=company.id,
+        branch_id=branch.id,
+        occurred_at=occurred,
+        sequence=2,
+        payload=payload2,
+    )
+
+    batch = _build_batch(priv=priv, device_id=device_id, commands=[cmd1, cmd2])
+    rr = device_client.post("/api/sync/batch/", batch, format="json", HTTP_X_DEVICE_ID=device_id)
+    assert rr.status_code == 200
+    assert rr.data["results"][0]["status"] == "APPLIED"
+    assert rr.data["results"][1]["status"] == "REJECTED"
+    assert rr.data["results"][1]["reason"] == "SYNC_PAYLOAD_MISMATCH"
+
+
+@pytest.mark.django_db
+def test_sync_inventory_batch_limit_exceeded_rejected():
+    env = _setup_inventory_device()
+    company = env["company"]
+    branch = env["branch"]
+    device_client = env["device_client"]
+    device_id = env["device_id"]
+    priv = env["priv"]
+    wh_id = env["warehouse_id"]
+    item_id = env["item_id"]
+
+    occurred = occurred_at_canonical(timezone.now())
+    commands = []
+    for i in range(101):
+        payload = {
+            "warehouse_id": wh_id,
+            "item_id": item_id,
+            "qty": "1.0000",
+            "unit_cost": "1.000000",
+        }
+        commands.append(
+            _build_command(
+                priv=priv,
+                command_id=str(uuid.uuid4()),
+                command_type="INVENTORY_MOVEMENT_RECEIVE",
+                company_id=company.id,
+                branch_id=branch.id,
+                occurred_at=occurred,
+                sequence=i + 1,
+                payload=payload,
+            )
+        )
+
+    batch = _build_batch(priv=priv, device_id=device_id, commands=commands)
+    rr = device_client.post("/api/sync/batch/", batch, format="json", HTTP_X_DEVICE_ID=device_id)
+    assert rr.status_code == 200
+    assert rr.data["results"] == []
+    assert rr.data["summary"]["received"] == 101
+    assert rr.data["summary"]["rejected"] == 101
+    assert rr.data["summary"]["applied"] == 0
