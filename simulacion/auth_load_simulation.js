@@ -1,5 +1,5 @@
 import http from "k6/http";
-import { check, sleep } from "k6";
+import { check, sleep, fail } from "k6";
 import crypto from "k6/crypto";
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8000/api";
@@ -14,6 +14,9 @@ const USER_PASSWORD = __ENV.USER_PASSWORD || "Pass12345__Strong";
 
 const CSRF_COOKIE_NAME = __ENV.CSRF_COOKIE_NAME || "nt_csrf";
 const AUTH_TRANSPORT = "cookie";
+const REQUIRE_ADMIN_TOTP = String(__ENV.REQUIRE_ADMIN_TOTP || "0") === "1";
+const REQUIRE_CSRF_COOKIE = String(__ENV.REQUIRE_CSRF_COOKIE || "0") === "1";
+const CSRF_CLEAR_REQUIRED = String(__ENV.CSRF_CLEAR_REQUIRED || "0") === "1";
 
 export const options = {
   scenarios: {
@@ -147,6 +150,33 @@ function getCookieValue(jar, name) {
   return entry[0].value;
 }
 
+function checkCookiesCleared(res, includeCsrf) {
+  const setCookies = res.headers && res.headers["Set-Cookie"];
+  if (!setCookies) return false;
+
+  const headers = Array.isArray(setCookies) ? setCookies : [setCookies];
+  const targets = ["nt_access", "nt_refresh"];
+  if (includeCsrf) targets.push(CSRF_COOKIE_NAME);
+
+  const isCleared = (name) =>
+    headers.some(
+      (h) =>
+        h.includes(`${name}=`) &&
+        (h.includes("Max-Age=0") || h.includes("Expires=Thu, 01 Jan 1970")),
+    );
+
+  return targets.every(isCleared);
+}
+
+function requireValue(label, value, required) {
+  const ok = !!value;
+  check(null, { [label]: () => ok });
+  if (required && !ok) {
+    fail(`${label} missing`);
+  }
+  return ok;
+}
+
 function loginCookie(username, password) {
   const res = http.post(
     `${BASE_URL}/auth/login/`,
@@ -200,7 +230,13 @@ function logoutWithCookies(csrfToken) {
 }
 
 export function twoFaCookieCycle() {
-  if (!ADMIN_TOTP_SECRET) {
+  if (
+    !requireValue(
+      "admin totp secret provided",
+      ADMIN_TOTP_SECRET,
+      REQUIRE_ADMIN_TOTP,
+    )
+  ) {
     sleep(0.5);
     return;
   }
@@ -231,7 +267,7 @@ export function twoFaCookieCycle() {
   });
 
   const csrfToken = getCookieValue(jar, CSRF_COOKIE_NAME);
-  if (!csrfToken) {
+  if (!requireValue("csrf cookie present", csrfToken, REQUIRE_CSRF_COOKIE)) {
     sleep(0.1);
     return;
   }
@@ -244,6 +280,8 @@ export function twoFaCookieCycle() {
   const logoutRes = logoutWithCookies(csrfToken);
   check(logoutRes, {
     "logout status 204": (r) => r && r.status === 204,
+    "logout cookies cleared": (r) =>
+      checkCookiesCleared(r, CSRF_CLEAR_REQUIRED),
   });
 
   sleep(Number(__ENV.SLEEP || 0.2));
@@ -267,7 +305,7 @@ export function basicCookieCycle() {
   });
 
   const csrfToken = getCookieValue(jar, CSRF_COOKIE_NAME);
-  if (!csrfToken) {
+  if (!requireValue("csrf cookie present", csrfToken, REQUIRE_CSRF_COOKIE)) {
     sleep(0.1);
     return;
   }
@@ -280,6 +318,8 @@ export function basicCookieCycle() {
   const logoutRes = logoutWithCookies(csrfToken);
   check(logoutRes, {
     "logout status 204": (r) => r && r.status === 204,
+    "logout cookies cleared": (r) =>
+      checkCookiesCleared(r, CSRF_CLEAR_REQUIRED),
   });
 
   sleep(Number(__ENV.SLEEP || 0.2));

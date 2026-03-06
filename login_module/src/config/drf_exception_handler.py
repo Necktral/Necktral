@@ -13,6 +13,7 @@ from rest_framework.views import exception_handler as drf_exception_handler
 
 from config.error_envelope import build_error_envelope
 from apps.audit.writer import write_event
+from apps.audit.deny_aggregator import aggregate_deny
 
 
 def _actor_user(request):
@@ -113,17 +114,35 @@ def custom_exception_handler(exc, context):
     if required_scope is not None:
         metadata["required_scope"] = required_scope
 
-    write_event(
-        request=request,
-        event_type="AUTH_ACCESS_DENIED",
-        reason_code=reason_code,
-        actor_user=actor,
-        subject_type=subject_type,
-        subject_id=subject_id,
-        metadata=metadata,
-    )
+    agg = None
     if request is not None:
-        setattr(request, "_audit_access_denied_written", True)
+        ip = request.META.get("HTTP_X_FORWARDED_FOR")
+        if ip:
+            ip = ip.split(",")[0].strip()
+        else:
+            ip = request.META.get("REMOTE_ADDR", "")
+        user_id = str(getattr(actor, "id", "")) if actor else ""
+        path = getattr(request, "path", "") or ""
+        cache_key = f"deny:{ip}:{user_id}:{path}:{status_code}"
+        agg = aggregate_deny(key=cache_key, ttl_seconds=60, every=50)
+
+    if agg is None:
+        if request is not None:
+            setattr(request, "_audit_access_denied_suppressed", True)
+    else:
+        metadata["count"] = agg.count
+        metadata["window_seconds"] = agg.window_seconds
+        write_event(
+            request=request,
+            event_type="AUTH_ACCESS_DENIED",
+            reason_code=reason_code,
+            actor_user=actor,
+            subject_type=subject_type,
+            subject_id=subject_id,
+            metadata=metadata,
+        )
+        if request is not None:
+            setattr(request, "_audit_access_denied_written", True)
 
     # Envelope contractual
     if isinstance(getattr(response, "data", None), dict) and "error" in response.data:

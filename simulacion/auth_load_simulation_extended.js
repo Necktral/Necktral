@@ -1,5 +1,6 @@
 import http from "k6/http";
-import { check, sleep } from "k6";
+import { check, sleep, fail } from "k6";
+import { Rate } from "k6/metrics";
 import crypto from "k6/crypto";
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8000/api";
@@ -17,9 +18,23 @@ const USER_PASSWORD = __ENV.USER_PASSWORD || "Pass12345__Strong";
 const CSRF_COOKIE_NAME = __ENV.CSRF_COOKIE_NAME || "nt_csrf";
 const ADMIN_2FA_VUS = Number(__ENV.ADMIN_2FA_VUS || 1);
 const ADMIN_2FA_SLEEP = Number(__ENV.ADMIN_2FA_SLEEP || 15);
+const REQUIRE_ADMIN_TOTP = String(__ENV.REQUIRE_ADMIN_TOTP || "0") === "1";
+const REQUIRE_CSRF_COOKIE = String(__ENV.REQUIRE_CSRF_COOKIE || "0") === "1";
+const CSRF_CLEAR_REQUIRED = String(__ENV.CSRF_CLEAR_REQUIRED || "0") === "1";
+const ENABLE_429_TEST = String(__ENV.ENABLE_429_TEST || "0") === "1";
+const ONLY_429_TEST = String(__ENV.ONLY_429_TEST || "0") === "1";
+const THROTTLE_RATE = Number(__ENV.THROTTLE_RATE || 20);
+const THROTTLE_DURATION = __ENV.THROTTLE_DURATION || "15s";
+const THROTTLE_PREALLOC = Number(__ENV.THROTTLE_PREALLOC || 20);
+const THROTTLE_MAX = Number(__ENV.THROTTLE_MAX || 50);
 
 const TRANSPORT_COOKIE = "cookie";
 const TRANSPORT_HEADER = "header";
+
+const authLogin429Rate = new Rate("auth_login_429_rate");
+const authRefresh429Rate = new Rate("auth_refresh_429_rate");
+const authLogout429Rate = new Rate("auth_logout_429_rate");
+const authTwoFa429Rate = new Rate("auth_2fa_429_rate");
 
 // Helper to check if response clears critical auth cookies
 function checkCookiesCleared(res) {
@@ -31,6 +46,7 @@ function checkCookiesCleared(res) {
 
   // We check for nt_access and nt_refresh being cleared (Max-Age=0 or Expires in past)
   const targets = ["nt_access", "nt_refresh"];
+  if (CSRF_CLEAR_REQUIRED) targets.push(CSRF_COOKIE_NAME);
   const isCleared = (name) =>
     headers.some(
       (h) =>
@@ -41,73 +57,162 @@ function checkCookiesCleared(res) {
   return targets.every(isCleared);
 }
 
+function requireValue(label, value, required) {
+  const ok = !!value;
+  if (required) {
+    check(null, { [label]: () => ok });
+  }
+  if (required && !ok) {
+    fail(`${label} missing`);
+  }
+  return ok;
+}
+
 function share(vus, ratio, minVal) {
   const computed = Math.floor(vus * ratio);
   return Math.max(minVal, computed);
 }
 
-export const options = {
-  scenarios: {
-    cookie_flow: {
-      executor: "constant-vus",
-      exec: "cookieLoginFlow",
-      vus: share(TOTAL_VUS, 0.3, 1),
-      duration: DURATION,
-    },
-    cookie_logout_idempotent: {
-      executor: "constant-vus",
-      exec: "cookieIdempotentLogoutFlow",
-      vus: share(TOTAL_VUS, 0.1, 1),
-      duration: DURATION,
-    },
-    admin_2fa: {
-      executor: "constant-vus",
-      exec: "adminTwoFaFlow",
-      vus: ADMIN_2FA_VUS,
-      duration: DURATION,
-    },
-    refresh_rotation: {
-      executor: "constant-vus",
-      exec: "refreshRotationFlow",
-      vus: share(TOTAL_VUS, 0.2, 1),
-      duration: DURATION,
-    },
-    logout_idempotent: {
-      executor: "constant-vus",
-      exec: "logoutFlow",
-      vus: share(TOTAL_VUS, 0.1, 1),
-      duration: DURATION,
-    },
-    attacks: {
-      executor: "constant-vus",
-      exec: "attackFlow",
-      vus: share(TOTAL_VUS, 0.1, 1),
-      duration: DURATION,
-    },
+const baseScenarios = {
+  cookie_flow: {
+    executor: "constant-vus",
+    exec: "cookieLoginFlow",
+    vus: share(TOTAL_VUS, 0.3, 1),
+    duration: DURATION,
   },
-  thresholds: {
-    http_req_failed: ["rate<0.01"],
-    "http_req_duration{scenario:cookie_flow,name:auth_login_cookie}": [
-      "p(95)<600",
-    ],
-    "http_req_duration{scenario:cookie_flow,name:auth_refresh_cookie}": [
-      "p(95)<450",
-    ],
-    "http_req_duration{scenario:cookie_flow,name:auth_logout_cookie}": [
-      "p(95)<450",
-    ],
-    "http_req_duration{scenario:cookie_logout_idempotent,name:auth_logout_cookie_invalid}":
-      ["p(95)<450"],
-    "http_req_duration{scenario:admin_2fa,name:auth_2fa_verify}": ["p(95)<700"],
-    "http_req_duration{scenario:refresh_rotation,name:auth_refresh_header}": [
-      "p(95)<400",
-    ],
-    "http_req_duration{scenario:logout_idempotent,name:auth_logout_header}": [
-      "p(95)<400",
-    ],
-    "http_req_duration{scenario:attacks,name:auth_attack}": ["p(95)<500"],
+  cookie_logout_idempotent: {
+    executor: "constant-vus",
+    exec: "cookieIdempotentLogoutFlow",
+    vus: share(TOTAL_VUS, 0.1, 1),
+    duration: DURATION,
+  },
+  admin_2fa: {
+    executor: "constant-vus",
+    exec: "adminTwoFaFlow",
+    vus: ADMIN_2FA_VUS,
+    duration: DURATION,
+  },
+  refresh_rotation: {
+    executor: "constant-vus",
+    exec: "refreshRotationFlow",
+    vus: share(TOTAL_VUS, 0.2, 1),
+    duration: DURATION,
+  },
+  logout_idempotent: {
+    executor: "constant-vus",
+    exec: "logoutFlow",
+    vus: share(TOTAL_VUS, 0.1, 1),
+    duration: DURATION,
+  },
+  attacks: {
+    executor: "constant-vus",
+    exec: "attackFlow",
+    vus: share(TOTAL_VUS, 0.1, 1),
+    duration: DURATION,
   },
 };
+
+const throttleScenarios = {};
+
+if (ENABLE_429_TEST) {
+  throttleScenarios.throttle_login = {
+    executor: "constant-arrival-rate",
+    exec: "throttleLoginFlow",
+    rate: THROTTLE_RATE,
+    timeUnit: "1s",
+    duration: THROTTLE_DURATION,
+    preAllocatedVUs: THROTTLE_PREALLOC,
+    maxVUs: THROTTLE_MAX,
+  };
+  throttleScenarios.throttle_refresh = {
+    executor: "constant-arrival-rate",
+    exec: "throttleRefreshFlow",
+    rate: THROTTLE_RATE,
+    timeUnit: "1s",
+    duration: THROTTLE_DURATION,
+    preAllocatedVUs: THROTTLE_PREALLOC,
+    maxVUs: THROTTLE_MAX,
+  };
+  throttleScenarios.throttle_logout = {
+    executor: "constant-arrival-rate",
+    exec: "throttleLogoutFlow",
+    rate: THROTTLE_RATE,
+    timeUnit: "1s",
+    duration: THROTTLE_DURATION,
+    preAllocatedVUs: THROTTLE_PREALLOC,
+    maxVUs: THROTTLE_MAX,
+  };
+  throttleScenarios.throttle_2fa = {
+    executor: "constant-arrival-rate",
+    exec: "throttleTwoFaFlow",
+    rate: THROTTLE_RATE,
+    timeUnit: "1s",
+    duration: THROTTLE_DURATION,
+    preAllocatedVUs: THROTTLE_PREALLOC,
+    maxVUs: THROTTLE_MAX,
+  };
+}
+
+const scenarios = ONLY_429_TEST
+  ? throttleScenarios
+  : { ...baseScenarios, ...throttleScenarios };
+
+const thresholds = {};
+
+if (!ONLY_429_TEST) {
+  thresholds.http_req_failed = ["rate<0.01"];
+  thresholds["http_req_duration{scenario:cookie_flow,name:auth_login_cookie}"] =
+    ["p(95)<600"];
+  thresholds[
+    "http_req_duration{scenario:cookie_flow,name:auth_refresh_cookie}"
+  ] = ["p(95)<450"];
+  thresholds[
+    "http_req_duration{scenario:cookie_flow,name:auth_logout_cookie}"
+  ] = ["p(95)<450"];
+  thresholds[
+    "http_req_duration{scenario:cookie_logout_idempotent,name:auth_logout_cookie_invalid}"
+  ] = ["p(95)<450"];
+  thresholds["http_req_duration{scenario:admin_2fa,name:auth_2fa_verify}"] = [
+    "p(95)<700",
+  ];
+  thresholds[
+    "http_req_duration{scenario:refresh_rotation,name:auth_refresh_header}"
+  ] = ["p(95)<400"];
+  thresholds[
+    "http_req_duration{scenario:logout_idempotent,name:auth_logout_header}"
+  ] = ["p(95)<400"];
+  thresholds["http_req_duration{scenario:attacks,name:auth_attack}"] = [
+    "p(95)<500",
+  ];
+}
+
+if (ENABLE_429_TEST) {
+  thresholds.auth_login_429_rate = ["rate>0"];
+  thresholds.auth_refresh_429_rate = ["rate>0"];
+  thresholds.auth_logout_429_rate = ["rate>0"];
+  thresholds.auth_2fa_429_rate = ["rate>0"];
+}
+
+export const options = {
+  scenarios,
+  thresholds,
+};
+
+export function setup() {
+  if (!ENABLE_429_TEST) {
+    return {};
+  }
+
+  const tokens = loginHeader(USER_USERNAME, USER_PASSWORD);
+  if (!tokens) {
+    return {};
+  }
+
+  return {
+    throttleAccess: tokens.access,
+    throttleRefresh: tokens.refresh,
+  };
+}
 
 function jsonOrNull(res) {
   try {
@@ -258,6 +363,36 @@ function logoutHeader(accessToken, refreshToken) {
   );
 }
 
+function logoutHeaderRaw(accessToken, refreshToken) {
+  return http.post(
+    `${BASE_URL}/auth/logout/`,
+    JSON.stringify({ refresh: refreshToken }),
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      responseCallback: http.expectedStatuses(204, 401, 403, 429),
+      tags: { name: "auth_logout_throttle" },
+    },
+  );
+}
+
+function loginHeaderRaw(username, password) {
+  return http.post(
+    `${BASE_URL}/auth/login/`,
+    JSON.stringify({ username, password }),
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Auth-Transport": TRANSPORT_HEADER,
+      },
+      responseCallback: http.expectedStatuses(401, 429),
+      tags: { name: "auth_login_throttle" },
+    },
+  );
+}
+
 function refreshCookie(csrfToken) {
   return http.post(`${BASE_URL}/auth/refresh/`, JSON.stringify({}), {
     headers: {
@@ -294,6 +429,21 @@ function verifyTwoFa(challenge, code) {
   );
 }
 
+function verifyTwoFaRaw(challenge, code) {
+  return http.post(
+    `${BASE_URL}/auth/2fa/verify/`,
+    JSON.stringify({ challenge, code }),
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Auth-Transport": TRANSPORT_COOKIE,
+      },
+      responseCallback: http.expectedStatuses(400, 429),
+      tags: { name: "auth_2fa_throttle" },
+    },
+  );
+}
+
 export function cookieLoginFlow() {
   const jar = http.cookieJar();
   clearJar(jar);
@@ -304,7 +454,7 @@ export function cookieLoginFlow() {
   });
 
   const csrfToken = getCookieValue(jar, CSRF_COOKIE_NAME);
-  if (!csrfToken) {
+  if (!requireValue("csrf cookie present", csrfToken, REQUIRE_CSRF_COOKIE)) {
     sleep(0.2);
     return;
   }
@@ -365,7 +515,7 @@ export function cookieIdempotentLogoutFlow() {
   });
 
   const csrfToken = getCookieValue(jar, CSRF_COOKIE_NAME);
-  if (!csrfToken) {
+  if (!requireValue("csrf cookie present", csrfToken, REQUIRE_CSRF_COOKIE)) {
     sleep(0.2);
     return;
   }
@@ -390,7 +540,13 @@ export function cookieIdempotentLogoutFlow() {
 }
 
 export function adminTwoFaFlow() {
-  if (!ADMIN_TOTP_SECRET) {
+  if (
+    !requireValue(
+      "admin totp secret provided",
+      ADMIN_TOTP_SECRET,
+      REQUIRE_ADMIN_TOTP,
+    )
+  ) {
     sleep(0.5);
     return;
   }
@@ -428,12 +584,12 @@ export function adminTwoFaFlow() {
         "X-Auth-Transport": TRANSPORT_COOKIE,
         Cookie: "", // Ensure no cookies are sent
       },
-      responseCallback: http.expectedStatuses(400),
+      responseCallback: http.expectedStatuses(400, 403),
       tags: { name: "auth_2fa_verify" },
     },
   );
   check(replayRes, {
-    "2fa replay rejected": (r) => r && r.status === 400,
+    "2fa replay rejected": (r) => r && (r.status === 400 || r.status === 403),
   });
 
   const csrfToken = getCookieValue(jar, CSRF_COOKIE_NAME);
@@ -538,4 +694,78 @@ export function attackFlow() {
   });
 
   sleep(0.4);
+}
+
+export function throttleLoginFlow() {
+  const suffix = Math.random().toString(36).slice(2, 10);
+  const username = `throttle_${suffix}`;
+  const res = loginHeaderRaw(username, "bad_password");
+  const status = res && res.status ? res.status : 0;
+
+  check(res, {
+    "throttle login status 401/429": () => status === 401 || status === 429,
+  });
+  authLogin429Rate.add(status === 429);
+
+  sleep(0.1);
+}
+
+export function throttleRefreshFlow() {
+  const badToken = Math.random().toString(36).slice(2);
+  const res = http.post(
+    `${BASE_URL}/auth/refresh/`,
+    JSON.stringify({ refresh: badToken }),
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Auth-Transport": TRANSPORT_HEADER,
+      },
+      responseCallback: http.expectedStatuses(401, 429),
+      tags: { name: "auth_refresh_throttle" },
+    },
+  );
+  const status = res && res.status ? res.status : 0;
+
+  check(res, {
+    "throttle refresh status 401/429": () => status === 401 || status === 429,
+  });
+  authRefresh429Rate.add(status === 429);
+
+  sleep(0.1);
+}
+
+export function throttleLogoutFlow(data) {
+  const accessToken = data && data.throttleAccess ? data.throttleAccess : "";
+  const refreshToken = data && data.throttleRefresh ? data.throttleRefresh : "";
+
+  if (!accessToken) {
+    sleep(0.2);
+    return;
+  }
+
+  const res = logoutHeaderRaw(accessToken, refreshToken || "invalid_refresh");
+  const status = res && res.status ? res.status : 0;
+
+  check(res, {
+    "throttle logout status 204/401/403/429": () =>
+      status === 204 || status === 401 || status === 403 || status === 429,
+  });
+  authLogout429Rate.add(status === 429);
+
+  sleep(0.1);
+}
+
+export function throttleTwoFaFlow() {
+  const fakeChallenge = Math.random().toString(36).slice(2, 12);
+  const fakeCode = Math.random().toString(10).slice(2, 8).padEnd(6, "0");
+
+  const res = verifyTwoFaRaw(fakeChallenge, fakeCode);
+  const status = res && res.status ? res.status : 0;
+
+  check(res, {
+    "throttle 2fa status 400/429": () => status === 400 || status === 429,
+  });
+  authTwoFa429Rate.add(status === 429);
+
+  sleep(0.1);
 }

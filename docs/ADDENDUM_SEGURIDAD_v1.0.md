@@ -55,6 +55,7 @@ Este plan surge de un debate interno sobre **excelencia tecnica vs. riesgo siste
 
 - Autenticacion por cookies HttpOnly + CSRF en SPA; sin tokens en `localStorage`.
 - CSP base enforce + report-only para `connect-src` (endpoint `/api/csp/report/`).
+- Nginx emite CSP report-only con `report-uri /api/csp/report/` para el frontend.
 - Refresh tokens persistidos y revocables por sesion (rotacion y blacklist).
 - Politica de contrasenas reforzada (longitud + complejidad).
 - 2FA TOTP para cuentas admin con setup y QR (Anti-Replay garantizado).

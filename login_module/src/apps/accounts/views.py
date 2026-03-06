@@ -19,11 +19,16 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from apps.audit.writer import write_event
 from config.throttling import AuthLoginRateThrottle
 
+from apps.accounts.bootstrap_guard import enforce_bootstrap_guard
+from apps.common.permissions import rbac_permission
+
 from apps.iam.models import AdminGrant, OrgUnit, UserMembership
 from apps.iam.selectors import build_acl_snapshot
 from apps.org.models import BranchProfile, CompanyProfile
 from apps.rbac.models import Role, RoleAssignment
 from apps.rbac.seed_v01 import seed_rbac_v01
+from modulos.estacion_servicios.services import provision_fuel_inventory_for_branch
+from modulos.facturacion.services import provision_billing_sequences_for_branch
 
 from .cookies import clear_auth_cookies, set_auth_cookies
 from .models import RefreshTokenSession, TwoFactorChallenge
@@ -35,6 +40,7 @@ from .serializers import (
     PasswordChangeSerializer,
     TwoFactorSetupConfirmSerializer,
     TwoFactorVerifySerializer,
+    AxesUnlockSerializer,
 )
 
 User = get_user_model()
@@ -463,6 +469,48 @@ class LogoutView(APIView):
         return response
 
 
+class AxesUnlockView(APIView):
+    permission_classes = [rbac_permission("auth.lockout.reset")]
+    throttle_scope = "auth_sensitive"
+
+    def post(self, request):
+        s = AxesUnlockSerializer(data=request.data)
+        if not s.is_valid():
+            return Response(s.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        username = (s.validated_data.get("username") or "").strip() or None
+        ip_address = (s.validated_data.get("ip_address") or "").strip() or None
+
+        try:
+            from axes.helpers import reset
+
+            reset(username=username, ip_address=ip_address)
+        except Exception:
+            try:
+                from axes.models import AccessAttempt
+
+                qs = AccessAttempt.objects.all()
+                if username:
+                    qs = qs.filter(username=username)
+                if ip_address:
+                    qs = qs.filter(ip_address=ip_address)
+                qs.delete()
+            except Exception:
+                return Response({"detail": "No se pudo desbloquear."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        write_event(
+            request=request,
+            event_type="AUTH_LOCKOUT_RESET",
+            reason_code="AUTH_OK",
+            actor_user=request.user,
+            subject_type="USER",
+            subject_id=str(username or ""),
+            metadata={"ip_address": ip_address or ""},
+        )
+
+        return Response({"ok": True}, status=status.HTTP_200_OK)
+
+
 class TwoFactorSetupView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_scope = "auth_sensitive"
@@ -674,12 +722,14 @@ class BootstrapStatusView(APIView):
 
 class BootstrapInitView(APIView):
     permission_classes = [AllowAny]
-    throttle_scope = "admin_writes"
+    throttle_scope = "bootstrap"
 
     def post(self, request):
         # contrato: solo se permite cuando no hay usuarios
         if User.objects.exists():
             return Response({"detail": "Sistema ya inicializado."}, status=status.HTTP_400_BAD_REQUEST)
+
+        enforce_bootstrap_guard(request)
 
         s = BootstrapInitSerializer(data=request.data)
         if not s.is_valid():
@@ -766,6 +816,20 @@ class BootstrapOrgView(APIView):
             bp, _ = BranchProfile.objects.get_or_create(branch=branch)
             bp.address = (v.get("branch_address") or "").strip()
             bp.save(update_fields=["address"])
+
+            provision_fuel_inventory_for_branch(
+                request=request,
+                company=company,
+                branch=branch,
+                actor_user=request.user,
+            )
+
+            provision_billing_sequences_for_branch(
+                request=request,
+                company=company,
+                branch=branch,
+                actor_user=request.user,
+            )
 
             # 5) Membership a COMPANY (esto habilita accesibilidad en ACL snapshot)
             UserMembership.objects.get_or_create(

@@ -2,7 +2,7 @@
 	qa-load-user qa-load-reset-axes qa-load-smoke qa-load-stress qa-gate3 \
 	qa-ci-up qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci \
 	qa-backend-ruff qa-backend-mypy qa-backend-tests qa-static-scan qa-frontend-ci qa-audit-integrity \
-	docker-clean docker-clean-all
+	qa-rbac-doctor docker-clean docker-clean-all
 
 BASE_URL ?= http://localhost:8000/api
 K6_IMAGE ?= grafana/k6
@@ -75,6 +75,9 @@ qa-backend-mypy:
 qa-backend-tests:
 	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/login_module && coverage run --rcfile /app/login_module/.coveragerc -m pytest --junitxml=/app/$(QA_REPORTS_DIR)/pytest.xml && coverage xml --rcfile /app/login_module/.coveragerc -o /app/$(QA_REPORTS_DIR)/coverage.xml && coverage report --rcfile /app/login_module/.coveragerc | tee /app/$(QA_REPORTS_DIR)/coverage.txt"
 
+qa-rbac-doctor:
+	docker compose exec -T backend bash -lc "cd /app/login_module && python manage.py seed_rbac_v01 && python manage.py rbac_doctor"
+
 qa-audit-integrity:
 	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/login_module && python manage.py audit_verify_chain --seed-minimal --format json --output /app/$(QA_REPORTS_DIR)/audit_integrity.json"
 
@@ -85,7 +88,7 @@ qa-frontend-ci:
 qa-ci-gate1: qa-ci-up qa-static-scan qa-backend-ruff qa-backend-mypy qa-frontend-ci
 
 # Gate 2: pruebas deterministas (pytest + cobertura)
-qa-ci-gate2: qa-ci-up qa-backend-tests
+qa-ci-gate2: qa-ci-up qa-backend-tests qa-rbac-doctor
 
 # Gate 3: integridad de auditoría (reporte)
 qa-ci-gate3: qa-ci-up qa-audit-integrity

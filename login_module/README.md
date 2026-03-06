@@ -49,6 +49,7 @@ En PROD, Nginx sirve la SPA y proxyea `/api/` hacia el backend.
 ### Bootstrap / Fresh install
 
 - `GET /api/auth/bootstrap/status/` — Indica si la instalación está “fresh” (DB vacía) y permite al frontend evitar llamadas protegidas hasta completar bootstrap.
+- `POST /api/auth/bootstrap/init/` — Requiere `X-Setup-Token` si `DJANGO_INITIAL_SETUP_REQUIRE_TOKEN=1`.
 
 ### HR (IAM desde empleados)
 
@@ -102,6 +103,15 @@ Endpoints (MVP):
 - `POST /api/fuel/sales/<sale_id>/cancel/` — Cancelar venta (permiso: `fuel.sale.void`)
 
 Roles/permisos del módulo se agregan vía `python src/manage.py seed_rbac_v01` (roles `fuel_*`, permisos `fuel.*`).
+
+## Billing (Facturacion)
+
+- Las secuencias de documentos se provisionan por sucursal. Si falta una secuencia, la emision falla.
+- Comando: `python src/manage.py provision_billing_sequences`
+
+## Provision global (todos los modulos)
+
+- Comando: `python src/manage.py provision_all_modules`
 
 ```bash
 docker compose exec -T backend python manage.py audit_verify_chain

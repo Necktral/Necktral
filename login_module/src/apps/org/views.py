@@ -21,6 +21,8 @@ from .serializers import (
     CompanyCreateSerializer,
     CompanyProfileUpdateSerializer,
 )
+from modulos.estacion_servicios.services import provision_fuel_inventory_for_branch
+from modulos.facturacion.services import provision_billing_sequences_for_branch
 
 
 class CompanyListCreateView(MethodThrottleScopeMixin, APIView):
@@ -241,6 +243,20 @@ class BranchListCreateView(MethodThrottleScopeMixin, APIView):
             address=v.get("address", ""),
             phone=v.get("phone", ""),
             email=v.get("email", ""),
+        )
+
+        provision_fuel_inventory_for_branch(
+            request=request,
+            company=company,
+            branch=branch,
+            actor_user=request.user,
+        )
+
+        provision_billing_sequences_for_branch(
+            request=request,
+            company=company,
+            branch=branch,
+            actor_user=request.user,
         )
 
         write_event(

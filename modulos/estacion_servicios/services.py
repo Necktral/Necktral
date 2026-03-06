@@ -13,7 +13,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from datetime import datetime, date, time
 
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.utils import timezone
 from django.db.models import Sum, Count
 from django.utils.dateparse import parse_datetime, parse_date
@@ -30,6 +30,7 @@ from modulos.estacion_servicios.models import (
     FuelShiftStatus,
     FuelPriceUOM,
     FuelVolumeUOM,
+    FuelProduct,
     GALLON_TO_LITER,
 )
 
@@ -46,39 +47,63 @@ def _fuel_inventory_name(product: str) -> str:
     return f"Fuel {str(product).title()}"
 
 
-def _get_or_create_fuel_warehouse(*, company, branch):
+def _get_fuel_warehouse_or_error(*, company, branch):
     from modulos.inventarios.models import Warehouse
 
     wh = Warehouse.objects.filter(company=company, branch=branch, code="FUEL").first()
-    if wh:
-        return wh
-    try:
-        return Warehouse.objects.create(company=company, branch=branch, name="Fuel", code="FUEL", is_active=True)
-    except IntegrityError:
-        # Carrera concurrente: si otro proceso lo creó, lo tomamos.
-        wh2 = Warehouse.objects.filter(company=company, branch=branch, code="FUEL").first()
-        if wh2:
-            return wh2
-        raise
+    if not wh:
+        raise ValidationError({"detail": "Inventario FUEL no provisionado."})
+    return wh
 
 
-def _get_or_create_fuel_item(*, request, company, actor_user, product: str):
+def _get_fuel_item_or_error(*, company, product: str):
     from modulos.inventarios.models import InventoryItem
-    from modulos.inventarios.services import create_item
 
     sku = _fuel_inventory_sku(product)
     item = InventoryItem.objects.filter(company=company, sku=sku).first()
-    if item:
-        return item
-    # Fuel siempre emite/consume en litros canónicos.
-    return create_item(
-        request=request,
-        company=company,
-        actor_user=actor_user,
-        sku=sku,
-        name=_fuel_inventory_name(product),
-        uom="LITER",
-    )
+    if not item:
+        raise ValidationError({"detail": "Inventario FUEL no provisionado."})
+    return item
+
+
+def provision_fuel_inventory_for_branch(*, request=None, company, branch, actor_user=None) -> dict:
+    from modulos.inventarios.models import InventoryItem, Warehouse
+    from modulos.inventarios.services import create_item
+
+    created = {"warehouse": False, "items": 0}
+
+    wh = Warehouse.objects.filter(company=company, branch=branch, code="FUEL").first()
+    if not wh:
+        wh = Warehouse.objects.create(company=company, branch=branch, name="Fuel", code="FUEL", is_active=True)
+        created["warehouse"] = True
+
+    for product, _ in FuelProduct.choices:
+        sku = _fuel_inventory_sku(product)
+        if InventoryItem.objects.filter(company=company, sku=sku).exists():
+            continue
+        create_item(
+            request=request,
+            company=company,
+            actor_user=actor_user,
+            sku=sku,
+            name=_fuel_inventory_name(product),
+            uom="LITER",
+        )
+        created["items"] += 1
+
+    if created["warehouse"] or created["items"]:
+        write_event(
+            request=request,
+            module="FUEL",
+            event_type="FUEL_INVENTORY_PROVISIONED",
+            reason_code="FUEL_OK",
+            actor_user=actor_user,
+            subject_type="BRANCH",
+            subject_id=str(branch.id),
+            metadata={"warehouse": created["warehouse"], "items": created["items"]},
+        )
+
+    return created
 
 
 def _money(x: Decimal) -> Decimal:
@@ -592,8 +617,8 @@ def create_sale(
     from modulos.facturacion.services import create_draft, issue_doc
     from modulos.facturacion.models import DocType
 
-    warehouse = _get_or_create_fuel_warehouse(company=company, branch=branch)
-    item = _get_or_create_fuel_item(request=request, company=company, actor_user=actor_user, product=dispense.product)
+    warehouse = _get_fuel_warehouse_or_error(company=company, branch=branch)
+    item = _get_fuel_item_or_error(company=company, product=dispense.product)
 
     inv_res = post_issue(
         request=request,

@@ -72,6 +72,7 @@ def seed_rbac_v01() -> SeedResult:
         "rbac.permissions.update": "Actualizar permisos.",
         "rbac.assignments.read": "Ver asignaciones de roles.",
         "rbac.assignments.update": "Actualizar asignaciones de roles.",
+        "auth.lockout.reset": "Desbloquear usuarios por lockout (Axes).",
         # Auditoría
         "audit.read": "Leer auditoría.",
         "audit.export": "Exportar auditoría.",
@@ -182,6 +183,7 @@ def seed_rbac_v01() -> SeedResult:
             "rbac.permissions.update",
             "rbac.assignments.read",
             "rbac.assignments.update",
+            "auth.lockout.reset",
             "audit.read",
             "audit.export",
             "sync.device.enroll",

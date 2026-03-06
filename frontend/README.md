@@ -44,6 +44,8 @@ El sistema cuenta con un asistente de instalación automático. **No es necesari
    - Validar credenciales.
    - Configurar la estructura organizacional base (**Holding -> Empresa -> Sucursal**).
 
+Nota: en produccion el bootstrap requiere `X-Setup-Token`. Puedes definir `VITE_SETUP_TOKEN` para precargarlo en el wizard.
+
 ---
 
 ## 💻 Desarrollo Frontend (local)

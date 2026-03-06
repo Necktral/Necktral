@@ -1,0 +1,57 @@
+============================= test session starts ==============================
+platform linux -- Python 3.10.14, pytest-9.0.2, pluggy-1.6.0 -- /home/necktral/ERP_CRM/system_wis/bin/python
+cachedir: .pytest_cache
+django: version: 5.2.9, settings: config.settings.test (from ini)
+rootdir: /home/necktral/ERP_CRM/login_module
+configfile: pytest.ini
+plugins: django-4.11.1, Faker-39.0.0
+collecting ... collected 1 item
+
+login_module/src/tests/test_bootstrap_api.py::test_bootstrap_init_requires_setup_token_when_enabled 
+SETUP    S _fail_for_invalid_template_variable
+SETUP    S django_test_environment
+SETUP    S _session_faker
+SETUP    S django_db_blocker
+      SETUP    C _django_setup_unittest (fixtures used: django_db_blocker)
+        SETUP    F _dj_autoclear_mailbox
+        SETUP    F _django_clear_site_cache
+SETUP    S django_db_use_migrations
+SETUP    S django_db_keepdb
+SETUP    S django_db_createdb
+SETUP    S django_db_modify_db_settings_tox_suffix
+SETUP    S django_db_modify_db_settings_xdist_suffix
+SETUP    S django_db_modify_db_settings_parallel_suffix (fixtures used: django_db_modify_db_settings_tox_suffix, django_db_modify_db_settings_xdist_suffix)
+SETUP    S django_db_modify_db_settings (fixtures used: django_db_modify_db_settings_parallel_suffix)
+SETUP    S django_db_setup (fixtures used: django_db_blocker, django_db_createdb, django_db_keepdb, django_db_modify_db_settings, django_db_use_migrations, django_test_environment)
+        SETUP    F _django_db_helper (fixtures used: django_db_blocker, django_db_setup)
+        SETUP    F _django_db_marker
+        SETUP    F _django_set_urlconf
+        SETUP    F _live_server_helper
+        SETUP    F monkeypatch
+        SETUP    F _template_string_if_invalid_marker (fixtures used: monkeypatch)
+        SETUP    F _clear_throttle_cache
+        src/tests/test_bootstrap_api.py::test_bootstrap_init_requires_setup_token_when_enabled (fixtures used: _clear_throttle_cache, _dj_autoclear_mailbox, _django_clear_site_cache, _django_db_marker, _django_set_urlconf, _django_setup_unittest, _fail_for_invalid_template_variable, _live_server_helper, _session_faker, _template_string_if_invalid_marker, django_db_blocker, django_test_environment, monkeypatch, request)PASSED
+        TEARDOWN F _clear_throttle_cache
+        TEARDOWN F _template_string_if_invalid_marker
+        TEARDOWN F monkeypatch
+        TEARDOWN F _live_server_helper
+        TEARDOWN F _django_set_urlconf
+        TEARDOWN F _django_db_marker
+        TEARDOWN F _django_db_helper
+        TEARDOWN F _django_clear_site_cache
+        TEARDOWN F _dj_autoclear_mailbox
+      TEARDOWN C _django_setup_unittest
+TEARDOWN S django_db_setup
+TEARDOWN S django_db_modify_db_settings
+TEARDOWN S django_db_modify_db_settings_parallel_suffix
+TEARDOWN S django_db_modify_db_settings_xdist_suffix
+TEARDOWN S django_db_modify_db_settings_tox_suffix
+TEARDOWN S django_db_createdb
+TEARDOWN S django_db_keepdb
+TEARDOWN S django_db_use_migrations
+TEARDOWN S django_db_blocker
+TEARDOWN S _session_faker
+TEARDOWN S django_test_environment
+TEARDOWN S _fail_for_invalid_template_variable
+
+============================== 1 passed in 7.51s ===============================

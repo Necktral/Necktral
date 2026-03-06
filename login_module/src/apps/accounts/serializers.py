@@ -95,6 +95,11 @@ class TwoFactorVerifySerializer(serializers.Serializer):
     code = serializers.CharField()
 
 
+class AxesUnlockSerializer(serializers.Serializer):
+    username = serializers.CharField(required=False, allow_blank=True)
+    ip_address = serializers.IPAddressField(required=False, allow_blank=True)
+
+
 class MeSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     username = serializers.CharField()

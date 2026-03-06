@@ -17,6 +17,7 @@ Esta sección contiene documentación de **operación del negocio** (playbooks, 
 - [Templates Import/Export](import_export/templates/README.md)
 - [Rotación de secretos](ROTACION_SECRETOS_v1.0.md)
 - [CD Deploy (VPS + Docker Compose)](CD_DEPLOY_v1.0.md)
+- [Throttling y limites (API)](THROTTLING_LIMITS_v1.0.md)
 
 ## Reglas
 

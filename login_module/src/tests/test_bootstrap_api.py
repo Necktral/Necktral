@@ -1,5 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from rest_framework.test import APIClient
 
 from apps.iam.models import OrgUnit
@@ -32,6 +33,26 @@ def test_bootstrap_init_creates_first_admin():
     r2 = client.get("/api/auth/bootstrap/status/")
     assert r2.status_code == 200
     assert r2.data["is_fresh"] is False
+
+
+@pytest.mark.django_db
+@override_settings(INITIAL_SETUP_REQUIRE_TOKEN=True, INITIAL_SETUP_TOKEN="setup-secret")
+def test_bootstrap_init_requires_setup_token_when_enabled():
+    client = APIClient()
+    r = client.post(
+        "/api/auth/bootstrap/init/",
+        {"username": "root", "email": "root@test.com", "password": "Pass12345__Strong"},
+        format="json",
+    )
+    assert r.status_code == 401
+
+    r2 = client.post(
+        "/api/auth/bootstrap/init/",
+        {"username": "root", "email": "root@test.com", "password": "Pass12345__Strong"},
+        format="json",
+        HTTP_X_SETUP_TOKEN="setup-secret",
+    )
+    assert r2.status_code == 201
 
 
 @pytest.mark.django_db

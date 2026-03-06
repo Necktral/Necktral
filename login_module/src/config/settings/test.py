@@ -11,6 +11,9 @@ AUTH_TOKEN_TRANSPORT = "header"
 # Tests: permitir host por defecto de APIClient
 ALLOWED_HOSTS = list(ALLOWED_HOSTS) + ["testserver"]
 
+# Tests: bootstrap sin token para no romper fixtures actuales
+INITIAL_SETUP_REQUIRE_TOKEN = False
+
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
@@ -39,6 +42,7 @@ REST_FRAMEWORK = {
         "auth_sensitive": "10000/min",
         "me_read": "10000/min",
         "me_acl_read": "10000/min",
+        "bootstrap": "10000/min",
         "context_read": "10000/min",
         "sync_batch": "10000/min",
         "admin_writes": "10000/min",

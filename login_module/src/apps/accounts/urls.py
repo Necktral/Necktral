@@ -14,6 +14,7 @@ from .views import (
     TwoFactorConfirmView,
     TwoFactorVerifyView,
     TwoFactorDisableView,
+    AxesUnlockView,
 )
 
 urlpatterns = [
@@ -33,4 +34,5 @@ urlpatterns = [
     path("2fa/confirm/", TwoFactorConfirmView.as_view(), name="auth-2fa-confirm"),
     path("2fa/verify/", TwoFactorVerifyView.as_view(), name="auth-2fa-verify"),
     path("2fa/disable/", TwoFactorDisableView.as_view(), name="auth-2fa-disable"),
+    path("axes/unlock/", AxesUnlockView.as_view(), name="auth-axes-unlock"),
 ]

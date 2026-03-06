@@ -48,8 +48,13 @@ env = environ.Env(
     DRF_THROTTLE_AUTH_LOGOUT=(str, "60/min"),
     DRF_THROTTLE_ME_READ=(str, "60/min"),
     DRF_THROTTLE_ME_ACL_READ=(str, "30/min"),
+    DRF_THROTTLE_BOOTSTRAP=(str, "5/hour"),
     DJANGO_CSP_CONNECT_SRC=(list, ["http://localhost:8000", "http://127.0.0.1:8000"]),
+    DJANGO_INITIAL_SETUP_TOKEN=(str, ""),
+    DJANGO_INITIAL_SETUP_REQUIRE_TOKEN=(bool, True),
+    DJANGO_INITIAL_SETUP_IP_ALLOWLIST=(str, ""),
     AUDIT_HMAC_KEYS=(str, ""),
+    SECURITY_ALERT_SLACK_WEBHOOK=(str, ""),
     SENTRY_DSN=(str, ""),
     SENTRY_ENVIRONMENT=(str, "dev"),
     SENTRY_TRACES_SAMPLE_RATE=(float, 0.0),
@@ -74,6 +79,7 @@ LOGGING = {
     "disable_existing_loggers": False,
     "filters": {
         "request_id": {"()": "config.logging_utils.RequestIdFilter"},
+        "redact_sensitive": {"()": "apps.common.logging_filters.RedactSensitiveDataFilter"},
     },
     "formatters": {
         "verbose": {
@@ -85,7 +91,7 @@ LOGGING = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "filters": ["request_id"],
+            "filters": ["request_id", "redact_sensitive"],
             "formatter": "json" if not DEBUG else "verbose",
         },
     },
@@ -144,6 +150,7 @@ CORS_ALLOW_CREDENTIALS = env("AUTH_TOKEN_TRANSPORT") == "cookie"
 
 AUDIT_HMAC_KEY = env("AUDIT_HMAC_KEY")
 AUDIT_HMAC_KEYS = env("AUDIT_HMAC_KEYS")
+SECURITY_ALERT_SLACK_WEBHOOK = env("SECURITY_ALERT_SLACK_WEBHOOK")
 SENTRY_DSN = env("SENTRY_DSN")
 SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT")
 SENTRY_TRACES_SAMPLE_RATE = env("SENTRY_TRACES_SAMPLE_RATE")
@@ -178,8 +185,8 @@ INSTALLED_APPS = [
     "csp",
     # Apps del proyecto
     "apps.common",
-    "apps.audit",
-    "apps.rbac",
+    "apps.audit.apps.AuditConfig",
+    "apps.rbac.apps.RbacConfig",
     "apps.accounts.apps.AccountsConfig",
     "apps.iam.apps.IamConfig",
     "apps.org.apps.OrgConfig",  # <-- NUEVO
@@ -306,7 +313,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "config.drf_exception_handler.custom_exception_handler",
     "DEFAULT_AUTHENTICATION_CLASSES": ("apps.iam.authentication.JWTAuthWithOrgContext",),
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+        "apps.accounts.permissions.MustChangePasswordGate",
+    ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
     "DEFAULT_THROTTLE_CLASSES": (
@@ -324,6 +334,7 @@ REST_FRAMEWORK = {
         "auth_logout": env("DRF_THROTTLE_AUTH_LOGOUT"),
         "me_read": env("DRF_THROTTLE_ME_READ"),
         "me_acl_read": env("DRF_THROTTLE_ME_ACL_READ"),
+        "bootstrap": env("DRF_THROTTLE_BOOTSTRAP"),
         "context_read": "60/min",
         "sync_batch": "30/min",
         "admin_writes": "60/min",
@@ -415,3 +426,9 @@ _refresh_lifetime = cast(timedelta, SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"])
 AUTH_COOKIE_ACCESS_MAX_AGE = int(_access_lifetime.total_seconds())
 AUTH_COOKIE_REFRESH_MAX_AGE = int(_refresh_lifetime.total_seconds())
 AUTH_COOKIE_CSRF_MAX_AGE = AUTH_COOKIE_REFRESH_MAX_AGE
+
+# Bootstrap guard
+INITIAL_SETUP_TOKEN = env("DJANGO_INITIAL_SETUP_TOKEN")
+INITIAL_SETUP_REQUIRE_TOKEN = env("DJANGO_INITIAL_SETUP_REQUIRE_TOKEN")
+_allowlist_raw = env("DJANGO_INITIAL_SETUP_IP_ALLOWLIST")
+INITIAL_SETUP_IP_ALLOWLIST = [x.strip() for x in _allowlist_raw.split(",") if x.strip()]

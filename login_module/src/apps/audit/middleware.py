@@ -13,6 +13,7 @@ from __future__ import annotations
 from django.utils.deprecation import MiddlewareMixin
 
 from apps.audit.contracts import validate_reason_code
+from apps.audit.deny_aggregator import aggregate_deny
 from apps.audit.writer import write_event
 
 
@@ -43,8 +44,10 @@ class AuditAccessDeniedMiddleware(MiddlewareMixin):
             if path.startswith(prefix):
                 return response
 
-        # Evitar duplicado si el exception handler ya escribió el evento
-        if getattr(request, "_audit_access_denied_written", False):
+        # Evitar duplicado si el exception handler ya escribió o suprimió el evento
+        if getattr(request, "_audit_access_denied_written", False) or getattr(
+            request, "_audit_access_denied_suppressed", False
+        ):
             return response
 
         reason_code = None
@@ -117,6 +120,23 @@ class AuditAccessDeniedMiddleware(MiddlewareMixin):
                 "data_branch_id": getattr(ctx, "data_branch_id", None),
             }
 
+        ip = request.META.get("HTTP_X_FORWARDED_FOR")
+        if ip:
+            ip = ip.split(",")[0].strip()
+        else:
+            ip = request.META.get("REMOTE_ADDR", "")
+
+        user_id = str(getattr(actor, "id", "")) if actor else ""
+        cache_key = f"deny:{ip}:{user_id}:{path}:{status_code}"
+        agg = aggregate_deny(key=cache_key, ttl_seconds=60, every=50)
+
+        if agg is None:
+            setattr(request, "_audit_access_denied_suppressed", True)
+            return response
+
+        metadata["count"] = agg.count
+        metadata["window_seconds"] = agg.window_seconds
+
         write_event(
             request=request,
             event_type="AUTH_ACCESS_DENIED",
@@ -127,7 +147,6 @@ class AuditAccessDeniedMiddleware(MiddlewareMixin):
             metadata=metadata,
         )
 
-        # Marcar para evitar dobles escrituras si hay otro middleware
         setattr(request, "_audit_access_denied_written", True)
 
         return response

@@ -88,6 +88,39 @@ def _compute_lines_and_totals(*, lines_in: list[dict]) -> tuple[list[dict], Deci
     return computed, _q_money(subtotal), _q_money(tax_total), _q_money(total)
 
 
+DEFAULT_BILLING_SERIES = ("A", "FUEL")
+
+
+def provision_billing_sequences_for_branch(*, request=None, company, branch, actor_user=None) -> dict:
+    created = 0
+    with transaction.atomic():
+        for series in DEFAULT_BILLING_SERIES:
+            for doc_type in (DocType.INVOICE, DocType.CREDIT_NOTE):
+                obj, was_created = BillingSequence.objects.get_or_create(
+                    company=company,
+                    branch=branch,
+                    doc_type=doc_type,
+                    series=series,
+                    defaults={"next_number": 1, "updated_at": timezone.now()},
+                )
+                if was_created:
+                    created += 1
+
+    if created:
+        write_event(
+            request=request,
+            module="BILLING",
+            event_type="BILLING_SEQUENCE_PROVISIONED",
+            reason_code="BILLING_OK",
+            actor_user=actor_user,
+            subject_type="BRANCH",
+            subject_id=str(branch.id),
+            metadata={"created": created},
+        )
+
+    return {"created": created}
+
+
 def create_draft(
     *,
     request,
@@ -191,13 +224,14 @@ def issue_doc(
         if doc.status == DocStatus.ISSUED:
             return {"ok": True, "already_issued": True, "doc_id": doc.id, "number": doc.number}
 
-        seq, _ = BillingSequence.objects.select_for_update().get_or_create(
+        seq = BillingSequence.objects.select_for_update().filter(
             company=company,
             branch=branch,
             doc_type=doc.doc_type,
             series=doc.series,
-            defaults={"next_number": 1, "updated_at": timezone.now()},
-        )
+        ).first()
+        if not seq:
+            raise BillingError("Secuencia no provisionada para este documento.")
 
         number = int(seq.next_number)
         seq.next_number = number + 1

@@ -40,6 +40,15 @@ export const useAuthStore = defineStore('auth', {
       if (this.hydrated) return;
       this.status = 'anonymous';
       this.hydrated = true;
+
+      if (!storageListenerReady && typeof window !== 'undefined') {
+        storageListenerReady = true;
+        window.addEventListener('storage', (event) => {
+          if (event.key === LOGOUT_BROADCAST_KEY) {
+            this.hardClearLocal();
+          }
+        });
+      }
     },
 
     async ensureSession() {
@@ -151,6 +160,15 @@ export const useAuthStore = defineStore('auth', {
 
       acl.clearAcl();
       ctx.clear();
+
+      try {
+        localStorage.setItem(LOGOUT_BROADCAST_KEY, String(Date.now()));
+      } catch {
+        // ignore storage errors
+      }
     },
   },
 });
+
+const LOGOUT_BROADCAST_KEY = 'nt_logout_at';
+let storageListenerReady = false;
