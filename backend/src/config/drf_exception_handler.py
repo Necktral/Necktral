@@ -138,7 +138,6 @@ def custom_exception_handler(exc, context):
             "data_company_id": getattr(ctx, "data_company_id", None),
             "data_branch_id": getattr(ctx, "data_branch_id", None),
         }
-
     agg = None
     if request is not None:
         ip = request.META.get("HTTP_X_FORWARDED_FOR")

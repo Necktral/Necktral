@@ -90,6 +90,9 @@ qa-backend-tests:
 qa-rbac-doctor:
 	docker compose exec -T backend bash -lc "cd /app/backend && python manage.py seed_rbac_v01 && python manage.py rbac_doctor"
 
+qa-rbac-doctor:
+	docker compose exec -T backend bash -lc "cd /app/login_module && python manage.py seed_rbac_v01 && python manage.py rbac_doctor"
+
 qa-audit-integrity:
 	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/backend && python manage.py audit_verify_chain --seed-minimal --format json --output /app/$(QA_REPORTS_DIR)/audit_integrity.json"
 

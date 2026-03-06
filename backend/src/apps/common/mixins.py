@@ -12,7 +12,7 @@ class ScopedQuerysetMixin:
     company_field = "company"
     branch_field = "branch"
 
-    def get_queryset(self):
+    def get_queryset(self):  # type: ignore[override]
         qs = super().get_queryset()
         request = getattr(self, "request", None)
         if request is None:

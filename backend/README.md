@@ -114,6 +114,15 @@ Roles/permisos del módulo se agregan vía `python manage.py seed_rbac_v01` (rol
 
 - Comando: `python manage.py provision_all_modules`
 
+## Billing (Facturacion)
+
+- Las secuencias de documentos se provisionan por sucursal. Si falta una secuencia, la emision falla.
+- Comando: `python src/manage.py provision_billing_sequences`
+
+## Provision global (todos los modulos)
+
+- Comando: `python src/manage.py provision_all_modules`
+
 ```bash
 docker compose exec -T backend python manage.py audit_verify_chain
 ```

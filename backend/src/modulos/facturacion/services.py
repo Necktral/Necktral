@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.utils import timezone
 
 from apps.audit.writer import write_event
@@ -231,22 +231,7 @@ def issue_doc(
             series=doc.series,
         ).first()
         if not seq:
-            try:
-                seq, _ = BillingSequence.objects.get_or_create(
-                    company=company,
-                    branch=branch,
-                    doc_type=doc.doc_type,
-                    series=doc.series,
-                    defaults={"next_number": 1, "updated_at": timezone.now()},
-                )
-            except IntegrityError:
-                seq = BillingSequence.objects.get(
-                    company=company,
-                    branch=branch,
-                    doc_type=doc.doc_type,
-                    series=doc.series,
-                )
-            seq = BillingSequence.objects.select_for_update().get(pk=seq.pk)
+            raise BillingError("Secuencia no provisionada para este documento.")
 
         number = int(seq.next_number)
         seq.next_number = number + 1

@@ -13,7 +13,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from datetime import datetime, date, time
 
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.utils import timezone
 from django.db.models import Sum, Count
 from django.utils.dateparse import parse_datetime, parse_date
@@ -617,20 +617,8 @@ def create_sale(
     from modulos.facturacion.services import create_draft, issue_doc
     from modulos.facturacion.models import DocType
 
-    # Compatibilidad operativa: si no hubo bootstrap de inventario FUEL,
-    # provisionamos de forma idempotente antes de bloquear la venta.
-    try:
-        warehouse = _get_fuel_warehouse_or_error(company=company, branch=branch)
-        item = _get_fuel_item_or_error(company=company, product=dispense.product)
-    except ValidationError:
-        provision_fuel_inventory_for_branch(
-            request=request,
-            company=company,
-            branch=branch,
-            actor_user=actor_user,
-        )
-        warehouse = _get_fuel_warehouse_or_error(company=company, branch=branch)
-        item = _get_fuel_item_or_error(company=company, product=dispense.product)
+    warehouse = _get_fuel_warehouse_or_error(company=company, branch=branch)
+    item = _get_fuel_item_or_error(company=company, product=dispense.product)
 
     inv_res = post_issue(
         request=request,
