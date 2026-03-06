@@ -6,7 +6,7 @@ REPORT_DIR="${ROOT_DIR}/qa/reports"
 
 mkdir -p "${REPORT_DIR}"
 
-TARGET_DIR="${ROOT_DIR}/login_module/src/apps"
+TARGET_DIR="${ROOT_DIR}/backend/src/apps"
 
 # Scan enfocado en indicadores típicos de deuda crítica en rutas sensibles.
 # Evita falsos positivos excluyendo migraciones.

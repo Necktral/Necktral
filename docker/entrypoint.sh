@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd /app/login_module
+cd /app/backend
 
 : "${DJANGO_SETTINGS_MODULE:=config.settings.dev}"
 

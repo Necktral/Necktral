@@ -27,7 +27,7 @@ services:
       dockerfile: docker/backend.Dockerfile.dev
     container_name: erpcrm_backend
     restart: unless-stopped
-    working_dir: /app/login_module
+    working_dir: /app/backend
     env_file:
       - ./.env
     environment:
@@ -43,7 +43,7 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings.dev
 
       # Para imports consistentes (tu código vive en /app/src)
-      PYTHONPATH: /app/login_module/src
+      PYTHONPATH: /app/backend/src
 
       # QA / Load: habilita Gunicorn para mejor concurrencia
       USE_GUNICORN: ${USE_GUNICORN:-0}

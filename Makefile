@@ -1,8 +1,8 @@
 .PHONY: qa-backend-gunicorn qa-backend-runserver \
 	qa-load-user qa-load-reset-axes qa-load-smoke qa-load-stress qa-gate3 \
-	qa-ci-up qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci \
+	qa-ci-up qa-ci-up-build qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci \
 	qa-backend-ruff qa-backend-mypy qa-backend-tests qa-static-scan qa-frontend-ci qa-audit-integrity \
-	docker-clean docker-clean-all
+	qa-rbac-doctor docker-clean docker-clean-all
 
 BASE_URL ?= http://localhost:8000/api
 K6_IMAGE ?= grafana/k6
@@ -50,8 +50,20 @@ qa-ci-up:
 	@if [ "$(QA_FRESH_DB)" = "1" ]; then \
 		echo "[qa] QA_FRESH_DB=1: bajando stack y volúmenes..."; \
 		docker compose down -v --remove-orphans; \
+		echo "[qa] QA_FRESH_DB=1: reconstruyendo imágenes para evitar drift local..."; \
+		docker compose build backend; \
 	fi
-	docker compose up -d --build db backend
+	# Modo estable/local: no fuerza rebuild ni recreación de servicios.
+	docker compose up -d db backend frontend
+	$(MAKE) qa-backend-wait
+
+# Build explícito cuando quieres refrescar imagen backend manualmente.
+qa-ci-up-build:
+	@if [ "$(QA_FRESH_DB)" = "1" ]; then \
+		echo "[qa] QA_FRESH_DB=1: bajando stack y volúmenes..."; \
+		docker compose down -v --remove-orphans; \
+	fi
+	docker compose up -d --build db backend frontend
 	$(MAKE) qa-backend-wait
 
 qa-backend-wait:
@@ -67,16 +79,19 @@ qa-static-scan:
 	docker compose exec -T backend bash -lc "chmod +x /app/qa/static_scan_backend.sh && /app/qa/static_scan_backend.sh /app"
 
 qa-backend-ruff:
-	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && ruff check /app/login_module/src | tee /app/$(QA_REPORTS_DIR)/ruff.txt"
+	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && ruff check /app/backend/src | tee /app/$(QA_REPORTS_DIR)/ruff.txt"
 
 qa-backend-mypy:
-	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app && mypy --config-file mypy.ini login_module/src | tee /app/$(QA_REPORTS_DIR)/mypy.txt"
+	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app && mypy --no-incremental --config-file mypy.ini backend/src | sed -E 's#^[^/]+/src#backend/src#' | tee /app/$(QA_REPORTS_DIR)/mypy.txt"
 
 qa-backend-tests:
-	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/login_module && coverage run --rcfile /app/login_module/.coveragerc -m pytest --junitxml=/app/$(QA_REPORTS_DIR)/pytest.xml && coverage xml --rcfile /app/login_module/.coveragerc -o /app/$(QA_REPORTS_DIR)/coverage.xml && coverage report --rcfile /app/login_module/.coveragerc | tee /app/$(QA_REPORTS_DIR)/coverage.txt"
+	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/backend && DJANGO_SETTINGS_MODULE=config.settings.test coverage run --rcfile /app/backend/.coveragerc -m pytest --junitxml=/app/$(QA_REPORTS_DIR)/pytest.xml && coverage xml --rcfile /app/backend/.coveragerc -o /app/$(QA_REPORTS_DIR)/coverage.xml && coverage report --rcfile /app/backend/.coveragerc | tee /app/$(QA_REPORTS_DIR)/coverage.txt"
+
+qa-rbac-doctor:
+	docker compose exec -T backend bash -lc "cd /app/backend && python manage.py seed_rbac_v01 && python manage.py rbac_doctor"
 
 qa-audit-integrity:
-	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/login_module && python manage.py audit_verify_chain --seed-minimal --format json --output /app/$(QA_REPORTS_DIR)/audit_integrity.json"
+	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/backend && python manage.py audit_verify_chain --seed-minimal --format json --output /app/$(QA_REPORTS_DIR)/audit_integrity.json"
 
 qa-frontend-ci:
 	docker compose --profile qa run --rm frontend_ci
@@ -85,7 +100,7 @@ qa-frontend-ci:
 qa-ci-gate1: qa-ci-up qa-static-scan qa-backend-ruff qa-backend-mypy qa-frontend-ci
 
 # Gate 2: pruebas deterministas (pytest + cobertura)
-qa-ci-gate2: qa-ci-up qa-backend-tests
+qa-ci-gate2: qa-ci-up qa-backend-tests qa-rbac-doctor
 
 # Gate 3: integridad de auditoría (reporte)
 qa-ci-gate3: qa-ci-up qa-audit-integrity

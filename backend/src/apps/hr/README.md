@@ -21,7 +21,7 @@ docker compose up -d --force-recreate
 ### 3. Aplica migraciones y crea el superusuario admin
 
 ```bash
-docker compose exec backend python src/manage.py migrate --noinput
+docker compose exec backend python manage.py migrate --noinput
 ```
 
 > Nota: en instalaciones frescas, el flujo recomendado es usar el wizard `/bootstrap` desde el frontend para crear el usuario inicial.
@@ -29,8 +29,8 @@ docker compose exec backend python src/manage.py migrate --noinput
 ### 4. Siembra RBAC y bootstrap de empresa/sucursal/admin
 
 ```bash
-docker compose exec backend python src/manage.py seed_rbac_v01
-docker compose exec backend python src/manage.py bootstrap_company \
+docker compose exec backend python manage.py seed_rbac_v01
+docker compose exec backend python manage.py bootstrap_company \
 	--no-input \
 	--holding-name HOLDING \
 	--company-name ACME \
@@ -66,7 +66,7 @@ npm run dev
 ## Comandos útiles
 
 - `docker compose logs backend --tail=60` — Ver logs del backend
-- `docker compose exec backend python src/manage.py showmigrations` — Ver estado de migraciones
+- `docker compose exec backend python manage.py showmigrations` — Ver estado de migraciones
 - `docker compose exec db psql -U <POSTGRES_USER> -d <POSTGRES_DB> -c "\\l"` — Ver bases de datos en Postgres
 
 ---

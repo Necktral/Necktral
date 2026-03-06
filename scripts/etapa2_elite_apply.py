@@ -27,7 +27,7 @@ def write_file(path: Path, content: str) -> None:
 
 
 def update_audit_contracts() -> None:
-    path = REPO_ROOT / "login_module/src/apps/audit/contracts.py"
+    path = REPO_ROOT / "backend/src/apps/audit/contracts.py"
     text = path.read_text(encoding="utf-8")
     old = "    \"TOKEN_INVALID\",\n    \"TOKEN_EXPIRED\",\n"
     new = (
@@ -42,7 +42,7 @@ def update_audit_contracts() -> None:
 
 
 def add_audit_redaction() -> None:
-    path = REPO_ROOT / "login_module/src/apps/audit/redaction.py"
+    path = REPO_ROOT / "backend/src/apps/audit/redaction.py"
     if path.exists():
         return
     content = '''from __future__ import annotations
@@ -136,7 +136,7 @@ def sanitize_snapshot(snapshot: Any) -> Any:
 
 
 def update_audit_writer() -> None:
-    path = REPO_ROOT / "login_module/src/apps/audit/writer.py"
+    path = REPO_ROOT / "backend/src/apps/audit/writer.py"
     text = path.read_text(encoding="utf-8")
     import_anchor = "from .models import AuditChainHeadV2, AuditEvent\n"
     import_add = "from .redaction import sanitize_metadata, sanitize_snapshot\n"
@@ -154,7 +154,7 @@ def update_audit_writer() -> None:
 
 
 def update_audit_middleware() -> None:
-    path = REPO_ROOT / "login_module/src/apps/audit/middleware.py"
+    path = REPO_ROOT / "backend/src/apps/audit/middleware.py"
     text = path.read_text(encoding="utf-8")
     import_anchor = "from django.utils.deprecation import MiddlewareMixin\n\n"
     import_add = "from apps.audit.contracts import validate_reason_code\n"
@@ -203,7 +203,7 @@ def update_audit_middleware() -> None:
 
 
 def update_error_envelope() -> None:
-    path = REPO_ROOT / "login_module/src/config/error_envelope.py"
+    path = REPO_ROOT / "backend/src/config/error_envelope.py"
     text = path.read_text(encoding="utf-8")
     old = "def error_code_for(*, status_code: int, exc: Exception | None = None, request=None) -> str:\n    sc = int(status_code)\n"
     new = (
@@ -219,7 +219,7 @@ def update_error_envelope() -> None:
 
 
 def add_cookie_csrf_middleware() -> None:
-    path = REPO_ROOT / "login_module/src/config/middleware/cookie_csrf.py"
+    path = REPO_ROOT / "backend/src/config/middleware/cookie_csrf.py"
     if path.exists():
         return
     content = '''from __future__ import annotations
@@ -270,7 +270,7 @@ class CookieJwtCsrfMiddleware:
 
 
 def add_accounts_cookies() -> None:
-    path = REPO_ROOT / "login_module/src/apps/accounts/cookies.py"
+    path = REPO_ROOT / "backend/src/apps/accounts/cookies.py"
     if path.exists():
         return
     content = '''from __future__ import annotations
@@ -332,7 +332,7 @@ def clear_auth_cookies(response) -> None:
 
 
 def update_authentication_cookie() -> None:
-    path = REPO_ROOT / "login_module/src/apps/iam/authentication.py"
+    path = REPO_ROOT / "backend/src/apps/iam/authentication.py"
     text = path.read_text(encoding="utf-8")
     if "from django.conf import settings" not in text:
         text = text.replace(
@@ -364,7 +364,7 @@ def update_authentication_cookie() -> None:
 
 
 def update_accounts_views() -> None:
-    path = REPO_ROOT / "login_module/src/apps/accounts/views.py"
+    path = REPO_ROOT / "backend/src/apps/accounts/views.py"
     text = path.read_text(encoding="utf-8")
 
     if "from django.conf import settings" not in text:
@@ -482,7 +482,7 @@ def update_accounts_views() -> None:
 
 
 def update_settings_base() -> None:
-    path = REPO_ROOT / "login_module/src/config/settings/base.py"
+    path = REPO_ROOT / "backend/src/config/settings/base.py"
     text = path.read_text(encoding="utf-8")
 
     env_block = (
@@ -567,7 +567,7 @@ def update_settings_base() -> None:
 
 
 def update_settings_prod() -> None:
-    path = REPO_ROOT / "login_module/src/config/settings/prod.py"
+    path = REPO_ROOT / "backend/src/config/settings/prod.py"
     text = path.read_text(encoding="utf-8")
     if "SECURE_PROXY_SSL_HEADER" in text:
         return

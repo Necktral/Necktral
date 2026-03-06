@@ -15,7 +15,7 @@ Este paquete ejecuta una simulacion realista del flujo de autenticacion en modo 
 
 - Script base k6: simulacion/auth_load_simulation.js
 - Script extendido k6: simulacion/auth_load_simulation_extended.js
-- Seed de usuarios: login_module/src/apps/accounts/management/commands/seed_auth_users.py
+- Seed de usuarios: backend/src/apps/accounts/management/commands/seed_auth_users.py
 - Workflow de referencia: simulacion/auth-load-simulation.yml
 - Workflow oficial (GitHub Actions): .github/workflows/auth-load-simulation.yml
 
@@ -86,8 +86,8 @@ fi
 4. Migraciones + seed:
 
 ```bash
-docker compose exec -T backend python src/manage.py migrate --noinput
-docker compose exec -T backend python src/manage.py seed_auth_users
+docker compose exec -T backend python manage.py migrate --noinput
+docker compose exec -T backend python manage.py seed_auth_users
 ```
 
 ## Ejecucion local
@@ -193,7 +193,7 @@ k6 run simulacion/auth_load_simulation_extended.js
 ### Axes bloquea usuarios
 
 ```bash
-docker compose exec -T backend python src/manage.py axes_reset
+docker compose exec -T backend python manage.py axes_reset
 ```
 
 ### TOTP invalido

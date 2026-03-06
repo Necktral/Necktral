@@ -22,7 +22,7 @@ services:
       context: .
       dockerfile: docker/backend.Dockerfile.prod
     restart: unless-stopped
-    working_dir: /app/login_module
+    working_dir: /app/backend
     env_file:
       - ./.env
     environment:
@@ -31,7 +31,7 @@ services:
       DB_HOST: db
       DB_PORT: "5432"
       DJANGO_SETTINGS_MODULE: config.settings.prod
-      PYTHONPATH: /app/login_module/src
+      PYTHONPATH: /app/backend/src
     depends_on:
       db:
         condition: service_healthy

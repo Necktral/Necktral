@@ -13,7 +13,7 @@ VUS=${2:-8}
 DURATION=${3:-30s}
 
 # Check if network exists
-NETWORK_NAME="erp_crm_default"
+NETWORK_NAME=${SIM_NETWORK_NAME:-erp_crm_default}
 if ! docker network ls | grep -q "$NETWORK_NAME"; then
     echo "Error: Network '$NETWORK_NAME' not found. Please start the backend services first."
     exit 1
@@ -43,6 +43,15 @@ docker run --rm -i \
   -e ADMIN_PASSWORD=${AUTH_SIM_ADMIN_PASSWORD:-Pass12345__Strong} \
   -e ADMIN_TOTP_SECRET=${AUTH_SIM_ADMIN_TOTP_SECRET:-$ADMIN_TOTP_SECRET} \
   -e CSRF_COOKIE_NAME=${CSRF_COOKIE_NAME:-nt_csrf} \
+  -e ENABLE_429_TEST=${ENABLE_429_TEST:-0} \
+  -e ONLY_429_TEST=${ONLY_429_TEST:-0} \
+  -e THROTTLE_RATE=${THROTTLE_RATE:-20} \
+  -e THROTTLE_DURATION=${THROTTLE_DURATION:-15s} \
+  -e THROTTLE_PREALLOC=${THROTTLE_PREALLOC:-20} \
+  -e THROTTLE_MAX=${THROTTLE_MAX:-50} \
+  -e REQUIRE_ADMIN_TOTP=${REQUIRE_ADMIN_TOTP:-0} \
+  -e REQUIRE_CSRF_COOKIE=${REQUIRE_CSRF_COOKIE:-0} \
+  -e CSRF_CLEAR_REQUIRED=${CSRF_CLEAR_REQUIRED:-0} \
   -e VUS=$VUS \
   -e DURATION=$DURATION \
   grafana/k6 run \

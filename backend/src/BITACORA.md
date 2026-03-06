@@ -48,9 +48,9 @@ Se habilita el flujo de “primer arranque” (sistema _fresh_) sin redirección
 
 **Archivos tocados**
 
-- `login_module/src/apps/org/serializers.py`
-- `login_module/src/apps/org/views.py`
-- `login_module/src/apps/org/urls.py`
+- `backend/src/apps/org/serializers.py`
+- `backend/src/apps/org/views.py`
+- `backend/src/apps/org/urls.py`
 
 ### RBAC seed
 
@@ -59,7 +59,7 @@ Se habilita el flujo de “primer arranque” (sistema _fresh_) sin redirección
 
 **Archivo tocado**
 
-- `login_module/src/apps/rbac/seed_v01.py`
+- `backend/src/apps/rbac/seed_v01.py`
 
 ### Frontend (Quasar/Vue)
 
@@ -118,7 +118,7 @@ Se refuerza el modo de densidad `compact` para que el cambio sea perceptible y c
 **Archivos tocados**
 
 - `README.md`
-- `login_module/src/README.md`
+- `backend/src/README.md`
 - `frontend/README.md`
 - `CHANGELOG.md`
 
@@ -143,7 +143,7 @@ Se endurece el endpoint de compañías y se aclara el flujo UX para que sea cohe
 
 ### Tests
 
-- Se extiende `login_module/tests/test_org_endpoints_audit.py` para cubrir:
+- Se extiende `backend/tests/test_org_endpoints_audit.py` para cubrir:
   - `GET /api/org/company/profile/` con permiso `org.company.read` (sin requerir update).
   - Listado/creación de companies + auditoría `ORG_COMPANY_CREATED`.
 

@@ -9,7 +9,16 @@
       </div>
 
       <div class="row items-center q-gutter-sm">
-        <q-btn flat label="Recargar" :disable="loading" @click="load" />
+        <q-btn
+          flat
+          label="Recargar"
+          :disable="loading"
+          @click="
+            () => {
+              void load();
+            }
+          "
+        />
         <q-btn v-if="canCreate" color="primary" label="Nuevo puesto" @click="openCreate" />
       </div>
     </div>
@@ -219,10 +228,12 @@ async function load(page = pagination.value.page, rowsPerPage = pagination.value
 
 function onRequest(props: { pagination: { page: number; rowsPerPage: number } }) {
   const { page, rowsPerPage } = props.pagination;
-  load(page, rowsPerPage);
+  void load(page, rowsPerPage);
 }
 
-onMounted(load);
+onMounted(() => {
+  void load();
+});
 
 // Create/Edit
 const editDialog = ref(false);

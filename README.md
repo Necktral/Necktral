@@ -4,9 +4,9 @@ Sistema ERP/CRM modular con backend Django + DRF y frontend Quasar. Incluye RBAC
 
 ## Estructura del repo
 
-- `login_module/`: backend Django/DRF (código en `login_module/src/`)
+- `backend/`: backend Django/DRF (código en `backend/src/`)
 - `frontend/`: consola web (Vue 3 + Quasar)
-- `modulos/`: módulos de dominio en la raíz del repo (ej: `modulos.estacion_servicios`)
+- `backend/src/modulos/`: módulos de dominio (ej: `modulos.estacion_servicios`)
 - `compose.yaml`: entorno Docker (backend + Postgres)
 - `system_wis/`: entorno virtual Python (dev)
 
@@ -114,19 +114,19 @@ En una instalación fresca normalmente quieres:
 1. Sembrar RBAC
 
 ```bash
-docker compose exec backend python src/manage.py seed_rbac_v01
+docker compose exec backend python manage.py seed_rbac_v01
 ```
 
 2. Crear usuario admin (si no existe)
 
 ```bash
-docker compose exec backend python src/manage.py createsuperuser
+docker compose exec backend python manage.py createsuperuser
 ```
 
 3. Crear empresa/sucursal y grants iniciales (requiere que el usuario exista)
 
 ```bash
-docker compose exec backend python src/manage.py bootstrap_company \
+docker compose exec backend python manage.py bootstrap_company \
   --company-name "Necktral" \
   --branch-name "Principal" \
   --admin-username "admin"
@@ -140,9 +140,9 @@ docker compose exec backend python src/manage.py bootstrap_company \
 source system_wis/bin/activate
 pip install -r requirements/dev.txt
 
-cd login_module
-python src/manage.py migrate --noinput
-python src/manage.py runserver
+cd backend
+python manage.py migrate --noinput
+python manage.py runserver
 ```
 
 ### Frontend
@@ -206,7 +206,7 @@ Artefactos generados:
 
   ```bash
   source system_wis/bin/activate
-  cd login_module
+  cd backend
   pytest
   ```
 
@@ -217,7 +217,7 @@ Artefactos generados:
 - Lint (ruff):
   ```bash
   source system_wis/bin/activate
-  cd login_module
+  cd backend
   ruff check .
   ```
 
@@ -329,12 +329,12 @@ Nota: el módulo FUEL está inicializado como “base” (scaffolding). El catá
 
 ### Nota de compatibilidad (provisionamiento)
 
-- Si tu base de datos ya tenía la columna `accounts_user.is_setup_complete` como NOT NULL, asegúrate de aplicar migraciones: `docker compose exec backend python src/manage.py migrate --noinput`.
+- Si tu base de datos ya tenía la columna `accounts_user.is_setup_complete` como NOT NULL, asegúrate de aplicar migraciones: `docker compose exec backend python manage.py migrate --noinput`.
 
 ## Comandos de gestión
 
-- `python src/manage.py seed_rbac_v01` — Siembra roles, permisos y mapeos estándar (idempotente, auditable)
-- `python src/manage.py bootstrap_company --company-name ... --branch-name ... --admin-username ...` — Bootstrap de empresa, sucursal y admin
+- `python manage.py seed_rbac_v01` — Siembra roles, permisos y mapeos estándar (idempotente, auditable)
+- `python manage.py bootstrap_company --company-name ... --branch-name ... --admin-username ...` — Bootstrap de empresa, sucursal y admin
   - El comando es idempotente: si la empresa, sucursal o holding ya existen (por código o nombre), los reutiliza y reactiva si estaban desactivados.
   - Si usas `--no-input`, todos los parámetros son obligatorios y el comando falla si falta alguno.
   - AdminGrant siempre se crea con `org_unit=company` y se reactiva si estaba desactivado.
@@ -344,8 +344,8 @@ Nota: el módulo FUEL está inicializado como “base” (scaffolding). El catá
 En Docker, ejecuta estos comandos así:
 
 ```bash
-docker compose exec backend python src/manage.py seed_rbac_v01
-docker compose exec backend python src/manage.py bootstrap_company --company-name ... --branch-name ... --admin-username ...
+docker compose exec backend python manage.py seed_rbac_v01
+docker compose exec backend python manage.py bootstrap_company --company-name ... --branch-name ... --admin-username ...
 ```
 
 ## Auditoría contractual

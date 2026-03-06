@@ -16,7 +16,16 @@
       </template>
 
       <template #actions>
-        <q-btn flat label="Recargar" :disable="loading" @click="load" />
+        <q-btn
+          flat
+          label="Recargar"
+          :disable="loading"
+          @click="
+            () => {
+              void load();
+            }
+          "
+        />
         <q-btn v-if="canCreate" color="primary" label="Nuevo empleado" @click="openCreate" />
       </template>
     </AppPageHeader>
@@ -561,7 +570,6 @@ import {
   resetEmployeeTempPassword,
   revokeEmployeeAccess,
   type EmployeeRow,
-  type PositionRow,
 } from 'src/services/hr.service';
 import AppContainer from 'src/ui/AppContainer.vue';
 import AppDataTable from 'src/ui/AppDataTable.vue';
@@ -643,9 +651,11 @@ async function load(page = pagination.value.page, rowsPerPage = pagination.value
 
 function onRequest(props: { pagination: { page: number; rowsPerPage: number } }) {
   const { page, rowsPerPage } = props.pagination;
-  load(page, rowsPerPage);
+  void load(page, rowsPerPage);
 }
-onMounted(load);
+onMounted(() => {
+  void load();
+});
 
 // Create/Edit
 const editDialog = ref(false);

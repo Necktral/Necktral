@@ -23,17 +23,17 @@ Se completa WS5 (paginación + índices) y WS6 (pipeline CD), y se endurece 2FA 
 
 ### Archivos/Areas
 
-- `login_module/src/apps/common/pagination.py`
-- `login_module/src/apps/org/views.py`
-- `login_module/src/apps/hr/views.py`
-- `login_module/src/apps/rbac/views.py`
-- `login_module/src/apps/sync_engine/views.py`
-- `login_module/src/apps/iam/models.py`
-- `login_module/src/apps/hr/models.py`
-- `login_module/src/apps/rbac/models.py`
-- `login_module/src/apps/accounts/models.py`
-- `login_module/src/apps/accounts/views.py`
-- `login_module/src/apps/accounts/migrations/0006_two_factor_challenge.py`
+- `backend/src/apps/common/pagination.py`
+- `backend/src/apps/org/views.py`
+- `backend/src/apps/hr/views.py`
+- `backend/src/apps/rbac/views.py`
+- `backend/src/apps/sync_engine/views.py`
+- `backend/src/apps/iam/models.py`
+- `backend/src/apps/hr/models.py`
+- `backend/src/apps/rbac/models.py`
+- `backend/src/apps/accounts/models.py`
+- `backend/src/apps/accounts/views.py`
+- `backend/src/apps/accounts/migrations/0006_two_factor_challenge.py`
 - `frontend/src/pages/OrgCompaniesPage.vue`
 - `frontend/src/pages/OrgBranchesPage.vue`
 - `frontend/src/pages/HrEmployeesPage.vue`
@@ -46,8 +46,8 @@ Se completa WS5 (paginación + índices) y WS6 (pipeline CD), y se endurece 2FA 
 - `compose.prod.yaml`
 - `docs/operacion/CD_DEPLOY_v1.0.md`
 - `docs/operacion/README.md`
-- `login_module/tests/test_2fa_challenge.py`
-- `login_module/tests/test_pagination_list_endpoints.py`
+- `backend/tests/test_2fa_challenge.py`
+- `backend/tests/test_pagination_list_endpoints.py`
 
 ## 2026-02-09 — Fixes QA 2FA & Linting
 
@@ -69,7 +69,7 @@ Se abordan los fallos de CI detectados en PR #2, especificamente en los tests de
 - **Gate 3 (Audit):** Integro.
 - **Linting:** Clean.
 
-- `login_module/tests/test_axes_lockout.py`
+- `backend/tests/test_axes_lockout.py`
 
 ---
 
@@ -96,10 +96,10 @@ Cierre operativo de Etapa 2 con cambios de seguridad, auditoria y QA determinist
 
 ### Archivos/Areas
 
-- `login_module/src/apps/accounts/views.py`
-- `login_module/src/apps/audit/contracts.py`
-- `login_module/src/apps/audit/writer.py`
-- `login_module/src/config/settings/base.py`
+- `backend/src/apps/accounts/views.py`
+- `backend/src/apps/audit/contracts.py`
+- `backend/src/apps/audit/writer.py`
+- `backend/src/config/settings/base.py`
 - `frontend/src/boot/axios.ts`
 - `docker/nginx/default.conf`
 
@@ -167,7 +167,7 @@ Se completa el MVP operativo del módulo **Estación de Servicios** (FUEL) para 
 - `modulos/estacion_servicios/services.py` (operaciones + auditoría)
 - `modulos/estacion_servicios/views.py`, `modulos/estacion_servicios/urls.py`
 - `modulos/estacion_servicios/migrations/0001_initial.py`
-- `login_module/src/tests/test_fuel_shift_flow.py`
+- `backend/src/tests/test_fuel_shift_flow.py`
 
 ### Notas/Riesgos
 
@@ -193,18 +193,18 @@ Se inicializa el módulo de dominio **Estación de Servicios** (FUEL) con una ap
 
 - Endpoint: `GET /api/fuel/health/`
 - `modulos/estacion_servicios/` (apps/urls/views)
-- `login_module/src/config/settings/base.py` (REPO_ROOT en `sys.path` + INSTALLED_APPS)
-- `login_module/src/config/urls.py` (include `api/fuel/`)
-- `login_module/src/apps/rbac/seed_v01.py`
-- `login_module/src/apps/audit/contracts.py`
+- `backend/src/config/settings/base.py` (REPO_ROOT en `sys.path` + INSTALLED_APPS)
+- `backend/src/config/urls.py` (include `api/fuel/`)
+- `backend/src/apps/rbac/seed_v01.py`
+- `backend/src/apps/audit/contracts.py`
 
 ---
 
-## 2026-01-18 — Cierre login_module: revoke-access, Auditoría UI y PROD
+## 2026-01-18 — Cierre backend (antes login_module): revoke-access, Auditoría UI y PROD
 
 ### Contexto
 
-Cierre funcional del módulo login_module (ORG/HR/IAM/RBAC/AUDIT) tras implementar auditoría UI, revoke-access y despliegue PROD.
+Cierre funcional del módulo backend (en ese momento nombrado `login_module`) (ORG/HR/IAM/RBAC/AUDIT) tras implementar auditoría UI, revoke-access y despliegue PROD.
 
 ### Cambios principales
 
@@ -218,8 +218,8 @@ Cierre funcional del módulo login_module (ORG/HR/IAM/RBAC/AUDIT) tras implement
 - `frontend/src/router/routes.ts`
 - `frontend/src/layouts/MainLayout.vue`
 - `frontend/README.md`
-- `login_module/src/apps/hr/services.py` (revoke-access)
-- `login_module/src/apps/hr/tests/test_hr_method_permissions.py`
+- `backend/src/apps/hr/services.py` (revoke-access)
+- `backend/src/apps/hr/tests/test_hr_method_permissions.py`
 - `compose.prod.yaml`, `Dockerfile.frontend`, `Dockerfile.backend`, `.env.prod.example`
 
 ### Notas/Riesgos
@@ -275,9 +275,9 @@ Se habilita el flujo de “primer arranque” (sistema _fresh_) sin redirección
 
 **Archivos tocados**
 
-- `login_module/src/apps/org/serializers.py`
-- `login_module/src/apps/org/views.py`
-- `login_module/src/apps/org/urls.py`
+- `backend/src/apps/org/serializers.py`
+- `backend/src/apps/org/views.py`
+- `backend/src/apps/org/urls.py`
 
 ### RBAC seed
 
@@ -286,7 +286,7 @@ Se habilita el flujo de “primer arranque” (sistema _fresh_) sin redirección
 
 **Archivo tocado**
 
-- `login_module/src/apps/rbac/seed_v01.py`
+- `backend/src/apps/rbac/seed_v01.py`
 
 ### Frontend (Quasar/Vue)
 
@@ -345,7 +345,7 @@ Se refuerza el modo de densidad `compact` para que el cambio sea perceptible y c
 **Archivos tocados**
 
 - `README.md`
-- `login_module/src/README.md`
+- `backend/src/README.md`
 - `frontend/README.md`
 - `CHANGELOG.md`
 
@@ -370,7 +370,7 @@ Se endurece el endpoint de compañías y se aclara el flujo UX para que sea cohe
 
 ### Tests
 
-- Se extiende `login_module/tests/test_org_endpoints_audit.py` para cubrir:
+- Se extiende `backend/tests/test_org_endpoints_audit.py` para cubrir:
   - `GET /api/org/company/profile/` con permiso `org.company.read` (sin requerir update).
   - Listado/creación de companies + auditoría `ORG_COMPANY_CREATED`.
 
@@ -419,11 +419,11 @@ Se completa el flujo PC-first de HR (empleados/asignaciones/provisionamiento) y 
 
 **Archivos tocados**
 
-- `login_module/src/apps/hr/views.py`
-- `login_module/src/apps/hr/services.py`
-- `login_module/src/apps/hr/serializers.py`
-- `login_module/src/apps/accounts/models.py`
-- `login_module/src/apps/accounts/migrations/0003_user_is_setup_complete.py`
+- `backend/src/apps/hr/views.py`
+- `backend/src/apps/hr/services.py`
+- `backend/src/apps/hr/serializers.py`
+- `backend/src/apps/accounts/models.py`
+- `backend/src/apps/accounts/migrations/0003_user_is_setup_complete.py`
 
 ### RBAC
 
@@ -431,7 +431,7 @@ Se completa el flujo PC-first de HR (empleados/asignaciones/provisionamiento) y 
 
 **Archivo tocado**
 
-- `login_module/src/apps/rbac/seed_v01.py`
+- `backend/src/apps/rbac/seed_v01.py`
 
 ### Validación
 
@@ -462,11 +462,11 @@ Se implementa el reset controlado de contraseña provisional para empleados (HR)
 
 **Archivos tocados**
 
-- `login_module/src/apps/audit/contracts.py`
-- `login_module/src/apps/hr/serializers.py`
-- `login_module/src/apps/hr/services.py`
-- `login_module/src/apps/hr/views.py`
-- `login_module/src/apps/hr/urls.py`
+- `backend/src/apps/audit/contracts.py`
+- `backend/src/apps/hr/serializers.py`
+- `backend/src/apps/hr/services.py`
+- `backend/src/apps/hr/views.py`
+- `backend/src/apps/hr/urls.py`
 
 ### Tests
 
@@ -474,7 +474,7 @@ Se implementa el reset controlado de contraseña provisional para empleados (HR)
 
 **Archivo tocado**
 
-- `login_module/src/tests/test_hr_end_assignment_endpoint.py`
+- `backend/src/tests/test_hr_end_assignment_endpoint.py`
 
 ### Frontend (Quasar/Vue)
 

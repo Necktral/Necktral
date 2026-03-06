@@ -14,7 +14,7 @@ Requisitos:
 Si no tienes credenciales conocidas (o tu entorno no está "fresh"), crea un usuario dedicado para carga:
 
 ```bash
-docker compose exec -T backend python src/manage.py seed_auth_users
+docker compose exec -T backend python manage.py seed_auth_users
 ```
 
 O bien crea un usuario manual:

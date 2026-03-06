@@ -75,6 +75,11 @@ jobs:
           print('pip-audit OK: no high/critical with fix available')
           PY
 
+      - name: SAST (bandit)
+        run: |
+          pip install bandit
+          bandit -r backend/src -x "*/migrations/*" -ll
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -111,3 +116,12 @@ jobs:
           }
           console.log('npm audit OK: no high/critical with fix available');
           NODE
+
+      - name: Vulnerability scan (trivy)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          severity: "HIGH,CRITICAL"
+          ignore-unfixed: true
+          exit-code: "1"

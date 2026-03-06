@@ -32,8 +32,8 @@ source system_wis/bin/activate
 pip install -r requirements/dev.txt
 
 cd backend
-python src/manage.py migrate --noinput
-python src/manage.py runserver
+python manage.py migrate --noinput
+python manage.py runserver
 ```
 
 ## Ejecutar en PROD (Docker)
@@ -103,16 +103,16 @@ Endpoints (MVP):
 - `POST /api/fuel/sales/` — Crear venta (permiso: `fuel.sale.create`)
 - `POST /api/fuel/sales/<sale_id>/cancel/` — Cancelar venta (permiso: `fuel.sale.void`)
 
-Roles/permisos del módulo se agregan vía `python src/manage.py seed_rbac_v01` (roles `fuel_*`, permisos `fuel.*`).
+Roles/permisos del módulo se agregan vía `python manage.py seed_rbac_v01` (roles `fuel_*`, permisos `fuel.*`).
 
 ## Billing (Facturacion)
 
 - Las secuencias de documentos se provisionan por sucursal. Si falta una secuencia, la emision falla.
-- Comando: `python src/manage.py provision_billing_sequences`
+- Comando: `python manage.py provision_billing_sequences`
 
 ## Provision global (todos los modulos)
 
-- Comando: `python src/manage.py provision_all_modules`
+- Comando: `python manage.py provision_all_modules`
 
 ```bash
 docker compose exec -T backend python manage.py audit_verify_chain
@@ -204,7 +204,7 @@ docker compose exec -T backend python manage.py audit_verify_chain
 
 - Seed determinista de usuarios para k6:
   ```bash
-  docker compose exec -T backend python src/manage.py seed_auth_users
+  docker compose exec -T backend python manage.py seed_auth_users
   ```
 - Guía completa: [../simulacion/README.md](../simulacion/README.md)
 

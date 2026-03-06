@@ -72,6 +72,15 @@
                     :rules="[(val) => !!val || 'Required']"
                   />
                 </div>
+                <div class="col-12">
+                  <q-input
+                    v-model="adminForm.setup_token"
+                    type="password"
+                    label="Setup Token (optional)"
+                    outlined
+                    dense
+                  />
+                </div>
               </div>
               <div class="q-mt-md flex justify-end">
                 <q-btn type="submit" label="Create Admin" color="primary" :loading="loading" />
@@ -196,6 +205,7 @@ const adminForm = reactive({
   password: '',
   first_name: '',
   last_name: '',
+  setup_token: (import.meta.env.VITE_SETUP_TOKEN as string | undefined) ?? '',
 });
 
 const loginForm = reactive({
@@ -237,7 +247,18 @@ async function createAdmin() {
   try {
     // Initial Admin Check
     // We can use the public endpoint
-    await api.post('/auth/bootstrap/init/', adminForm);
+    const payload = {
+      username: adminForm.username,
+      email: adminForm.email,
+      password: adminForm.password,
+      first_name: adminForm.first_name,
+      last_name: adminForm.last_name,
+    };
+    const headers: Record<string, string> = {};
+    if (adminForm.setup_token) {
+      headers['X-Setup-Token'] = adminForm.setup_token;
+    }
+    await api.post('/auth/bootstrap/init/', payload, { headers });
     $q.notify({ type: 'positive', message: 'Admin created successfully' });
 
     // Pre-fill login

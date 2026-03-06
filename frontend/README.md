@@ -29,7 +29,7 @@ Esto levantará:
 ### 3. Aplicar Migraciones
 
 ```bash
-docker compose exec backend python src/manage.py migrate --noinput
+docker compose exec backend python manage.py migrate --noinput
 ```
 
 ### 4. Flujo de Onboarding (Inicialización)
@@ -43,6 +43,8 @@ El sistema cuenta con un asistente de instalación automático. **No es necesari
    - Crear el **Administrador Inicial**.
    - Validar credenciales.
    - Configurar la estructura organizacional base (**Holding -> Empresa -> Sucursal**).
+
+Nota: en produccion el bootstrap requiere `X-Setup-Token`. Puedes definir `VITE_SETUP_TOKEN` para precargarlo en el wizard.
 
 ---
 

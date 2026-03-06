@@ -16,7 +16,7 @@ Este paquete ejecuta una simulacion realista del flujo de autenticacion en modo 
 
 - Script base k6: simulacion/auth_load_simulation.js
 - Script extendido k6: simulacion/auth_load_simulation_extended.js
-- Seed de usuarios: login_module/src/apps/accounts/management/commands/seed_auth_users.py
+- Seed de usuarios: backend/src/apps/accounts/management/commands/seed_auth_users.py
 - Workflow de referencia: simulacion/auth-load-simulation.yml
 - Workflow oficial (GitHub Actions): .github/workflows/auth-load-simulation.yml
 
@@ -87,8 +87,8 @@ fi
 4. Migraciones + seed:
 
 ```bash
-docker compose exec -T backend python src/manage.py migrate --noinput
-docker compose exec -T backend python src/manage.py seed_auth_users
+docker compose exec -T backend python manage.py migrate --noinput
+docker compose exec -T backend python manage.py seed_auth_users
 ```
 
 ## Ejecucion local
@@ -136,6 +136,15 @@ k6 run simulacion/auth_load_simulation_extended.js
 - ADMIN_2FA_SLEEP: sleep entre intentos 2FA
 - AUTH_SIM_ADMIN_SUPERUSER: siembra admin como superuser (0/1)
 - AUTH_SIM_SHOW_SECRETS: imprime secreto TOTP en consola (0/1)
+- REQUIRE_ADMIN_TOTP: falla si no hay ADMIN_TOTP_SECRET (0/1)
+- REQUIRE_CSRF_COOKIE: falla si no se emite cookie CSRF (0/1)
+- CSRF_CLEAR_REQUIRED: exige limpiar cookie CSRF en logout (0/1)
+- ENABLE_429_TEST: habilita escenarios de throttling 429 (0/1)
+- ONLY_429_TEST: ejecuta solo escenarios 429 (0/1)
+- THROTTLE_RATE: tasa por segundo para pruebas 429 (default: 20)
+- THROTTLE_DURATION: duracion de pruebas 429 (default: 15s)
+- THROTTLE_PREALLOC: VUs preasignados para 429 (default: 20)
+- THROTTLE_MAX: VUs maximos para 429 (default: 50)
 
 ## Escenarios del script extendido
 
@@ -174,6 +183,22 @@ k6 run simulacion/auth_load_simulation_extended.js
 
 - Refresh corrupto (401 esperado)
 
+7. throttle_login (opcional)
+
+- Login con credenciales invalidas para provocar 429 (si ENABLE_429_TEST=1)
+
+8. throttle_refresh (opcional)
+
+- Refresh con token invalido para provocar 429 (si ENABLE_429_TEST=1)
+
+9. throttle_logout (opcional)
+
+- Logout repetido para provocar 429 (si ENABLE_429_TEST=1)
+
+10. throttle_2fa (opcional)
+
+- 2FA con challenge invalido para provocar 429 (si ENABLE_429_TEST=1)
+
 ## Thresholds esperados
 
 - http_req_failed < 1%
@@ -194,7 +219,7 @@ k6 run simulacion/auth_load_simulation_extended.js
 ### Axes bloquea usuarios
 
 ```bash
-docker compose exec -T backend python src/manage.py axes_reset
+docker compose exec -T backend python manage.py axes_reset
 ```
 
 ### TOTP invalido

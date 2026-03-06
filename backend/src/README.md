@@ -17,7 +17,7 @@ docker compose up -d --build
 Migraciones:
 
 ```bash
-docker compose exec -T backend python src/manage.py migrate --noinput
+docker compose exec -T backend python manage.py migrate --noinput
 ```
 
 ## Puntos clave recientes
@@ -28,9 +28,9 @@ docker compose exec -T backend python src/manage.py migrate --noinput
 
 ## Comandos útiles
 
-- `python src/manage.py seed_rbac_v01`
-- `python src/manage.py bootstrap_company --company-name ... --branch-name ... --admin-username ...`
-- `python src/manage.py seed_auth_users` (seed para k6)
+- `python manage.py seed_rbac_v01`
+- `python manage.py bootstrap_company --company-name ... --branch-name ... --admin-username ...`
+- `python manage.py seed_auth_users` (seed para k6)
 
 ## Tests
 
