@@ -142,6 +142,11 @@ const routes: RouteRecordRaw[] = [
           requiredPermissions: ['fuel.shift.read'],
         },
       },
+      {
+        path: 'chat',
+        component: () => import('pages/ChatPage.vue'),
+        meta: { requiresAuth: true, requiresContext: false },
+      },
     ],
   },
 

@@ -146,6 +146,15 @@
           <q-item-section avatar><q-icon name="local_gas_station" /></q-item-section>
           <q-item-section>FUEL Health</q-item-section>
         </q-item>
+
+        <q-separator spaced />
+
+        <q-item-label header>Comunicación</q-item-label>
+
+        <q-item clickable to="/chat">
+          <q-item-section avatar><q-icon name="chat" /></q-item-section>
+          <q-item-section>Chat</q-item-section>
+        </q-item>
       </q-list>
     </q-drawer>
 

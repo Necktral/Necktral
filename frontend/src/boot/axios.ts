@@ -51,6 +51,7 @@ const CONTEXT_EXEMPT_PREFIXES = [
   '/auth/bootstrap/',
   '/auth/password/',
   '/schema/',
+  '/chat/',
 ];
 
 function getPath(config: AxiosRequestConfig): string {

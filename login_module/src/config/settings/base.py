@@ -186,6 +186,7 @@ INSTALLED_APPS = [
     "apps.hr.apps.HrConfig",  # <-- NUEVO
     "apps.sync_engine",
     "apps.sync.apps.SyncConfig",
+    "apps.chat.apps.ChatConfig",
     # Módulos de dominio (raíz/modulos)
     # (Se agregan abajo con el patrón INSTALLED_APPS += [...])
 ]

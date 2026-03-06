@@ -45,6 +45,8 @@ urlpatterns = [
     path("api/org/", include("apps.org.urls")),
     # HR
     path("api/hr/", include("apps.hr.urls")),
+    # Chat
+    path("api/chat/", include("apps.chat.urls")),
     # Estación de Servicios
     path("api/fuel/", include("modulos.estacion_servicios.urls")),
 ]
