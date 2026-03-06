@@ -47,8 +47,8 @@ Este documento define el **contrato de organización** del ERP/CRM: cómo deben 
 
 Referencias del repo:
 
-- Contrato de eventos/subjects/reasons: `login_module/src/apps/audit/contracts.py`
-- Verificación de integridad: `login_module/src/apps/audit/management/commands/audit_verify_chain.py`
+- Contrato de eventos/subjects/reasons: `backend/src/apps/audit/contracts.py`
+- Verificación de integridad: `backend/src/apps/audit/management/commands/audit_verify_chain.py`
 
 ### 4) Sync / Offline (precedente)
 
@@ -60,8 +60,8 @@ Existe un precedente implementado para sincronización por lotes con:
 
 Referencias del repo:
 
-- API/serialización: `login_module/src/apps/sync_engine/serializers.py`
-- Vistas: `login_module/src/apps/sync_engine/views.py`
+- API/serialización: `backend/src/apps/sync_engine/serializers.py`
+- Vistas: `backend/src/apps/sync_engine/views.py`
 
 ## Kernels y módulos
 
