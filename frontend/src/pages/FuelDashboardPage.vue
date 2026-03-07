@@ -33,18 +33,18 @@
         <div class="col-12 col-md-6 col-lg-4">
           <q-card class="app-card">
             <q-card-section>
-              <div class="text-subtitle1">Operación (próximo)</div>
+              <div class="text-subtitle1">Operación</div>
               <div class="text-caption text-grey-7">
-                Turnos, despachos, ventas, tanques, conciliación e intercompany.
+                Ciclo completo de la estación: turno → despacho → venta → cierre.
               </div>
             </q-card-section>
             <q-card-section class="text-caption">
               <ul class="q-pl-md q-my-none">
-                <li>Turnos (open/close)</li>
-                <li>Despachos + anulaciones</li>
-                <li>Ventas + anulaciones</li>
-                <li>Recepciones/ajustes de tanque</li>
-                <li>Conciliación</li>
+                <li>Turnos — apertura y cierre por sucursal</li>
+                <li>Despachos — combustible (litros o galones)</li>
+                <li>Ventas — pública / interna / empleado</li>
+                <li>Anulaciones de venta</li>
+                <li>Preferencias de UoM por usuario</li>
               </ul>
             </q-card-section>
           </q-card>
@@ -53,17 +53,17 @@
         <div class="col-12 col-md-6 col-lg-4">
           <q-card class="app-card">
             <q-card-section>
-              <div class="text-subtitle1">Kernel modular (diseño)</div>
+              <div class="text-subtitle1">Integraciones</div>
               <div class="text-caption text-grey-7">
-                Base compartida para módulos multi-negocio.
+                El módulo Fuel se integra con el resto del kernel.
               </div>
             </q-card-section>
             <q-card-section class="text-caption">
               <ul class="q-pl-md q-my-none">
-                <li>Facturación multi-negocio (próximo)</li>
-                <li>Inventarios (próximo)</li>
-                <li>RBAC/ACL + contexto por company/branch</li>
-                <li>Auditoría contractual (eventos por módulo)</li>
+                <li>Inventarios — movimientos de stock por venta/anulación</li>
+                <li>Facturación — FK a BillingDocument por venta fiscal</li>
+                <li>RBAC — permisos <code>fuel.*</code> por sucursal</li>
+                <li>Auditoría — eventos <code>FUEL_*</code> trazables</li>
               </ul>
             </q-card-section>
           </q-card>

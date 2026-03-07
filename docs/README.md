@@ -17,6 +17,7 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - [ADDENDUM_SEGURIDAD_v1.0.md](ADDENDUM_SEGURIDAD_v1.0.md) — Plan de mejoras de seguridad y robustez.
 - [ADDENDUM_SEGURIDAD_BACKLOG_v1.0.md](ADDENDUM_SEGURIDAD_BACKLOG_v1.0.md) — Backlog ejecutable del addendum de seguridad.
 - [BILLING_KERNEL_v1.0.md](BILLING_KERNEL_v1.0.md) — Contrato operativo del kernel de facturación.
+- [FUEL_MODULE_v1.0.md](FUEL_MODULE_v1.0.md) — Módulo Fuel (Estación de Servicios): flujo operativo, endpoints, RBAC y auditoría.
 - [FUTURAS_MEJORAS.md](FUTURAS_MEJORAS.md) — Roadmap de mejoras futuras (técnicas y de producto).
 
 ## Documentación operacional
