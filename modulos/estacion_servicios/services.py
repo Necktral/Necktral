@@ -569,7 +569,9 @@ def create_sale(
     if dispense.shift_id != shift.id:
         raise ValidationError({"detail": "Dispense no pertenece a ese turno."})
 
-    if hasattr(dispense, "sale"):
+    # Lock the dispense row to prevent concurrent sale creation (race condition).
+    dispense = FuelDispense.objects.select_for_update().get(pk=dispense.pk)
+    if FuelSale.objects.filter(dispense=dispense).exists():
         raise ValidationError({"detail": "Este despacho ya tiene venta asociada."})
 
     sale = FuelSale.objects.create(
@@ -659,6 +661,8 @@ def create_sale(
 
 @transaction.atomic
 def cancel_sale(*, request=None, sale: FuelSale, actor_user, reason: str = "") -> FuelSale:
+    # Lock the sale row to prevent concurrent cancellation (race condition).
+    sale = FuelSale.objects.select_for_update().get(pk=sale.pk)
     if sale.status != FuelSaleStatus.ACTIVE:
         raise ValidationError({"detail": "Venta ya está anulada."})
 

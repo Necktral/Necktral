@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hmac as _hmac
+
 from django.conf import settings
 from django.http import JsonResponse
 
@@ -35,7 +37,7 @@ class CookieJwtCsrfMiddleware:
         csrf_cookie = request.COOKIES.get(settings.AUTH_COOKIE_CSRF_NAME)
         csrf_header = request.headers.get("X-CSRF-Token") or request.headers.get("X-CSRFToken")
 
-        if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+        if not csrf_cookie or not csrf_header or not _hmac.compare_digest(csrf_cookie, csrf_header):
             request.error_code_override = "AUTH_CSRF_FAILED"
             request.audit_reason_code_override = "CSRF_FAILED"
             return JsonResponse({"detail": "CSRF token missing or invalid."}, status=403)

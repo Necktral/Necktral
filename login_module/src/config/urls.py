@@ -19,12 +19,12 @@ from django.contrib import admin
 from django.urls import include, path
 from config.csp_report import csp_report
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # OpenAPI
-    path("api/schema/", SpectacularAPIView.as_view(permission_classes=[AllowAny]), name="schema"),
+    # OpenAPI (requiere autenticación)
+    path("api/schema/", SpectacularAPIView.as_view(permission_classes=[IsAuthenticated]), name="schema"),
     path("api/schema/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/schema/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     # CSP reports (report-only)

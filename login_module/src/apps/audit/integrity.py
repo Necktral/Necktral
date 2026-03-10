@@ -139,12 +139,12 @@ def verify_events(events: Iterable[AuditEvent]) -> AuditIntegrityReport:
             key = key_map.get(ev.signature_key_id)
             if key:
                 expected_sig = _hmac_hex(expected_hash, key=key)
-                signature_ok = got_sig == expected_sig
+                signature_ok = hmac.compare_digest(got_sig, expected_sig)
 
         if not signature_ok:
             for kid, key in keyring:
                 candidate = _hmac_hex(expected_hash, key=key)
-                if got_sig == candidate:
+                if hmac.compare_digest(got_sig, candidate):
                     signature_ok = True
                     if expected_sig is None:
                         expected_sig = candidate

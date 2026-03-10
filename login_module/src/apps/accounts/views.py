@@ -1,4 +1,6 @@
 import hashlib
+import hmac as _hmac
+import logging
 import uuid
 from datetime import datetime, timezone as dt_timezone
 
@@ -38,6 +40,7 @@ from .serializers import (
 )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def _token_jti(token: RefreshToken) -> str:
@@ -83,8 +86,7 @@ def _extract_login_reason_code(serializer_errors) -> str:
             if code == "invalid_credentials":
                 return "INVALID_CREDENTIALS"
     except Exception:
-        pass
-    return "INVALID_CREDENTIALS"
+        logger.debug("Failed to extract login reason code from serializer errors", exc_info=True)
 
 
 def _request_auth_transport(request) -> str:
@@ -126,7 +128,7 @@ def _consume_2fa_challenge(*, challenge_token: str, request) -> TwoFactorChallen
     try:
         raw = signer.unsign(challenge_token, max_age=settings.TOTP_CHALLENGE_TTL)
         challenge_id = uuid.UUID(str(raw))
-    except Exception:
+    except (signing.BadSignature, signing.SignatureExpired, ValueError, OverflowError):
         return None
 
     now = timezone.now()
@@ -148,10 +150,10 @@ def _consume_2fa_challenge(*, challenge_token: str, request) -> TwoFactorChallen
         if challenge.expires_at and challenge.expires_at <= now:
             return None
 
-        if challenge.ip_address and ip and challenge.ip_address != ip:
+        if challenge.ip_address and ip and not _hmac.compare_digest(challenge.ip_address, ip):
             return None
 
-        if challenge.user_agent_hash and ua_hash and challenge.user_agent_hash != ua_hash:
+        if challenge.user_agent_hash and ua_hash and not _hmac.compare_digest(challenge.user_agent_hash, ua_hash):
             return None
 
         # Challenge consumed. Delete to prevent any replay possibility.
@@ -276,6 +278,7 @@ class RefreshView(TokenRefreshView):
         try:
             token = RefreshToken(refresh_token)
         except Exception:
+            logger.debug("Invalid refresh token submitted", exc_info=True)
             write_event(
                 request=request,
                 event_type="AUTH_TOKEN_REFRESH_FAILURE",
@@ -340,7 +343,7 @@ class RefreshView(TokenRefreshView):
         try:
             token.blacklist()
         except Exception:
-            pass
+            logger.debug("Failed to blacklist old refresh token during rotation", exc_info=True)
 
         access = new_refresh.access_token
         new_refresh_str = str(new_refresh)
@@ -447,6 +450,7 @@ class LogoutView(APIView):
             )
 
         except Exception:
+            logger.warning("Failed to blacklist token during logout", exc_info=True)
             write_event(
                 request=request,
                 event_type="AUTH_LOGOUT_FAILURE",
@@ -458,7 +462,6 @@ class LogoutView(APIView):
             )
             # Idempotente: refresh expirado/corrupto no debe bloquear el logout local.
             # response ya es 204 y cookies limpias.
-            pass
 
         return response
 

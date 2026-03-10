@@ -3,6 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -98,20 +99,20 @@ class FuelDispense(models.Model):
 
     product = models.CharField(max_length=16, choices=FuelProduct.choices)
 
-    liters = models.DecimalField(max_digits=12, decimal_places=4)  # canónico para reportes/cierres
+    liters = models.DecimalField(max_digits=12, decimal_places=4, validators=[MinValueValidator(Decimal("0.0001"))])  # canónico para reportes/cierres
 
     # Lo que el operador capturó (persistido): elimina ambigüedad operativa.
-    volume_entered = models.DecimalField(max_digits=12, decimal_places=4)
+    volume_entered = models.DecimalField(max_digits=12, decimal_places=4, validators=[MinValueValidator(Decimal("0.0001"))])
     volume_uom = models.CharField(max_length=16, choices=FuelVolumeUOM.choices, default=FuelVolumeUOM.LITER)
 
     # Precio canónico: por litro (base contable/reporting).
-    unit_price = models.DecimalField(max_digits=12, decimal_places=4)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=4, validators=[MinValueValidator(Decimal("0.0001"))])
     # Precio capturado por el operador + su unidad.
-    unit_price_entered = models.DecimalField(max_digits=12, decimal_places=4)
+    unit_price_entered = models.DecimalField(max_digits=12, decimal_places=4, validators=[MinValueValidator(Decimal("0.0001"))])
     unit_price_uom = models.CharField(max_length=16, choices=FuelPriceUOM.choices, default=FuelPriceUOM.PER_LITER)
 
     # Monto principal (fuerte): lo capturado/operativo (entered).
-    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    amount = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
 
     # Monto canónico (para cierres/conciliación) y delta por cuantización.
     amount_canonical = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
@@ -150,7 +151,7 @@ class FuelSale(models.Model):
     customer_name = models.CharField(max_length=200, blank=True, default="")
     customer_ref = models.CharField(max_length=64, blank=True, default="")  # cédula, código cliente, interno, lo que uses
 
-    total_amount = models.DecimalField(max_digits=14, decimal_places=2)
+    total_amount = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
 
     status = models.CharField(max_length=16, choices=FuelSaleStatus.choices, default=FuelSaleStatus.ACTIVE)
 
