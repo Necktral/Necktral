@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.conf import settings
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -83,8 +83,8 @@ class BillingLine(models.Model):
 
     description = models.CharField(max_length=200)
     quantity = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal("1.0000"), validators=[MinValueValidator(Decimal("0.0001"))])
-    unit_price = models.DecimalField(max_digits=18, decimal_places=6, default=Decimal("0.000000"), validators=[MinValueValidator(Decimal("0"))])
-    tax_rate = models.DecimalField(max_digits=8, decimal_places=4, default=Decimal("0.0000"), validators=[MinValueValidator(Decimal("0"))])  # 0.1500 = 15%
+    unit_price = models.DecimalField(max_digits=18, decimal_places=6, default=Decimal("0.000000"), validators=[MinValueValidator(Decimal("0.000001"))])
+    tax_rate = models.DecimalField(max_digits=8, decimal_places=4, default=Decimal("0.0000"), validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("1"))])  # 0.1500 = 15%
 
     line_subtotal = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
     line_tax = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))

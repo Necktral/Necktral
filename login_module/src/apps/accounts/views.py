@@ -87,6 +87,7 @@ def _extract_login_reason_code(serializer_errors) -> str:
                 return "INVALID_CREDENTIALS"
     except Exception:
         logger.debug("Failed to extract login reason code from serializer errors", exc_info=True)
+    return "INVALID_CREDENTIALS"
 
 
 def _request_auth_transport(request) -> str:
