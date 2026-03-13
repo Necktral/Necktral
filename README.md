@@ -171,15 +171,17 @@ npm run dev
 Si editaste archivos directamente en github.com (botón **Edit this file**) y luego quieres traer esos cambios a tu copia local en VSCode:
 
 ```bash
-cd /home/runner/work/Necktral/Necktral
-git fetch origin
-git pull --rebase origin <tu-rama>
+cd /ruta/a/tu/Necktral
+git checkout <tu-rama>
+git pull --rebase
 ```
 
 Notas:
 
-- Reemplaza `<tu-rama>` por la rama donde hiciste los cambios (ej: `main` o `copilot/sync-local-changes`).
-- Si tienes cambios locales sin commit, primero guárdalos con `git stash` o haz commit antes de `pull`.
+- Reemplaza `<tu-rama>` por la rama donde hiciste los cambios (ej: `main` o `feature/mi-rama`).
+- Si tu rama no tiene tracking remoto, usa: `git pull --rebase origin <tu-rama>`.
+- Se usa `--rebase` para mantener un historial lineal; si prefieres merge explícito, usa `git pull origin <tu-rama>`.
+- Si tienes cambios locales sin commit, primero guárdalos con `git stash` o haz commit antes de `pull` (y recupera luego con `git stash apply`).
 - En VSCode también puedes usar **Source Control > ... > Pull** sobre esa misma rama.
 
 ## 🐳 100% Docker (incluye frontend)
