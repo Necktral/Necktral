@@ -87,10 +87,7 @@
                   label="Email"
                   type="email"
                   outlined
-                  :rules="[
-                    (v: string) =>
-                      !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || 'Email inválido',
-                  ]"
+                  :rules="[email]"
                 />
               </div>
             </div>
@@ -480,7 +477,7 @@ import { copyToClipboard, useQuasar } from 'quasar';
 import { isAxiosError } from 'axios';
 import { extractErrorMessage } from 'src/core/http/errors';
 import { BUSINESS_LABELS } from 'src/shared/ui/business-terms';
-import { required } from 'src/shared/validators';
+import { email, required } from 'src/shared/validators';
 import { useHrEmployeesFeature } from 'src/features/hr/employees/useHrEmployeesFeature';
 import { listBranches } from 'src/services/org.service';
 import {
