@@ -5,7 +5,7 @@
       subtitle="GET /audit/bitacora/ · GET /audit/events/{event_id}/"
     />
 
-    <q-banner v-if="!canRead" dense rounded class="q-mb-md">
+    <q-banner v-if="!canRead" role="alert" dense rounded class="q-mb-md">
       No tienes permiso <b>audit.read</b> o no hay contexto de company.
     </q-banner>
 
@@ -153,7 +153,7 @@
             </div>
             <div class="col-12 col-md-6">
               <q-input
-                :model-value="(detail as any)?.timestamp_server ?? ''"
+                :model-value="detail?.timestamp_server ?? ''"
                 label="timestamp_server"
                 outlined
                 readonly
@@ -162,7 +162,7 @@
 
             <div class="col-12 col-md-4">
               <q-input
-                :model-value="(detail as any)?.event_type ?? ''"
+                :model-value="detail?.event_type ?? ''"
                 label="event_type"
                 outlined
                 readonly
@@ -170,7 +170,7 @@
             </div>
             <div class="col-12 col-md-4">
               <q-input
-                :model-value="(detail as any)?.reason_code ?? ''"
+                :model-value="detail?.reason_code ?? ''"
                 label="reason_code"
                 outlined
                 readonly
@@ -178,7 +178,7 @@
             </div>
             <div class="col-12 col-md-4">
               <q-input
-                :model-value="String((detail as any)?.actor_user ?? '')"
+                :model-value="String(detail?.actor_user ?? '')"
                 label="actor_user"
                 outlined
                 readonly
@@ -187,7 +187,7 @@
 
             <div class="col-12 col-md-4">
               <q-input
-                :model-value="(detail as any)?.module ?? ''"
+                :model-value="detail?.module ?? ''"
                 label="module"
                 outlined
                 readonly
@@ -195,19 +195,19 @@
             </div>
             <div class="col-12 col-md-2">
               <q-input
-                :model-value="(detail as any)?.method ?? ''"
+                :model-value="detail?.method ?? ''"
                 label="method"
                 outlined
                 readonly
               />
             </div>
             <div class="col-12 col-md-6">
-              <q-input :model-value="(detail as any)?.path ?? ''" label="path" outlined readonly />
+              <q-input :model-value="detail?.path ?? ''" label="path" outlined readonly />
             </div>
 
             <div class="col-12 col-md-4">
               <q-input
-                :model-value="(detail as any)?.subject_type ?? ''"
+                :model-value="detail?.subject_type ?? ''"
                 label="subject_type"
                 outlined
                 readonly
@@ -215,7 +215,7 @@
             </div>
             <div class="col-12 col-md-8">
               <q-input
-                :model-value="(detail as any)?.subject_id ?? ''"
+                :model-value="detail?.subject_id ?? ''"
                 label="subject_id"
                 outlined
                 readonly
@@ -224,7 +224,7 @@
 
             <div class="col-12 col-md-4">
               <q-input
-                :model-value="(detail as any)?.ip_server_seen ?? ''"
+                :model-value="detail?.ip_server_seen ?? ''"
                 label="ip_server_seen"
                 outlined
                 readonly
@@ -232,7 +232,7 @@
             </div>
             <div class="col-12 col-md-4">
               <q-input
-                :model-value="(detail as any)?.device_id ?? ''"
+                :model-value="detail?.device_id ?? ''"
                 label="device_id"
                 outlined
                 readonly
@@ -240,22 +240,22 @@
             </div>
             <div class="col-12 col-md-4">
               <q-badge outline>
-                offline_mode: {{ (detail as any)?.offline_mode ? 'true' : 'false' }}
+                offline_mode: {{ detail?.offline_mode ? 'true' : 'false' }}
               </q-badge>
             </div>
 
             <div class="col-12">
               <div class="text-caption text-grey-7 q-mb-xs">metadata</div>
-              <pre class="json-box">{{ pretty((detail as any)?.metadata) }}</pre>
+              <pre class="json-box">{{ pretty(detail?.metadata) }}</pre>
             </div>
 
-            <div v-if="(detail as any)?.integrity" class="col-12">
+            <div v-if="detail?.integrity" class="col-12">
               <div class="text-caption text-grey-7 q-mb-xs">integrity</div>
-              <pre class="json-box">{{ pretty((detail as any)?.integrity) }}</pre>
+              <pre class="json-box">{{ pretty(detail?.integrity) }}</pre>
             </div>
           </div>
 
-          <q-banner v-if="detailError" class="q-mt-md" dense rounded>
+          <q-banner v-if="detailError" role="alert" class="q-mt-md" dense rounded>
             {{ detailError }}
           </q-banner>
         </q-card-section>
@@ -265,7 +265,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { isAxiosError } from 'axios';
 import type { QTableColumn } from 'quasar';
@@ -493,6 +493,10 @@ function debouncedReload() {
   if (t) window.clearTimeout(t);
   t = window.setTimeout(() => reloadFirstPage(), 350);
 }
+
+onBeforeUnmount(() => {
+  if (t) window.clearTimeout(t);
+});
 
 watch(
   () => ({

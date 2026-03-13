@@ -82,7 +82,16 @@
                 <q-input v-model="form.phone" label="Teléfono" outlined />
               </div>
               <div class="col-12 col-md-6">
-                <q-input v-model="form.email" label="Email" outlined />
+                <q-input
+                  v-model="form.email"
+                  label="Email"
+                  type="email"
+                  outlined
+                  :rules="[
+                    (v: string) =>
+                      !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || 'Email inválido',
+                  ]"
+                />
               </div>
             </div>
 

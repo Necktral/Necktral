@@ -50,6 +50,7 @@ env = environ.Env(
     DRF_THROTTLE_ME_READ=(str, "60/min"),
     DRF_THROTTLE_ME_ACL_READ=(str, "30/min"),
     DJANGO_CSP_CONNECT_SRC=(list, ["http://localhost:8000", "http://127.0.0.1:8000"]),
+    AUDIT_HMAC_KEY=(str, ""),
     AUDIT_HMAC_KEYS=(str, ""),
     SENTRY_DSN=(str, ""),
     SENTRY_ENVIRONMENT=(str, "dev"),
@@ -381,10 +382,6 @@ if SENTRY_DSN:
         send_default_pii=False,
         integrations=[DjangoIntegration()],
     )
-
-# CORS / CSRF para PWA
-CORS_ALLOWED_ORIGINS = env("DJANGO_CORS_ALLOWED_ORIGINS")
-CSRF_TRUSTED_ORIGINS = env("DJANGO_CSRF_TRUSTED_ORIGINS")
 
 # drf-spectacular + sidecar (UI embebida)
 SPECTACULAR_SETTINGS = {

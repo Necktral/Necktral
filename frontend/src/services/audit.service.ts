@@ -32,8 +32,31 @@ export type AuditEventRow = {
   metadata?: Record<string, unknown>;
 };
 
-export type AuditEventDetail = Record<string, unknown> & {
+export type AuditEventDetail = {
   event_id: string;
+  schema_version?: number;
+
+  module: string | null;
+  event_type: string;
+  reason_code: string | null;
+
+  timestamp_server: string;
+
+  actor_user: number | null;
+  device_id: string | null;
+  ip_server_seen: string | null;
+  offline_mode: boolean;
+
+  path: string;
+  method: string;
+
+  subject_type: string | null;
+  subject_id: string | null;
+
+  metadata?: Record<string, unknown>;
+  integrity?: Record<string, unknown>;
+
+  [key: string]: unknown;
 };
 
 export type AuditListParams = {
