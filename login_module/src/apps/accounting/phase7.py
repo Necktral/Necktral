@@ -1,3 +1,5 @@
+"""Servicios de núcleo contable Fase 7 (GL/FX) con invariantes auditablemente estrictas."""
+
 from __future__ import annotations
 
 import calendar
@@ -117,6 +119,7 @@ def _resolve_company(*, company_id: int) -> OrgUnit:
 
 
 def get_or_create_accounting_config(*, company: OrgUnit) -> CompanyAccountingConfig:
+    """Obtiene o inicializa configuración contable por empresa con defaults seguros."""
     cfg, _ = CompanyAccountingConfig.objects.get_or_create(
         company=company,
         defaults={
@@ -138,6 +141,7 @@ def upsert_chart_of_accounts(
     rows: list[dict[str, Any]],
     sync_deactivate: bool = False,
 ) -> CoAUpsertResult:
+    """Sincroniza plan de cuentas garantizando unicidad, validez de tipos y jerarquía consistente."""
     if not rows:
         raise Phase7ValidationError("rows es requerido.")
 
@@ -151,6 +155,7 @@ def upsert_chart_of_accounts(
         account_type = str(row.get("account_type") or "").strip().upper()
         if not code:
             raise Phase7ValidationError(f"rows[{idx}].code es requerido.")
+        # Regla fuerte: la carga de COA es determinista, no permite códigos duplicados en el mismo payload.
         if code in seen_codes:
             raise Phase7ValidationError(f"Código duplicado en payload: {code}")
         seen_codes.add(code)
@@ -215,6 +220,7 @@ def upsert_chart_of_accounts(
                     raise Phase7ValidationError(
                         f"parent_code {parent_code} no encontrado en payload/company."
                     )
+                # Regla fuerte: se evita ciclo trivial self-parent para preservar consistencia de árbol contable.
                 if parent.id == obj.id:
                     raise Phase7ValidationError(f"Cuenta {obj.code} no puede tenerse como parent.")
             if obj.parent_id != (parent.id if parent else None):
@@ -239,6 +245,7 @@ def build_entry_lines_from_draft(
     draft: JournalDraft,
     functional_currency: str,
 ) -> tuple[list[dict[str, Any]], Decimal, Decimal]:
+    """Normaliza líneas de draft a formato canónico, validando cuentas, montos y moneda funcional."""
     rows = draft.lines_json if isinstance(draft.lines_json, list) else []
     if not rows:
         raise Phase7ValidationError(f"Draft {draft.id} no contiene lines_json.")
@@ -300,6 +307,7 @@ def build_entry_lines_from_draft(
 
         fx_rate = _to_decimal(row.get("fx_rate"), default=Decimal("0.00"))
         if fx_rate <= Decimal("0.00"):
+            # Contrato de resiliencia: si no viene tasa explícita, se fuerza 1.0 para mantener cierre balanceado.
             fx_rate = Decimal("1.00000000") if currency == base_currency else Decimal("1.00000000")
         fx_rate = _q_rate(fx_rate)
         if fx_rate <= Decimal("0.00"):
@@ -679,6 +687,7 @@ def run_fx_revaluation(
     actor_user=None,
     scope_account_codes: list[str] | None = None,
 ) -> RevaluationExecutionResult:
+    """Ejecuta revaluación FX mensual con idempotencia por scope y bloqueo estricto ante issues."""
     company = _resolve_company(company_id=company_id)
     if month < 1 or month > 12:
         raise Phase7ValidationError("month debe estar en rango 1..12.")
@@ -809,6 +818,7 @@ def run_fx_revaluation(
             )
 
         if strict and issues:
+            # Gate estricto: no se generan asientos cuando faltan precondiciones críticas de cierre.
             summary = {
                 "schema_version": 1,
                 "status": RevaluationRun.Status.BLOCKED,
@@ -911,6 +921,7 @@ def run_fx_revaluation(
             )
 
             lines_json = [
+                # Regla de asiento técnico: línea principal en cuenta revaluable y contrapartida en cuenta FX.
                 {
                     "account": account.code,
                     "side": main_side,

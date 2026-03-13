@@ -41,6 +41,27 @@ Workflow sugerido en GitHub Actions: `.github/workflows/qa-ci.yml`.
 
 Nota: el “Gate 3” del runner de CI es **integridad de auditoría** (comando `audit_verify_chain`). El target `make qa-gate3` de este README es un **Gate 3 de carga** (k6 smoke+stress).
 
+## Auditoría integral de repositorio y comentarios
+
+Para validar estado de rama y calidad mínima de comentarios/docstrings en módulos críticos:
+
+```bash
+make qa-repo-comment-audit
+```
+
+Artefactos generados:
+
+- `qa/reports/repo_comment_audit.json`
+- `qa/reports/repo_comment_audit.md`
+
+La auditoría reporta:
+
+- Sync Git de la rama actual contra `origin/<rama>` (`PASS/FAIL`).
+- Brecha informativa contra `upstream/master` (`PASS/WARN`).
+- Densidad de comentarios/docstrings por lenguaje.
+- Densidad por módulo crítico y ranking de archivos críticos con menor anotación.
+- Estado de política mínima (`PASS/WARN`) para archivos críticos priorizados.
+
 ## Load / Stress (k6)
 
 Requisitos:

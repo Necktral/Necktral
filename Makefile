@@ -3,6 +3,7 @@
 	qa-operational-hygiene qa-operational-gate qa-operational-pilot-stage1 qa-operational-pilot-stage2 qa-operational-pilot-stage3 qa-operational-pilot-rollback qa-operational-all \
 	qa-operational-go-live \
 	qa-ci-up qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci \
+	qa-repo-comment-audit \
 	qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-backend-mypy-baseline-refresh qa-backend-tests qa-static-scan qa-frontend-ci qa-audit-integrity \
 	docker-clean docker-clean-all
 
@@ -48,6 +49,9 @@ OPER_BILLING_VUS ?= 6
 OPER_INVENTORY_VUS ?= 6
 OPER_POSTING_VUS ?= 1
 OPER_DURATION ?= 2m
+REPO_AUDIT_FETCH ?= 1
+REPO_AUDIT_TOP_N ?= 20
+REPO_AUDIT_MIN_LINES ?= 120
 
 qa-load-reset-axes:
 	docker compose exec -T backend python manage.py axes_reset
@@ -116,6 +120,13 @@ qa-ci-gate3: qa-ci-up qa-audit-integrity
 # Runner completo Gates 1–3
 qa-ci:
 	QA_REPORTS_DIR="$(QA_REPORTS_DIR)" QA_FRESH_DB="$(QA_FRESH_DB)" QA_KEEP_FRONTEND="$(QA_KEEP_FRONTEND)" bash ./qa/run_qa_ci.sh
+
+qa-repo-comment-audit:
+	python3 ./qa/repo_comment_audit.py \
+		--json-output ./qa/reports/repo_comment_audit.json \
+		--md-output ./qa/reports/repo_comment_audit.md \
+		--top-n $(REPO_AUDIT_TOP_N) \
+		--min-large-lines $(REPO_AUDIT_MIN_LINES) $(if $(filter 1,$(REPO_AUDIT_FETCH)),--fetch,)
 
 # --- Docker helpers (dev/local) ---
 

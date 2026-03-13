@@ -28,6 +28,7 @@ yarn-error.log*
 *.ntvs*
 *.njsproj
 *.sln
+*:Zone.Identifier
 
 # local .env files
 .env

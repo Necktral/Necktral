@@ -1,3 +1,5 @@
+"""API REST de contabilidad (GL, FX e intercompany) con contratos de respuesta estables."""
+
 from __future__ import annotations
 
 from django.db.models import Q
@@ -82,6 +84,8 @@ from .services import (
 
 
 class HealthView(APIView):
+    """Healthcheck del módulo contable sin autenticación para observabilidad técnica."""
+
     authentication_classes = []
     permission_classes = []
 
@@ -90,6 +94,7 @@ class HealthView(APIView):
 
 
 def _resolve_range_payload(validated: dict):
+    """Resuelve rango por período (`year/month`) o por fechas explícitas, con prioridad a período."""
     period_range = resolve_period_range(
         year=validated.get("year"),
         month=validated.get("month"),
@@ -100,6 +105,7 @@ def _resolve_range_payload(validated: dict):
 
 
 def _serialize_intercompany(tx: IntercompanyTransaction) -> dict:
+    """Serializa transacción intercompany con contexto de disputa activa para UI/reportes."""
     dispute_case = (
         tx.dispute_cases.filter(status__in=["OPEN", "UNDER_REVIEW", "APPROVED"])
         .select_related("reason")
@@ -141,10 +147,13 @@ def _serialize_intercompany(tx: IntercompanyTransaction) -> dict:
 
 
 def _load_intercompany(tx_id: str) -> IntercompanyTransaction | None:
+    """Carga transacción intercompany por identificador de negocio (`tx_id`)."""
     return IntercompanyTransaction.objects.filter(tx_id=tx_id).first()
 
 
 class ChartOfAccountView(APIView):
+    """Consulta y actualización de COA/config de Fase 7 con publicación de evento de integración."""
+
     permission_classes = [rbac_permission("accounting.coa.read")]
 
     def get(self, request):
@@ -220,6 +229,7 @@ class ChartOfAccountView(APIView):
                 code = str(v.get(code_field) or "").strip().upper()
                 if not code:
                     return None
+                # Regla fuerte: las cuentas técnicas deben existir activas en el mismo scope de empresa.
                 row = ChartOfAccount.objects.filter(company=company, code=code, is_active=True).first()
                 if row is None:
                     raise Phase7ValidationError(f"Cuenta no encontrada para {code_field}: {code}")
@@ -268,6 +278,8 @@ class ChartOfAccountView(APIView):
 
 
 class TrialBalanceReportView(APIView):
+    """Reporte de balance de comprobación con filtros por periodo y paginación estándar."""
+
     permission_classes = [rbac_permission("accounting.report.read")]
 
     def get(self, request):
@@ -317,6 +329,8 @@ class TrialBalanceReportView(APIView):
 
 
 class GeneralLedgerReportView(APIView):
+    """Reporte de mayor general por cuenta contable en orden cronológico estable."""
+
     permission_classes = [rbac_permission("accounting.report.read")]
 
     def get(self, request):
@@ -536,6 +550,8 @@ class FxRateUpsertView(APIView):
 
 
 class FxRevaluationRunView(APIView):
+    """Ejecuta revaluación FX y expone resultado idempotente/bloqueado en contrato REST."""
+
     permission_classes = [rbac_permission("accounting.revaluation.run")]
 
     def post(self, request):

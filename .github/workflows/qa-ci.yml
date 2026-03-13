@@ -17,6 +17,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run repo comment audit (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          make qa-repo-comment-audit REPO_AUDIT_FETCH=1
 
       - name: Docker info
         run: |
@@ -30,6 +37,15 @@ jobs:
       - name: Run QA gates (deterministic)
         run: |
           make qa-ci-ci
+
+      - name: Publish repo audit summary (PR)
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          if [ -f qa/reports/repo_comment_audit.md ]; then
+            cat qa/reports/repo_comment_audit.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No se encontró qa/reports/repo_comment_audit.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload QA reports
         if: always()

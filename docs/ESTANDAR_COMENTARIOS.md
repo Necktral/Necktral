@@ -65,3 +65,18 @@ Debe responder:
 - ¿Está en español y es legible?
 - ¿Está cerca del código que implementa la regla?
 - ¿Aclara seguridad/consistencia/auditoría si corresponde?
+
+## Política mínima auditable (módulos críticos)
+
+Para validaciones de release se aplica una auditoría reproducible (`qa/repo_comment_audit.py`) con estos mínimos:
+
+1. **Repositorio actualizado (criterio operativo):**
+   - La rama local debe estar en sync con `origin/<rama>` (sin cambios locales y sin ahead/behind).
+   - La brecha contra `upstream/master` se reporta como informativa.
+2. **Docstrings obligatorias en superficies públicas críticas:**
+   - Vistas/servicios/comandos públicos definidos como críticos por la auditoría.
+   - Deben documentar contrato, precondiciones e invariantes relevantes.
+3. **Comentarios obligatorios en reglas no obvias:**
+   - Gates, idempotencia, reconciliación y decisiones de consistencia/auditoría.
+4. **Exclusiones de cómputo:**
+   - `node_modules`, `dist`, `.quasar`, artefactos generados y migraciones.

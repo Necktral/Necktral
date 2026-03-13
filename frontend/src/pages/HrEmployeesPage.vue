@@ -509,7 +509,7 @@ const {
   reload,
 } = useHrEmployeesFeature();
 
-// Create/Edit
+// Contrato UI HR: edición local y persistencia explícita, sin mutaciones optimistas de tabla.
 const editDialog = ref(false);
 const editingId = ref<number | null>(null);
 
@@ -590,7 +590,7 @@ async function saveEmployee() {
   }
 }
 
-// Assign
+// Regla operativa: la asignación usa catálogos (puestos/sucursales) para mantener coherencia RBAC.
 const assignDialog = ref(false);
 const assignTarget = ref<EmployeeRow | null>(null);
 const assignSaving = ref(false);
@@ -636,8 +636,7 @@ async function openAssign(e: EmployeeRow) {
       value: b.id,
     }));
   } catch (err: unknown) {
-    // Si no tienes org.branch.read, igual puedes asignar sin branch_id o ingresarlo manual (más adelante si lo quieres)
-    // Aquí solo informamos.
+    // Degradación controlada: si falta org.branch.read permitimos continuar sin branch_id.
     const msg = extractErrorMessage(err);
     assignError.value = assignError.value
       ? `${assignError.value} | Branches: ${msg}`
@@ -671,7 +670,7 @@ async function doAssign() {
   }
 }
 
-// End assignment
+// Regla fuerte HR: cierre de asignación siempre sobre assignment_id explícito.
 const endDialog = ref(false);
 const endTarget = ref<EmployeeRow | null>(null);
 const endAssignmentId = ref<number | null>(null);
@@ -713,7 +712,7 @@ async function doEnd() {
   }
 }
 
-// Provision user
+// Provisionamiento IAM ligado a estado HR: requiere asignación activa para evitar usuarios huérfanos.
 const provDialog = ref(false);
 const provTarget = ref<EmployeeRow | null>(null);
 const provSaving = ref(false);
@@ -798,12 +797,12 @@ async function doProvision() {
         provError.value =
           'No tienes permisos para esta acción (requiere iam.users.create y hr.employee.update).';
       } else if (status === 409) {
-        // backend actual devuelve 409 con mensaje en español
+        // 409 representa conflicto de dominio (estado incompatible o vínculo ya existente).
         provError.value =
           detailStr ||
           'Conflicto: el empleado ya tiene usuario vinculado o el estado no permite provisionar.';
       } else if (status === 400) {
-        // Mensajes “humanos” basados en ValueError del backend (en español)
+        // Traducción de errores de contrato backend a mensajes accionables para operación.
         if (detailStr.includes('no tiene ninguna asignación activa')) {
           provError.value =
             'El empleado no tiene asignación activa. Asigna un puesto/sucursal antes de provisionar acceso.';
@@ -837,7 +836,7 @@ async function copyProvPass() {
   }
 }
 
-// Reset temp password
+// Reset de contraseña temporal con confirmación explícita para trazabilidad operativa.
 const resetDialog = ref(false);
 const resetTarget = ref<EmployeeRow | null>(null);
 const resetSaving = ref(false);
@@ -942,7 +941,7 @@ async function copyResetPass() {
   }
 }
 
-// Revoke access (B)
+// Revocación de acceso IAM con warning cuando aún existe asignación activa.
 const revokeDialog = ref(false);
 const revokeTarget = ref<EmployeeRow | null>(null);
 const revokeSaving = ref(false);
