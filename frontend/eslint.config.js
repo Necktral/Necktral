@@ -4,6 +4,7 @@ import pluginVue from 'eslint-plugin-vue';
 import pluginQuasar from '@quasar/app-vite/eslint';
 import { defineConfigWithVueTs, vueTsConfigs } from '@vue/eslint-config-typescript';
 import prettierSkipFormatting from '@vue/eslint-config-prettier/skip-formatting';
+import pluginA11y from 'eslint-plugin-vuejs-accessibility';
 
 export default defineConfigWithVueTs(
   {
@@ -34,6 +35,20 @@ export default defineConfigWithVueTs(
    *   -> Above, plus rules to enforce subjective community defaults to ensure consistency.
    */
   pluginVue.configs['flat/essential'],
+
+  // Accessibility rules for Vue templates (vuejs-accessibility)
+  // Set to 'warn' for gradual adoption — promote to 'error' once violations are fixed.
+  ...pluginA11y.configs['flat/recommended'].map(
+    (cfg) =>
+      cfg.rules
+        ? {
+            ...cfg,
+            rules: Object.fromEntries(
+              Object.entries(cfg.rules).map(([k, v]) => [k, v === 'error' || v === 2 ? 'warn' : v]),
+            ),
+          }
+        : cfg,
+  ),
 
   {
     files: ['**/*.ts', '**/*.vue'],

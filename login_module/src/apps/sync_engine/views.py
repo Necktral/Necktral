@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.db.models import Q
 import uuid
 from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny  # noqa: F401 — kept for reference
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -23,6 +23,7 @@ from apps.common.permissions import rbac_permission
 from apps.iam.models import OrgUnit
 
 from .models import Device, DeviceEnrollmentChallenge
+from .permissions import IsDeviceAuthenticated, IsEnrollmentCode
 from .serializers import EnrollmentChallengeCreateIn, DeviceEnrollIn, SyncBatchIn
 from .signing import public_key_from_b64
 from .services import process_batch, resolve_device
@@ -108,7 +109,7 @@ class DeviceEnrollView(APIView):
     No requiere JWT: el secreto es el enrollment_code (one-time).
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsEnrollmentCode]
     throttle_scope = "auth_sensitive"
 
     def post(self, request):
@@ -280,7 +281,7 @@ class SyncBatchView(APIView):
     Device-auth (X-Device-Id) + firma por comando.
     """
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsDeviceAuthenticated]
     throttle_scope = "sync_batch"
 
     def post(self, request):
