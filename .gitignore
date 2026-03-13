@@ -54,6 +54,7 @@ htmlcov/
 
 # QA runner artefacts
 qa/reports/
+simulacion/reports/
 
 # PM snapshot (generado localmente / artefacto de CI)
 pm_snapshot.md
