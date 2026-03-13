@@ -166,6 +166,22 @@ npm install
 npm run dev
 ```
 
+### Sincronizar cambios hechos en GitHub Web (VSCode local)
+
+Si editaste archivos directamente en github.com (botón **Edit this file**) y luego quieres traer esos cambios a tu copia local en VSCode:
+
+```bash
+cd /home/runner/work/Necktral/Necktral
+git fetch origin
+git pull --rebase origin <tu-rama>
+```
+
+Notas:
+
+- Reemplaza `<tu-rama>` por la rama donde hiciste los cambios (ej: `main` o `copilot/sync-local-changes`).
+- Si tienes cambios locales sin commit, primero guárdalos con `git stash` o haz commit antes de `pull`.
+- En VSCode también puedes usar **Source Control > ... > Pull** sobre esa misma rama.
+
 ## 🐳 100% Docker (incluye frontend)
 
 Si prefieres no instalar Node localmente, el `compose.yaml` incluye un servicio `frontend`.
