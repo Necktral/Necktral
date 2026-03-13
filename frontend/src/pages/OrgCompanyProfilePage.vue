@@ -29,7 +29,7 @@
                 label="Razón social / nombre legal"
                 outlined
                 :disable="!canEdit"
-                :rules="[(v) => !!String(v || '').trim() || 'Requerido']"
+                :rules="[required]"
               />
             </div>
             <div class="col-12 col-md-4">
@@ -83,6 +83,7 @@ import { useAclStore } from 'src/stores/acl.store';
 import { useContextStore } from 'src/stores/context.store';
 import { extractErrorMessage } from 'src/core/http/errors';
 import { BUSINESS_LABELS } from 'src/shared/ui/business-terms';
+import { required } from 'src/shared/validators';
 import {
   getCompanyProfile,
   updateCompanyProfile,

@@ -2,6 +2,7 @@ import { computed, onMounted, ref } from 'vue';
 import type { QTableColumn } from 'quasar';
 
 import { extractErrorMessage } from 'src/core/http/errors';
+import { computeLimit } from 'src/shared/constants';
 import { listEmployees, type EmployeeRow } from 'src/services/hr.service';
 import { useAclStore } from 'src/stores/acl.store';
 import { useContextStore } from 'src/stores/context.store';
@@ -30,10 +31,6 @@ const EMPLOYEE_COLUMNS: QTableColumn[] = [
   { name: 'access', label: 'Acceso', field: 'access', align: 'left' },
   { name: 'actions', label: 'Acciones', field: 'actions', align: 'right' },
 ];
-
-function computeLimit(rowsPerPage: number): number {
-  return rowsPerPage === 0 ? 200 : rowsPerPage;
-}
 
 export function useHrEmployeesFeature() {
   const acl = useAclStore();

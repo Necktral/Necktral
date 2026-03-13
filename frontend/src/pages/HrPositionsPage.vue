@@ -61,7 +61,7 @@
               v-model="form.name"
               label="Nombre"
               outlined
-              :rules="[(v) => !!v || 'Requerido']"
+              :rules="[required]"
             />
             <div class="q-mt-sm" />
             <q-input v-model="form.code" label="Código" outlined />
@@ -151,6 +151,8 @@ import { useAclStore } from 'src/stores/acl.store';
 import { useContextStore } from 'src/stores/context.store';
 import { extractErrorMessage } from 'src/core/http/errors';
 import { BUSINESS_LABELS } from 'src/shared/ui/business-terms';
+import { computeLimit } from 'src/shared/constants';
+import { required } from 'src/shared/validators';
 import { listRoles } from 'src/services/rbac.service';
 import {
   createPosition,
@@ -202,10 +204,6 @@ const canRoleMap = computed(() => {
     acl.hasPermission(ctx.activeCompanyId, 'rbac.roles.read')
   );
 });
-
-function computeLimit(rowsPerPage: number) {
-  return rowsPerPage === 0 ? 200 : rowsPerPage;
-}
 
 async function load(page = pagination.value.page, rowsPerPage = pagination.value.rowsPerPage) {
   loading.value = true;

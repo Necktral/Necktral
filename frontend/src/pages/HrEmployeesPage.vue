@@ -69,7 +69,7 @@
                   v-model="form.first_name"
                   label="Nombres"
                   outlined
-                  :rules="[(v) => !!String(v || '').trim() || 'Requerido']"
+                  :rules="[required]"
                 />
               </div>
               <div class="col-12 col-md-4">
@@ -226,7 +226,7 @@
                   v-model="provForm.username"
                   label="Username"
                   outlined
-                  :rules="[(v) => !!String(v || '').trim() || 'Requerido']"
+                  :rules="[required]"
                 />
               </div>
               <div class="col-12 col-md-6">
@@ -480,6 +480,7 @@ import { copyToClipboard, useQuasar } from 'quasar';
 import { isAxiosError } from 'axios';
 import { extractErrorMessage } from 'src/core/http/errors';
 import { BUSINESS_LABELS } from 'src/shared/ui/business-terms';
+import { required } from 'src/shared/validators';
 import { useHrEmployeesFeature } from 'src/features/hr/employees/useHrEmployeesFeature';
 import { listBranches } from 'src/services/org.service';
 import {

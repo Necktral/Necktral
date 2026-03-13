@@ -77,7 +77,7 @@
                   v-model="form.name"
                   label="Nombre"
                   outlined
-                  :rules="[(v) => !!String(v || '').trim() || 'Requerido']"
+                  :rules="[required]"
                 />
               </div>
               <div class="col-12 col-md-4">
@@ -128,6 +128,8 @@ import { useAclStore } from 'src/stores/acl.store';
 import { useContextStore } from 'src/stores/context.store';
 import { extractErrorMessage } from 'src/core/http/errors';
 import { BUSINESS_LABELS } from 'src/shared/ui/business-terms';
+import { computeLimit } from 'src/shared/constants';
+import { required } from 'src/shared/validators';
 import { createBranch, listBranches, patchBranch, type BranchRow } from 'src/services/org.service';
 import AppContainer from 'src/ui/AppContainer.vue';
 import AppPageHeader from 'src/ui/AppPageHeader.vue';
@@ -170,10 +172,6 @@ const columns: QTableColumn[] = [
   { name: 'email', label: 'Email', field: 'email', align: 'left' },
   { name: 'actions', label: 'Acciones', field: 'actions', align: 'right' },
 ];
-
-function computeLimit(rowsPerPage: number) {
-  return rowsPerPage === 0 ? 200 : rowsPerPage;
-}
 
 async function load(page = pagination.value.page, rowsPerPage = pagination.value.rowsPerPage) {
   loading.value = true;
