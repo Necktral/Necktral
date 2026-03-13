@@ -55,8 +55,6 @@ export type AuditEventDetail = {
 
   metadata?: Record<string, unknown>;
   integrity?: Record<string, unknown>;
-
-  [key: string]: unknown;
 };
 
 export type AuditListParams = {
