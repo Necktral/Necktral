@@ -16,6 +16,15 @@ Eso significa que el **TOTAL** del reporte corresponde **solo** a ese módulo, n
 - Cobertura del scope definido **≥ 98%** (o **≥ 99%** si el objetivo es más estricto).
 - `make qa-ci-gate2` y `make qa-ci-gate3` pasan sin errores.
 - Sin regresión: no bajar la cobertura del scope ni en archivos tocados.
+- `qa/reports/coverage_by_domain.{json,md}` generado y con umbrales por dominio en `PASS`.
+
+Umbral por dominio configurable:
+
+```bash
+make qa-ci-gate2 QA_DOMAIN_THRESHOLDS="sync_engine=98 iam=80 audit=85 accounting=85 integration=85 billing=85 inventory=85 procurement=80"
+```
+
+Nota: mientras `.coveragerc` permanezca acotado a `sync_engine`, solo ese dominio tendrá líneas medidas.
 
 Si el KPI es “backend completo”, hay que **ampliar o ajustar** el `source` en `.coveragerc` y recalcular el %.
 
@@ -40,6 +49,18 @@ Workflow sugerido en GitHub Actions: `.github/workflows/qa-ci.yml`.
   ```
 
 Nota: el “Gate 3” del runner de CI es **integridad de auditoría** (comando `audit_verify_chain`). El target `make qa-gate3` de este README es un **Gate 3 de carga** (k6 smoke+stress).
+
+Artefactos principales del runner (`make qa-ci`):
+
+- `qa/reports/static_scan.txt`
+- `qa/reports/ruff.txt`
+- `qa/reports/mypy.txt`
+- `qa/reports/pytest.xml`
+- `qa/reports/coverage.xml`
+- `qa/reports/coverage.txt`
+- `qa/reports/coverage_by_domain.json`
+- `qa/reports/coverage_by_domain.md`
+- `qa/reports/audit_integrity.json`
 
 ## Auditoría integral de repositorio y comentarios
 

@@ -13,12 +13,24 @@ from .serializers import SyncBatchSerializer
 from .signing import canonical_string, verify_hmac_signature
 
 MAX_SKEW_SECONDS = 300  # 5 minutos
+SYNC_HMAC_SUNSET = "2026-06-30T00:00:00Z"
+SYNC_HMAC_DEPRECATION_LINK = "</docs/CONTRACT_PACK_v2.0.md>; rel=\"deprecation\""
+SYNC_HMAC_DEPRECATION_NOTICE = "Use /api/sync/batch/ (sync-hmac legacy sera retirado tras Sunset)."
 
 
 class SyncBatchView(APIView):
     authentication_classes = []  # autenticación propia por firma
     permission_classes = []
     throttle_scope = "sync_batch"
+
+    @staticmethod
+    def _with_deprecation_headers(response: Response) -> Response:
+        response["Deprecation"] = "true"
+        response["Sunset"] = SYNC_HMAC_SUNSET
+        response["Link"] = SYNC_HMAC_DEPRECATION_LINK
+        response["X-Deprecated"] = "true"
+        response["X-Deprecation-Notice"] = SYNC_HMAC_DEPRECATION_NOTICE
+        return response
 
     def _error_response(self, request, *, status_code: int, reason: str, details: dict | None = None) -> Response:
         payload = build_error_envelope(
@@ -27,7 +39,7 @@ class SyncBatchView(APIView):
             exc=None,
             details={"detail": reason, **(details or {})},
         )
-        return Response(payload, status=status_code)
+        return self._with_deprecation_headers(Response(payload, status=status_code))
 
     def post(self, request):
         # 1) Headers
@@ -117,4 +129,6 @@ class SyncBatchView(APIView):
             except CommandError as e:
                 results.append({"command_id": cmd.command_id, "result": {"status": "ERROR", "error": str(e)}})
 
-        return Response({"device_id": str(device.id), "results": results}, status=status.HTTP_200_OK)
+        return self._with_deprecation_headers(
+            Response({"device_id": str(device.id), "results": results}, status=status.HTTP_200_OK)
+        )

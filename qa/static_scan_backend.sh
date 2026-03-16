@@ -2,9 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="${1:-/app}"
+REPORT_FILE="${2:-}"
 REPORT_DIR="${ROOT_DIR}/qa/reports"
 
-mkdir -p "${REPORT_DIR}"
+if [[ -z "${REPORT_FILE}" ]]; then
+  REPORT_FILE="${REPORT_DIR}/static_scan.txt"
+fi
+
+REPORT_PARENT="$(dirname "${REPORT_FILE}")"
+mkdir -p "${REPORT_PARENT}"
 
 TARGET_DIR="${ROOT_DIR}/login_module/src/apps"
 
@@ -29,11 +35,11 @@ matches="$(
   else
     echo "OK: sin hallazgos"
   fi
-} > "${REPORT_DIR}/static_scan.txt"
+} > "${REPORT_FILE}"
 
 if [[ -n "${matches}" ]]; then
-  echo "Static scan falló: ver ${REPORT_DIR}/static_scan.txt" >&2
+  echo "Static scan falló: ver ${REPORT_FILE}" >&2
   exit 2
 fi
 
-echo "Static scan OK: ${REPORT_DIR}/static_scan.txt"
+echo "Static scan OK: ${REPORT_FILE}"

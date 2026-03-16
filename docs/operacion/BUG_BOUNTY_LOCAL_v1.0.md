@@ -32,6 +32,8 @@ Se crea `docs/operacion/evidencia/bug_bounty_local_<timestamp>/` con:
 - `12_npm_audit.json`
 - `13_trivy_fs.json`
 - `14_static_scan.txt`
+- `23_dast_zap.json` (si `BUG_BOUNTY_DAST_URL` está definido)
+- `23_dast_zap.md` (si `BUG_BOUNTY_DAST_URL` está definido)
 - `20_django_check.txt`
 - `21_audit_integrity.json`
 - `22_security_pytest.txt`
@@ -46,9 +48,21 @@ Se crea `docs/operacion/evidencia/bug_bounty_local_<timestamp>/` con:
 - `gitleaks_clean=true`
 - `pip_audit_blocking_clean=true` (sin HIGH/CRITICAL con fix disponible)
 - `npm_audit_blocking_clean=true` (sin HIGH/CRITICAL con fix disponible)
+- `static_scan_pass=true`
+- `dast_pass=true` (obligatorio solo cuando `BUG_BOUNTY_REQUIRE_DAST=1`)
 - `manage_check_pass=true`
 - `audit_chain_pass=true`
 - `security_pytest_pass=true`
+
+## DAST opcional
+
+Para activar DAST con ZAP baseline:
+
+```bash
+BUG_BOUNTY_DAST_URL=http://localhost:8000 \
+BUG_BOUNTY_REQUIRE_DAST=1 \
+./qa/run_bug_bounty_local.sh
+```
 
 ## Notas de gobernanza
 

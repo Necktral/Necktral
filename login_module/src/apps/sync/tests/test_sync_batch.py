@@ -18,6 +18,14 @@ from apps.sync.models import DeviceEnrollment, DeviceRequestNonce
 from apps.sync.signing import canonical_string, hmac_signature_b64
 
 
+def _assert_sync_hmac_deprecation_headers(res) -> None:
+    assert res["Deprecation"] == "true"
+    assert res["Sunset"]
+    assert "CONTRACT_PACK_v2.0.md" in res["Link"]
+    assert res["X-Deprecated"] == "true"
+    assert "Use /api/sync/batch/" in res["X-Deprecation-Notice"]
+
+
 @pytest.mark.django_db
 def test_sync_batch_happy_path(settings):
     client = APIClient()
@@ -55,6 +63,7 @@ def test_sync_batch_happy_path(settings):
     assert payload["device_id"] == str(device.id)
     assert payload["results"][0]["result"]["status"] == "OK"
     assert payload["results"][0]["result"]["data"]["pong"] is True
+    _assert_sync_hmac_deprecation_headers(res)
 
 
 @pytest.mark.django_db
@@ -83,6 +92,7 @@ def test_sync_batch_bad_signature_rejected():
     assert payload["error"]["code"] == "AUTH_UNAUTHENTICATED"
     assert payload["error"]["message"] == "BAD_SIGNATURE"
     assert DeviceRequestNonce.objects.filter(device=device).count() == 0
+    _assert_sync_hmac_deprecation_headers(res)
 
 
 @pytest.mark.django_db

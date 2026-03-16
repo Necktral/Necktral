@@ -1,5 +1,6 @@
 from .base import *  # noqa
 
+from datetime import timedelta
 from rest_framework.settings import api_settings
 
 # Tests: deterministas y rápidos
@@ -8,10 +9,13 @@ SECRET_KEY = "test-signing-key-with-minimum-32-bytes-2026"
 SIMPLE_JWT = {
     **SIMPLE_JWT,
     "SIGNING_KEY": SECRET_KEY,
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=365),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=365),
 }
 
 # Tests: mantener header para facilitar clientes no-browser
 AUTH_TOKEN_TRANSPORT = "header"
+OPENAPI_ALLOW_ANON = True
 
 # Tests: permitir host por defecto de APIClient
 ALLOWED_HOSTS = list(ALLOWED_HOSTS) + ["testserver"]

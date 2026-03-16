@@ -215,7 +215,7 @@ Los endpoints legacy deben:
 **Headers obligatorios en wrappers legacy**
 
 - `Deprecation: true`
-- `Sunset: 2026-03-31T00:00:00Z`
+- `Sunset: 2026-06-30T00:00:00Z`
 - `Link: </docs/CONTRACT_PACK_v2.0.md>; rel="deprecation"`
 
 **Métricas mínimas (legacy)**

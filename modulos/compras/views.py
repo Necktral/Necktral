@@ -86,6 +86,10 @@ class PurchaseDocDetailView(APIView):
                 "void_reason": doc.void_reason,
                 "notes": doc.notes,
                 "metadata_json": doc.metadata_json or {},
+                "accounting_status": str(doc.accounting_status or ""),
+                "accounting_error": str(doc.accounting_error or ""),
+                "journal_draft_id": doc.accounting_journal_draft_id,
+                "journal_entry_id": doc.accounting_journal_entry_id,
             },
             status=status.HTTP_200_OK,
         )

@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TS="${1:-$(date +%Y%m%d_%H%M)}"
 OUT_DIR="${ROOT_DIR}/docs/operacion/evidencia/bug_bounty_local_${TS}"
+DAST_URL="${BUG_BOUNTY_DAST_URL:-}"
+REQUIRE_DAST="${BUG_BOUNTY_REQUIRE_DAST:-0}"
 
 mkdir -p "${OUT_DIR}"
 
@@ -52,7 +54,15 @@ else
 fi
 
 static_scan_rc=0
-"${ROOT_DIR}/qa/static_scan_backend.sh" "${ROOT_DIR}" > "${OUT_DIR}/14_static_scan.txt" 2>&1 || static_scan_rc=$?
+"${ROOT_DIR}/qa/static_scan_backend.sh" "${ROOT_DIR}" "${OUT_DIR}/14_static_scan.txt" || static_scan_rc=$?
+
+dast_rc=0
+if [ -n "${DAST_URL}" ]; then
+  docker run --rm -v "${OUT_DIR}:/zap/wrk" ghcr.io/zaproxy/zaproxy:stable \
+    zap-baseline.py -t "${DAST_URL}" -J /zap/wrk/23_dast_zap.json -w /zap/wrk/23_dast_zap.md -m 2 || dast_rc=$?
+else
+  echo '{"status":"SKIPPED","reason":"BUG_BOUNTY_DAST_URL not set"}' > "${OUT_DIR}/23_dast_zap.json"
+fi
 
 manage_check_rc=0
 (
@@ -72,6 +82,8 @@ pytest -q \
   "${ROOT_DIR}/login_module/tests/test_2fa_challenge.py" \
   "${ROOT_DIR}/login_module/tests/test_access_denied_audit.py" \
   "${ROOT_DIR}/login_module/tests/test_audit_chain_integrity.py" \
+  "${ROOT_DIR}/login_module/tests/test_rbac_scoped_enforcement.py" \
+  "${ROOT_DIR}/login_module/tests/test_intercompany_grants.py" \
   > "${OUT_DIR}/22_security_pytest.txt" 2>&1 || security_pytest_rc=$?
 
 BUG_BOUNTY_OUT="${OUT_DIR}" \
@@ -82,6 +94,9 @@ STATIC_SCAN_RC="${static_scan_rc}" \
 MANAGE_CHECK_RC="${manage_check_rc}" \
 AUDIT_CHAIN_RC="${audit_chain_rc}" \
 SECURITY_PYTEST_RC="${security_pytest_rc}" \
+DAST_RC="${dast_rc}" \
+DAST_URL="${DAST_URL}" \
+REQUIRE_DAST="${REQUIRE_DAST}" \
 python3 - <<'PY'
 import hashlib
 import json
@@ -91,8 +106,12 @@ from pathlib import Path
 out = Path(os.environ["BUG_BOUNTY_OUT"])
 
 def load_json(path: Path):
+    text = ""
     try:
         text = path.read_text(encoding="utf-8")
+    except Exception:
+        return None
+    try:
         return json.loads(text)
     except Exception:
         try:
@@ -149,7 +168,30 @@ security_pytest = (out / "22_security_pytest.txt").read_text(encoding="utf-8", e
 security_pytest_pass = "failed" not in security_pytest.lower()
 
 static_scan_text = (out / "14_static_scan.txt").read_text(encoding="utf-8", errors="ignore")
-static_scan_pass = "Static scan OK:" in static_scan_text
+static_scan_pass = int(os.environ["STATIC_SCAN_RC"]) == 0 and "OK: sin hallazgos" in static_scan_text
+
+dast_data = load_json(out / "23_dast_zap.json")
+dast_url = str(os.environ.get("DAST_URL") or "").strip()
+require_dast = str(os.environ.get("REQUIRE_DAST") or "0").strip() in {"1", "true", "TRUE", "yes", "YES"}
+dast_enabled = bool(dast_url)
+dast_high_count = 0
+if isinstance(dast_data, dict):
+    site = dast_data.get("site")
+    if isinstance(site, list):
+        for entry in site:
+            alerts = entry.get("alerts") if isinstance(entry, dict) else None
+            if not isinstance(alerts, list):
+                continue
+            for alert in alerts:
+                risk = str((alert or {}).get("riskcode") or "")
+                if risk == "3":
+                    dast_high_count += 1
+
+if dast_enabled:
+    # ZAP baseline: rc 0 (pass), rc 1 (warnings). rc >=2 se considera fail.
+    dast_pass = int(os.environ["DAST_RC"]) < 2 and dast_high_count == 0
+else:
+    dast_pass = not require_dast
 
 summary = {
     "status": "PASS",
@@ -165,6 +207,9 @@ summary = {
         "audit_chain_pass": audit_chain_pass,
         "security_pytest_pass": security_pytest_pass,
         "static_scan_pass": static_scan_pass,
+        "dast_pass": dast_pass,
+        "dast_enabled": dast_enabled,
+        "dast_high_count": int(dast_high_count),
     },
     "tool_exit_codes": {
         "gitleaks_rc": int(os.environ["GITLEAKS_RC"]),
@@ -174,6 +219,7 @@ summary = {
         "manage_check_rc": int(os.environ["MANAGE_CHECK_RC"]),
         "audit_chain_rc": int(os.environ["AUDIT_CHAIN_RC"]),
         "security_pytest_rc": int(os.environ["SECURITY_PYTEST_RC"]),
+        "dast_rc": int(os.environ["DAST_RC"]),
     },
     "blocking_findings": {
         "pip": pip_blocking,
@@ -188,6 +234,8 @@ required = [
     summary["checks"]["manage_check_pass"],
     summary["checks"]["audit_chain_pass"],
     summary["checks"]["security_pytest_pass"],
+    summary["checks"]["static_scan_pass"],
+    summary["checks"]["dast_pass"],
 ]
 if not all(required):
     summary["status"] = "FAIL"
@@ -210,6 +258,8 @@ lines = [
     f"- manage_check_pass: {'PASS' if summary['checks']['manage_check_pass'] else 'FAIL'}",
     f"- audit_chain_pass: {'PASS' if summary['checks']['audit_chain_pass'] else 'FAIL'}",
     f"- security_pytest_pass: {'PASS' if summary['checks']['security_pytest_pass'] else 'FAIL'}",
+    f"- static_scan_pass: {'PASS' if summary['checks']['static_scan_pass'] else 'FAIL'}",
+    f"- dast_pass: {'PASS' if summary['checks']['dast_pass'] else 'FAIL'}",
     "",
     "## Blocking Findings",
 ]

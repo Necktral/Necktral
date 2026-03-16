@@ -34,6 +34,18 @@ from .services import (
     void_doc,
 )
 
+LEGACY_SUNSET = "2026-06-30T00:00:00Z"
+LEGACY_DEPRECATION_LINK = "</docs/BILLING_KERNEL_v1.0.md>; rel=\"deprecation\""
+
+
+def _set_legacy_deprecation_headers(response: Response, *, notice: str) -> Response:
+    response["Deprecation"] = "true"
+    response["Sunset"] = LEGACY_SUNSET
+    response["Link"] = LEGACY_DEPRECATION_LINK
+    response["X-Deprecated"] = "true"
+    response["X-Deprecation-Notice"] = notice
+    return response
+
 
 class HealthView(APIView):
     authentication_classes = []
@@ -292,9 +304,10 @@ class BillingHealthView(APIView):
 
     def get(self, request):
         resp = Response({"ok": True, "module": "billing"})
-        resp["X-Deprecated"] = "true"
-        resp["X-Deprecation-Notice"] = "Use /api/billing/health/ (legacy será retirado en v1.1)"
-        return resp
+        return _set_legacy_deprecation_headers(
+            resp,
+            notice="Use /api/billing/health/ (legacy sera retirado tras Sunset).",
+        )
 
 
 class InvoiceCreateView(APIView):
@@ -318,6 +331,7 @@ class InvoiceCreateView(APIView):
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         resp = Response(InvoiceOut(inv).data, status=status.HTTP_201_CREATED)
-        resp["X-Deprecated"] = "true"
-        resp["X-Deprecation-Notice"] = "Use /api/billing/docs/ (legacy será retirado en v1.1)"
-        return resp
+        return _set_legacy_deprecation_headers(
+            resp,
+            notice="Use /api/billing/docs/ (legacy sera retirado tras Sunset).",
+        )

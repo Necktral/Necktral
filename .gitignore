@@ -33,6 +33,8 @@ yarn-error.log*
 # local .env files
 .env
 .env.local*
+.env.loadtest
+!.env.loadtest.example
 
 # Python
 system_wis/
@@ -63,6 +65,9 @@ pm_snapshot.md
 docs/operacion/evidencia/**
 !docs/operacion/evidencia/.gitkeep
 !docs/operacion/evidencia/etup-git-less-help.txt
+
+# Simulación: reportes locales pesados
+simulacion/reports/**
 
 # No subir backups
 ERP_CRM_backup_*.tar.gz

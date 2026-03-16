@@ -19,6 +19,15 @@ from apps.integration.services import publish_outbox_event
 from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
 
 User = get_user_model()
+_VALID_ACCOUNTING_STATUSES = {
+    "DISABLED",
+    "UNSUPPORTED",
+    "PENDING_RULESET",
+    "PENDING_RULE",
+    "DRAFT_EXCEPTION",
+    "DRAFT_VALIDATED",
+    "POSTED",
+}
 
 
 def _mk_scope() -> tuple[OrgUnit, OrgUnit]:
@@ -113,11 +122,13 @@ def test_phase10_procurement_api_create_post_void_and_outbox():
     assert detail.status_code == 200
     assert detail.data["status"] == "DRAFT"
     assert int(detail.data["number"]) == 0
+    assert detail.data["accounting_status"] == ""
 
     posted = client.post(f"/api/procurement/docs/{doc_id}/post/", {}, format="json")
     assert posted.status_code == 200
     assert posted.data["status"] == "POSTED"
     assert int(posted.data["number"]) > 0
+    assert posted.data["accounting_status"] in _VALID_ACCOUNTING_STATUSES
 
     voided = client.post(
         f"/api/procurement/docs/{doc_id}/void/",
@@ -126,6 +137,7 @@ def test_phase10_procurement_api_create_post_void_and_outbox():
     )
     assert voided.status_code == 200
     assert voided.data["status"] == "VOIDED"
+    assert voided.data["accounting_status"] in _VALID_ACCOUNTING_STATUSES
 
     outbox_types = set(OutboxEvent.objects.filter(source_module="PROCUREMENT").values_list("event_type", flat=True))
     assert "ProcurementDocumentDrafted" in outbox_types

@@ -512,11 +512,21 @@ def certify_phase10_procurement_run(
                 and str(second_projection_payload.get("close_run_status") or "") == CloseRun.Status.REOPENED_EXCEPTION
             )
         else:
+            doc.refresh_from_db()
+            operational_accounting_ok = (
+                str(doc.accounting_status or "") in {"DRAFT_VALIDATED", "POSTED"}
+                and (doc.accounting_journal_draft_id is not None or doc.accounting_journal_entry_id is not None)
+            )
             scenario_ok = (
                 not blocked
-                and int(first_counts.get("journal_drafts_total") or 0) > 0
-                and int(first_counts.get("journal_entries_posted") or 0) > 0
                 and int(first_counts.get("blocking_exceptions") or 0) == 0
+                and (
+                    (
+                        int(first_counts.get("journal_drafts_total") or 0) > 0
+                        and int(first_counts.get("journal_entries_posted") or 0) > 0
+                    )
+                    or operational_accounting_ok
+                )
             )
         passed = bool(deterministic and scenario_ok)
     finally:

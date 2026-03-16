@@ -3,15 +3,18 @@
 	qa-operational-hygiene qa-operational-gate qa-operational-pilot-stage1 qa-operational-pilot-stage2 qa-operational-pilot-stage3 qa-operational-pilot-rollback qa-operational-all \
 	qa-operational-go-live \
 	qa-ci-up qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci \
+	qa-coverage-domains \
 	qa-repo-comment-audit \
 	qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-backend-mypy-baseline-refresh qa-backend-tests qa-static-scan qa-frontend-ci qa-audit-integrity \
-	docker-clean docker-clean-all
+	docker-clean docker-clean-all \
+	loadtest-precheck-auth loadtest loadtest-150k
 
 BASE_URL ?= http://localhost:8000/api
 K6_IMAGE ?= grafana/k6
 
 QA_REPORTS_DIR ?= qa/reports
 QA_KEEP_FRONTEND ?= 1
+QA_DOMAIN_THRESHOLDS ?= sync_engine=98
 QA_MYPY_STRICT_TARGETS ?= \
 	login_module/src/apps/accounting \
 	login_module/src/tests/test_phase3_cec_execute_api.py \
@@ -49,9 +52,22 @@ OPER_BILLING_VUS ?= 6
 OPER_INVENTORY_VUS ?= 6
 OPER_POSTING_VUS ?= 1
 OPER_DURATION ?= 2m
+LOADTEST_ENV_FILE ?= .env.loadtest
+TARGET_HTTP_REQS ?= 150000
+RUN_QA_GATES ?= 1
+RUN_SECURITY_SCAN ?= 1
+RUN_LOADTEST_PRECHECK ?= 1
 REPO_AUDIT_FETCH ?= 1
 REPO_AUDIT_TOP_N ?= 20
 REPO_AUDIT_MIN_LINES ?= 120
+
+LOADTEST_TOTAL_DURATION_EFFECTIVE = $(if $(filter command% environment%,$(origin TOTAL_DURATION)),$(TOTAL_DURATION),15m)
+LOADTEST_AUTH_VUS_EFFECTIVE = $(if $(filter command% environment%,$(origin AUTH_VUS)),$(AUTH_VUS),120)
+LOADTEST_AUTH_ADMIN_2FA_VUS_EFFECTIVE = $(if $(filter command% environment%,$(origin AUTH_ADMIN_2FA_VUS)),$(AUTH_ADMIN_2FA_VUS),6)
+LOADTEST_AUTH_ADMIN_2FA_SLEEP_EFFECTIVE = $(if $(filter command% environment%,$(origin AUTH_ADMIN_2FA_SLEEP)),$(AUTH_ADMIN_2FA_SLEEP),1)
+LOADTEST_OPER_BILLING_VUS_EFFECTIVE = $(if $(filter command% environment%,$(origin OPER_BILLING_VUS)),$(OPER_BILLING_VUS),80)
+LOADTEST_OPER_INVENTORY_VUS_EFFECTIVE = $(if $(filter command% environment%,$(origin OPER_INVENTORY_VUS)),$(OPER_INVENTORY_VUS),80)
+LOADTEST_OPER_POSTING_VUS_EFFECTIVE = $(if $(filter command% environment%,$(origin OPER_POSTING_VUS)),$(OPER_POSTING_VUS),24)
 
 qa-load-reset-axes:
 	docker compose exec -T backend python manage.py axes_reset
@@ -102,6 +118,9 @@ qa-backend-mypy-baseline-refresh:
 qa-backend-tests:
 	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/login_module && coverage run --rcfile /app/login_module/.coveragerc -m pytest --ds=config.settings.test --junitxml=/app/$(QA_REPORTS_DIR)/pytest.xml && coverage xml --rcfile /app/login_module/.coveragerc -o /app/$(QA_REPORTS_DIR)/coverage.xml && coverage report --rcfile /app/login_module/.coveragerc | tee /app/$(QA_REPORTS_DIR)/coverage.txt"
 
+qa-coverage-domains:
+	docker compose exec -T backend bash -lc "python /app/qa/coverage_by_domain.py --coverage-xml /app/$(QA_REPORTS_DIR)/coverage.xml --json-output /app/$(QA_REPORTS_DIR)/coverage_by_domain.json --md-output /app/$(QA_REPORTS_DIR)/coverage_by_domain.md $(foreach threshold,$(QA_DOMAIN_THRESHOLDS),--min-domain $(threshold))"
+
 qa-audit-integrity:
 	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/login_module && python manage.py audit_verify_chain --seed-minimal --format json --output /app/$(QA_REPORTS_DIR)/audit_integrity.json"
 
@@ -112,7 +131,7 @@ qa-frontend-ci:
 qa-ci-gate1: qa-ci-up qa-static-scan qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-frontend-ci
 
 # Gate 2: pruebas deterministas (pytest + cobertura)
-qa-ci-gate2: qa-ci-up qa-backend-tests
+qa-ci-gate2: qa-ci-up qa-backend-tests qa-coverage-domains
 
 # Gate 3: integridad de auditoría (reporte)
 qa-ci-gate3: qa-ci-up qa-audit-integrity
@@ -245,3 +264,26 @@ qa-operational-go-live:
 	PASSWORD=$(PASSWORD) \
 	REQUIRED_DAYS=$${REQUIRED_DAYS:-7} \
 	./qa/run_operational_go_live.sh full
+
+loadtest:
+	@if [ "$(RUN_LOADTEST_PRECHECK)" = "1" ]; then \
+		$(MAKE) loadtest-precheck-auth LOADTEST_ENV_FILE="$(LOADTEST_ENV_FILE)"; \
+	fi
+	LOADTEST_ENV_FILE="$(LOADTEST_ENV_FILE)" \
+	TARGET_HTTP_REQS="$(TARGET_HTTP_REQS)" \
+	TOTAL_DURATION="$(LOADTEST_TOTAL_DURATION_EFFECTIVE)" \
+	AUTH_VUS="$(LOADTEST_AUTH_VUS_EFFECTIVE)" \
+	AUTH_ADMIN_2FA_VUS="$(LOADTEST_AUTH_ADMIN_2FA_VUS_EFFECTIVE)" \
+	AUTH_ADMIN_2FA_SLEEP="$(LOADTEST_AUTH_ADMIN_2FA_SLEEP_EFFECTIVE)" \
+	OPER_BILLING_VUS="$(LOADTEST_OPER_BILLING_VUS_EFFECTIVE)" \
+	OPER_INVENTORY_VUS="$(LOADTEST_OPER_INVENTORY_VUS_EFFECTIVE)" \
+	OPER_POSTING_VUS="$(LOADTEST_OPER_POSTING_VUS_EFFECTIVE)" \
+	RUN_QA_GATES="$(RUN_QA_GATES)" \
+	RUN_SECURITY_SCAN="$(RUN_SECURITY_SCAN)" \
+	./simulacion/run_advanced_integral.sh
+
+loadtest-precheck-auth:
+	LOADTEST_ENV_FILE="$(LOADTEST_ENV_FILE)" ./simulacion/precheck_loadtest_auth.sh
+
+loadtest-150k:
+	$(MAKE) loadtest TARGET_HTTP_REQS=150000

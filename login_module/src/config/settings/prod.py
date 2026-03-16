@@ -1,6 +1,7 @@
 from .base import *  # noqa
 
 DEBUG = False
+OPENAPI_ALLOW_ANON = env.bool("OPENAPI_ALLOW_ANON", default=False)
 
 # Fail-fast si llaves inseguras o faltan
 import sys

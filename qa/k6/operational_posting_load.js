@@ -5,6 +5,7 @@ import { Rate, Trend } from "k6/metrics";
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8000/api";
 const USERNAME = __ENV.USERNAME || "k6_operational";
 const PASSWORD = __ENV.PASSWORD || "";
+const AUTH_TRANSPORT = (__ENV.AUTH_TRANSPORT || "header").toLowerCase() === "cookie" ? "cookie" : "header";
 
 const COMPANY_ID = Number(__ENV.COMPANY_ID || 0);
 const BRANCH_ID = Number(__ENV.BRANCH_ID || 0);
@@ -87,7 +88,10 @@ function login() {
     `${BASE_URL}/auth/login/`,
     JSON.stringify({ username: USERNAME, password: PASSWORD }),
     {
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Auth-Transport": AUTH_TRANSPORT,
+      },
       tags: { name: "auth_login", flow: "auth" },
     },
   );
@@ -98,8 +102,14 @@ function login() {
     flow: "auth",
     okStatuses: [200],
   });
-  if (!ok || !token) {
+  if (!ok) {
     fail("No fue posible autenticarse para la suite operacional (verifica usuario/password y 2FA deshabilitado).");
+  }
+  if (!token) {
+    fail(
+      `Login devolvio 200 sin access token (AUTH_TRANSPORT=${AUTH_TRANSPORT}). ` +
+        "Verifica AUTH_TOKEN_TRANSPORT en backend y AUTH_ALLOW_TRANSPORT_OVERRIDE=1.",
+    );
   }
   return token;
 }

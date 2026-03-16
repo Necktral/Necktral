@@ -17,6 +17,8 @@ OPERATIONAL_ACCOUNTING_CONTRACT_EVENTS = {
     ("INVENTORY", "InventoryMovementPosted"),
     ("INVENTORY", "InventoryAdjusted"),
     ("INVENTORY", "InventoryTransferCompleted"),
+    ("PROCUREMENT", "ProcurementDocumentPosted"),
+    ("PROCUREMENT", "ProcurementDocumentVoided"),
 }
 
 

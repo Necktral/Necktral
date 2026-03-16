@@ -36,6 +36,8 @@ cleanup_reports() {
     "${REPORTS_DIR}/pytest.xml" \
     "${REPORTS_DIR}/coverage.xml" \
     "${REPORTS_DIR}/coverage.txt" \
+    "${REPORTS_DIR}/coverage_by_domain.json" \
+    "${REPORTS_DIR}/coverage_by_domain.md" \
     "${REPORTS_DIR}/audit_integrity.json" \
     "${REPORTS_DIR}/run_manifest.json"
 }
@@ -104,7 +106,7 @@ if [[ "${run_status}" == "passed" ]]; then
 fi
 
 if [[ "${run_status}" == "passed" ]]; then
-  if make_cmd qa-backend-tests; then
+  if make_cmd qa-backend-tests && make_cmd qa-coverage-domains; then
     gate2_status="passed"
   else
     gate2_status="failed"

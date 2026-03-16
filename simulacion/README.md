@@ -29,6 +29,21 @@ Este paquete ejecuta una simulacion realista del flujo de autenticacion en modo 
 
 ## Ejecución Automatizada con Monitorización en Tiempo Real
 
+### Smoke run (recomendado para validar entorno)
+
+Para validar rápidamente que backend, seed, k6 y Grafana están bien conectados:
+
+```bash
+./simulacion/run_smoke.sh
+```
+
+Este script:
+
+1. Levanta `db` y `backend`.
+2. Espera healthcheck del backend.
+3. Ejecuta migraciones + `seed_auth_users` con credenciales explícitas.
+4. Resetea Axes y lanza una corrida corta (1 VU, 10s) del script extendido.
+
 Para ejecutar la simulación con visualización en Grafana sin configuración manual:
 
 ```bash
@@ -206,3 +221,97 @@ docker compose exec -T backend python src/manage.py axes_reset
 
 - El workflow oficial vive en .github/workflows/auth-load-simulation.yml.
 - El script extendido es el recomendado para validar el flujo completo.
+
+## Corrida avanzada integral (150k+ transacciones)
+
+Para ejecutar una corrida agresiva local de 15 minutos con cobertura integral
+(auth/seguridad + operacional/DB + gates QA + escaneo seguridad), usa el
+orquestador avanzado.
+
+1. Prepara perfil de carga (sin tocar `.env` base):
+
+```bash
+cp .env.loadtest.example .env.loadtest
+# Edita .env.loadtest y completa:
+# AUTH_SIM_ADMIN_PASSWORD, AUTH_SIM_USER_PASSWORD, AUTH_SIM_ADMIN_TOTP_SECRET
+# COMPANY_ID, BRANCH_ID, USERNAME y PASSWORD
+```
+
+2. Ejecuta precheck de autenticación y transporte:
+
+```bash
+make loadtest-precheck-auth
+# esperado: PRECHECK_STATUS=OK
+```
+
+3. Ejecuta la corrida integral:
+
+```bash
+make loadtest-150k
+# o target genérico:
+# make loadtest TARGET_HTTP_REQS=200000
+# o con archivo personalizado:
+# make loadtest-150k LOADTEST_ENV_FILE=.env.loadtest
+# sigue disponible la invocación directa:
+# ./simulacion/run_advanced_integral.sh
+```
+
+4. Revisa evidencia:
+
+- Carpeta de salida: simulacion/reports/advanced_YYYYMMDD_HHMMSS/
+- Resumen de volumen objetivo: run_summary.txt
+- Dashboard tiempo real: http://localhost:3000
+- Estado por fase en `run_summary.txt`:
+  - `ok`: fase completada sin fallos
+  - `soft-fail`: fallo de thresholds/k6 con summary disponible (la corrida continua)
+  - `hard-fail`: fallo de infraestructura/ejecucion (la corrida aborta)
+
+### Variables principales del orquestador
+
+- TOTAL_DURATION: duracion de ambos bloques de carga (default 15m)
+- TARGET_HTTP_REQS: objetivo total de `http_reqs` consolidado (default 150000)
+- AUTH_VUS: VUs de auth extendido (default 120)
+- AUTH_ADMIN_2FA_VUS: VUs dedicados a 2FA (default 6)
+- OPER_BILLING_VUS / OPER_INVENTORY_VUS / OPER_POSTING_VUS: VUs operacionales
+- LOADTEST_ENV_FILE: archivo opcional de override (default `.env.loadtest`)
+- AUTH_TOKEN_TRANSPORT/AUTH_ALLOW_TRANSPORT_OVERRIDE: recomendado `header`/`1`
+  para compatibilizar corrida operacional (header) con escenarios auth mixtos
+- Variables obligatorias del perfil: `AUTH_SIM_ADMIN_PASSWORD`,
+  `AUTH_SIM_USER_PASSWORD`, `AUTH_SIM_ADMIN_TOTP_SECRET`, `COMPANY_ID`,
+  `BRANCH_ID`, `USERNAME`, `PASSWORD`
+- RUN_QA_GATES: 1 para ejecutar qa-ci-gate1/2/3 y frontend CI
+- RUN_SECURITY_SCAN: 1 para ejecutar bug bounty local
+- ADAPTIVE_RETRY_ON_FAILURE: 1 para habilitar reintento adaptativo (reduce `BILLING_VUS`) cuando hay degradación (`billing_doc_create` fail, `operational_error_rate>1%` o `billing_write_ms p95>400ms`).
+- ADAPTIVE_BILLING_SCALE: factor de reducción de `BILLING_VUS` en reintento adaptativo (default `0.5`).
+- ADAPTIVE_DURATION: duración del reintento adaptativo (default `5m`).
+- BASELINE_RUN_DIR: carpeta `advanced_*` base para comparador inter-corridas.
+- REGRESSION_BUDGET_PCT: budget máximo de degradación permitida para comparador inter-corridas.
+
+### Criterio de volumen
+
+El script consolida `http_reqs` de las dos corridas (auth + operacional) y falla
+si el total es menor a `TARGET_HTTP_REQS` (default `150000`).
+
+### Redacción de secretos en evidencia
+
+Los summaries de k6 (`auth_summary.json` y `operational_summary.json`) se redactan automáticamente
+antes de persistirse en disco para evitar exposición de `token/password/secret`.
+
+### Comparador inter-corridas
+
+Si defines `BASELINE_RUN_DIR`, el orquestador ejecuta un comparador de regresión (`compare_k6_regression.py`)
+contra `operational_summary.json` y genera `operational_regression_report.json` en la corrida actual.
+
+### Troubleshooting
+
+Si ves `AUTH_SIM_ADMIN_PASSWORD faltante`, normalmente significa una de estas dos
+cosas:
+
+- `.env.loadtest` no existe en la ruta esperada
+- `.env.loadtest` sigue con `CHANGE_ME` o una variable requerida vacia
+
+Bootstrap minimo:
+
+```bash
+cp .env.loadtest.example .env.loadtest
+```

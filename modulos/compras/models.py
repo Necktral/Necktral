@@ -36,6 +36,15 @@ class PurchaseSequence(models.Model):
 
 
 class PurchaseDocument(models.Model):
+    class AccountingStatus(models.TextChoices):
+        DISABLED = "DISABLED", "Disabled"
+        UNSUPPORTED = "UNSUPPORTED", "Unsupported"
+        PENDING_RULESET = "PENDING_RULESET", "Pending ruleset"
+        PENDING_RULE = "PENDING_RULE", "Pending rule"
+        DRAFT_EXCEPTION = "DRAFT_EXCEPTION", "Draft exception"
+        DRAFT_VALIDATED = "DRAFT_VALIDATED", "Draft validated"
+        POSTED = "POSTED", "Posted"
+
     company = models.ForeignKey("iam.OrgUnit", on_delete=models.PROTECT, related_name="proc_docs_company")
     branch = models.ForeignKey("iam.OrgUnit", on_delete=models.PROTECT, related_name="proc_docs_branch")
 
@@ -61,6 +70,34 @@ class PurchaseDocument(models.Model):
     posted_at = models.DateTimeField(null=True, blank=True)
     voided_at = models.DateTimeField(null=True, blank=True)
     void_reason = models.CharField(max_length=255, blank=True, default="")
+    accounting_status = models.CharField(
+        max_length=24,
+        choices=AccountingStatus.choices,
+        blank=True,
+        default="",
+    )
+    accounting_error = models.CharField(max_length=255, blank=True, default="")
+    accounting_economic_event = models.ForeignKey(
+        "accounting.EconomicEvent",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="procurement_documents",
+    )
+    accounting_journal_draft = models.ForeignKey(
+        "accounting.JournalDraft",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="procurement_documents",
+    )
+    accounting_journal_entry = models.ForeignKey(
+        "accounting.JournalEntry",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="procurement_documents",
+    )
 
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(default=timezone.now)
@@ -70,6 +107,7 @@ class PurchaseDocument(models.Model):
             models.Index(fields=["company", "branch", "created_at"], name="ix_proc_doc_c_b_ca"),
             models.Index(fields=["company", "branch", "doc_type", "status", "created_at"], name="ix_proc_doc_scope"),
             models.Index(fields=["company", "idempotency_key"], name="ix_proc_doc_idem"),
+            models.Index(fields=["company", "branch", "accounting_status", "created_at"], name="ix_proc_doc_acc_st"),
         ]
         constraints = [
             models.UniqueConstraint(

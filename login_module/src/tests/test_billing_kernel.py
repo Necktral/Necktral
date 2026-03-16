@@ -80,6 +80,9 @@ def test_billing_invoice_create_writes_audit_event():
     assert resp.data["status"] == "DRAFT"
     assert resp["X-Deprecated"] == "true"
     assert "legacy" in resp["X-Deprecation-Notice"]
+    assert resp["Deprecation"] == "true"
+    assert resp["Sunset"]
+    assert "BILLING_KERNEL_v1.0.md" in resp["Link"]
 
     assert AuditEvent.objects.filter(module="BILLING", event_type="BILLING_INVOICE_CREATED").exists()
 
@@ -100,3 +103,13 @@ def test_billing_invoice_create_denied_is_audited():
         event_type="AUTH_ACCESS_DENIED",
         metadata__required_permission="billing.invoice.create",
     ).exists()
+
+
+@pytest.mark.django_db
+def test_billing_legacy_health_has_sunset_headers():
+    client = APIClient()
+    resp = client.get("/api/billing/health-legacy/")
+    assert resp.status_code == 200
+    assert resp["Deprecation"] == "true"
+    assert resp["Sunset"]
+    assert "BILLING_KERNEL_v1.0.md" in resp["Link"]
