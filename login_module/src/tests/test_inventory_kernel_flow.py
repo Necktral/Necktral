@@ -89,3 +89,62 @@ def test_inventory_receive_issue_audited():
 
     # Auditoría: deben existir eventos del módulo INVENTORY
     assert AuditEvent.objects.filter(module="INVENTORY", event_type="INVENTORY_MOVEMENT_POSTED").count() >= 2
+
+
+@pytest.mark.django_db
+def test_inventory_ledger_is_stable_and_paginated():
+    company, branch = _mk_scope()
+    user = User.objects.create_user(username="u-ledger", password="x")
+    UserMembership.objects.create(user=user, org_unit=company, is_active=True)
+    UserMembership.objects.create(user=user, org_unit=branch, is_active=True)
+
+    c = _client_with_perms(
+        user,
+        company,
+        branch,
+        [
+            "inventory.warehouse.create",
+            "inventory.item.create",
+            "inventory.movement.receive",
+            "inventory.movement.issue",
+            "inventory.balance.read",
+        ],
+    )
+
+    wh = c.post("/api/inventory/warehouses/", {"name": "Main", "code": "LED"}, format="json")
+    assert wh.status_code == 201
+    wh_id = wh.data["id"]
+
+    item = c.post("/api/inventory/items/", {"sku": "GAS95", "name": "Gas 95", "uom": "LITER"}, format="json")
+    assert item.status_code == 201
+    item_id = item.data["id"]
+
+    r1 = c.post(
+        "/api/inventory/movements/receive/",
+        {"warehouse_id": wh_id, "item_id": item_id, "qty": "5.0000", "unit_cost": "2.000000", "idempotency_key": "led-1"},
+        format="json",
+    )
+    assert r1.status_code == 201
+    r2 = c.post(
+        "/api/inventory/movements/issue/",
+        {"warehouse_id": wh_id, "item_id": item_id, "qty": "1.0000", "idempotency_key": "led-2"},
+        format="json",
+    )
+    assert r2.status_code == 201
+
+    page1 = c.get(f"/api/inventory/ledger/?warehouse_id={wh_id}&item_id={item_id}&page=1&page_size=1")
+    assert page1.status_code == 200
+    assert page1.data["page"] == 1
+    assert page1.data["page_size"] == 1
+    assert page1.data["total"] >= 2
+    assert page1.data["has_next"] is True
+    assert len(page1.data["items"]) == 1
+
+    first_id = page1.data["items"][0]["id"]
+
+    page2 = c.get(f"/api/inventory/ledger/?warehouse_id={wh_id}&item_id={item_id}&page=2&page_size=1")
+    assert page2.status_code == 200
+    assert page2.data["page"] == 2
+    assert page2.data["has_prev"] is True
+    assert len(page2.data["items"]) == 1
+    assert page2.data["items"][0]["id"] != first_id

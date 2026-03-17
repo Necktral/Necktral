@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 
 from apps.iam.models import OrgUnit
 from apps.integration.models import OutboxEvent
+from apps.integration.services import CANONICAL_OUTBOX_ENVELOPE_FIELDS, create_or_get_inbox_event, publish_outbox_event
 from modulos.facturacion.services import create_draft, issue_doc, void_doc
 from modulos.inventarios.services import create_item, post_receive
 from modulos.inventarios.models import Warehouse
@@ -70,6 +71,16 @@ def _required_contract_keys(data: dict) -> None:
     assert "journal_entry_id" in data
 
 
+def _assert_canonical_outbox_envelope(payload: dict, *, company_id: int, branch_id: int, user_id: int) -> None:
+    assert set(payload.keys()) == set(CANONICAL_OUTBOX_ENVELOPE_FIELDS)
+    assert int(payload.get("schema_version") or 0) == 1
+    assert payload.get("contract_version") == "1.0"
+    assert isinstance(payload.get("occurred_at"), str) and payload["occurred_at"]
+    assert payload.get("scope") == {"company_id": company_id, "branch_id": branch_id}
+    assert payload.get("actor") == {"user_id": user_id}
+    assert isinstance(payload.get("data"), dict)
+
+
 def _latest_event(*, source_module: str, event_type: str) -> OutboxEvent:
     ev = OutboxEvent.objects.filter(source_module=source_module, event_type=event_type).order_by("-id").first()
     assert ev is not None
@@ -120,7 +131,7 @@ def test_credit_note_issue_emits_contract_fields_and_correlation():
     payload = ev.payload if isinstance(ev.payload, dict) else {}
     data = _event_data(ev)
 
-    assert int(payload.get("schema_version") or 0) == 1
+    _assert_canonical_outbox_envelope(payload, company_id=request.company.id, branch_id=request.branch.id, user_id=user.id)
     assert payload.get("correlation_id") == "corr-credit-note"
     assert payload.get("causation_id") == "cause-credit-note-issue"
     assert data.get("doc_id") == draft.doc_id
@@ -227,6 +238,7 @@ def test_document_void_emits_contract_fields_and_correlation():
     payload = ev.payload if isinstance(ev.payload, dict) else {}
     data = _event_data(ev)
 
+    _assert_canonical_outbox_envelope(payload, company_id=request.company.id, branch_id=request.branch.id, user_id=user.id)
     assert payload.get("correlation_id") == "corr-void"
     assert payload.get("causation_id") == "cause-void"
     assert data.get("doc_id") == draft.doc_id
@@ -287,6 +299,33 @@ def test_inventory_receive_idempotent_and_contract_fields_present():
 
     payload = movement_events[0].payload if isinstance(movement_events[0].payload, dict) else {}
     data = _event_data(movement_events[0])
+    _assert_canonical_outbox_envelope(payload, company_id=company.id, branch_id=branch.id, user_id=user.id)
     assert payload.get("correlation_id") == "corr-recv"
     assert payload.get("causation_id") == "cause-recv"
     _required_contract_keys(data)
+
+
+@pytest.mark.django_db
+def test_inbox_upsert_is_idempotent_per_event_and_consumer():
+    company, branch, user, request = _build_scope()
+
+    event = publish_outbox_event(
+        source_module="TESTING",
+        event_type="ContractFrozen",
+        payload={"state": "ok"},
+        request=request,
+        actor_user=user,
+        company=company,
+        branch=branch,
+        correlation_id="corr-inbox",
+        causation_id="cause-inbox",
+    )
+
+    first, created_first = create_or_get_inbox_event(event=event, consumer="pytest.consumer")
+    second, created_second = create_or_get_inbox_event(event=event, consumer="pytest.consumer")
+
+    assert created_first is True
+    assert created_second is False
+    assert first.id == second.id
+    assert first.event_id == event.event_id
+    assert first.consumer == "pytest.consumer"

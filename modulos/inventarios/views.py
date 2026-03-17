@@ -8,10 +8,11 @@ from rest_framework.views import APIView
 from apps.common.permissions import rbac_permission
 from apps.iam.models import OrgUnit
 
-from .models import InventoryItem, StockBalance, Warehouse
+from .models import InventoryItem, StockBalance, StockMovement, Warehouse
 from .serializers import (
     InventoryItemOut,
     ItemCreateSerializer,
+    LedgerQuerySerializer,
     MovementAdjustSerializer,
     MovementIssueSerializer,
     MovementReceiveSerializer,
@@ -213,3 +214,76 @@ class BalanceView(APIView):
             return Response({"qty_on_hand": "0.0000", "avg_cost": "0.000000"}, status=status.HTTP_200_OK)
 
         return Response({"qty_on_hand": str(bal.qty_on_hand), "avg_cost": str(bal.avg_cost)}, status=status.HTTP_200_OK)
+
+
+class LedgerView(APIView):
+    permission_classes = [rbac_permission("inventory.balance.read")]
+
+    def get(self, request):
+        company: OrgUnit = request.company
+        branch: OrgUnit | None = getattr(request, "branch", None)
+        if not branch:
+            return Response({"detail": "X-Branch-Id requerido"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = LedgerQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        filters = serializer.validated_data
+
+        page = int(filters.get("page", 1))
+        page_size = min(int(filters.get("page_size", 50)), 100)
+        offset = (page - 1) * page_size
+
+        qs = StockMovement.objects.filter(company=company, branch=branch)
+
+        warehouse_id = filters.get("warehouse_id")
+        if warehouse_id is not None:
+            qs = qs.filter(warehouse_id=int(warehouse_id))
+
+        item_id = filters.get("item_id")
+        if item_id is not None:
+            qs = qs.filter(item_id=int(item_id))
+
+        movement_type = (filters.get("movement_type") or "").strip().upper()
+        if movement_type:
+            valid_types = {choice[0] for choice in StockMovement._meta.get_field("movement_type").choices}
+            if movement_type not in valid_types:
+                return Response({"detail": "movement_type inválido"}, status=status.HTTP_400_BAD_REQUEST)
+            qs = qs.filter(movement_type=movement_type)
+
+        total = qs.count()
+        rows = list(qs.order_by("-created_at", "-id")[offset : offset + page_size])
+
+        items = [
+            {
+                "id": row.id,
+                "created_at": row.created_at.isoformat(),
+                "movement_type": row.movement_type,
+                "warehouse_id": row.warehouse_id,
+                "item_id": row.item_id,
+                "qty_delta": str(row.qty_delta),
+                "unit_cost": str(row.unit_cost),
+                "total_cost": str(row.total_cost),
+                "source_module": row.source_module,
+                "source_type": row.source_type,
+                "source_id": row.source_id,
+                "note": row.note,
+                "idempotency_key": row.idempotency_key,
+                "accounting_status": row.accounting_status,
+                "accounting_error": row.accounting_error,
+                "journal_draft_id": row.accounting_journal_draft_id,
+                "journal_entry_id": row.accounting_journal_entry_id,
+            }
+            for row in rows
+        ]
+
+        return Response(
+            {
+                "page": page,
+                "page_size": page_size,
+                "total": total,
+                "has_next": (offset + page_size) < total,
+                "has_prev": page > 1,
+                "items": items,
+            },
+            status=status.HTTP_200_OK,
+        )

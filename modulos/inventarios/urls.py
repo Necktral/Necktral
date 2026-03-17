@@ -8,6 +8,7 @@ from .views import (
     HealthView,
     IssueView,
     ItemCreateView,
+    LedgerView,
     ReceiveView,
     TransferView,
     WarehouseCreateView,
@@ -23,4 +24,5 @@ urlpatterns = [
     path("movements/adjust/", AdjustView.as_view()),
     path("transfers/", TransferView.as_view()),
     path("balances/", BalanceView.as_view()),
+    path("ledger/", LedgerView.as_view()),
 ]

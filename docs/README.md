@@ -22,6 +22,13 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - [ADDENDUM_SEGURIDAD_BACKLOG_v1.0.md](ADDENDUM_SEGURIDAD_BACKLOG_v1.0.md) — Backlog ejecutable del addendum de seguridad.
 - [BILLING_KERNEL_v1.0.md](BILLING_KERNEL_v1.0.md) — Contrato operativo del kernel de facturación.
 - [FUTURAS_MEJORAS.md](FUTURAS_MEJORAS.md) — Roadmap de mejoras futuras (técnicas y de producto).
+- [ADR_KERNEL_HARDENING_PLAN_v1.0.md](ADR_KERNEL_HARDENING_PLAN_v1.0.md) — Orden oficial del programa backend-first de hardening.
+- [ADR_KERNEL_OWNERSHIP_BOUNDARIES_v1.0.md](ADR_KERNEL_OWNERSHIP_BOUNDARIES_v1.0.md) — Ownership y prohibiciones por kernel/módulo core.
+- [ADR_REPORTES_BEFORE_DASHBOARD_v1.0.md](ADR_REPORTES_BEFORE_DASHBOARD_v1.0.md) — Regla de secuenciación reportes antes que dashboard.
+- [ADR_AUDIT_TAXONOMY_MIN_v1.0.md](ADR_AUDIT_TAXONOMY_MIN_v1.0.md) — Taxonomía mínima de auditoría contractual por kernel.
+- [ADR_ACCOUNTING_RULESET_V1_FREEZE.md](ADR_ACCOUNTING_RULESET_V1_FREEZE.md) — Freeze contractual de `PostingRuleSet v1`.
+- [ADR_ACCOUNTING_EVENT_MATRIX_V1.md](ADR_ACCOUNTING_EVENT_MATRIX_V1.md) — Matriz oficial de eventos contables soportados.
+- [ADR_PAYMENTS_ACCOUNTING_BOUNDARY_V1.md](ADR_PAYMENTS_ACCOUNTING_BOUNDARY_V1.md) — Frontera semántica actual entre Payments y Accounting.
 - [repo_higiene/README.md](repo_higiene/README.md) — Índice de artefactos de reorganización y limpieza controlada.
 - [repo_higiene/resumen_reorganizacion_v1.1.md](repo_higiene/resumen_reorganizacion_v1.1.md) — Resumen de inventario técnico, decisiones KEEP/LEGACY/DELETE y checklist por lotes.
 
@@ -44,6 +51,9 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - [operacion/GO_LIVE_FASE12_CIERRE_MENSUAL_CONTINUO_v1.0.md](operacion/GO_LIVE_FASE12_CIERRE_MENSUAL_CONTINUO_v1.0.md) — Cierre mensual continuo con gate unificado.
 - [operacion/PLAN_MAESTRO_F1_F12_CIERRE_OPERATIVO_v1.0.md](operacion/PLAN_MAESTRO_F1_F12_CIERRE_OPERATIVO_v1.0.md) — Secuencia maestra de cierre release/seguridad/staging y preparación productiva.
 - [operacion/PR_RELEASE_F1_F12_CHECKLIST.md](operacion/PR_RELEASE_F1_F12_CHECKLIST.md) — Checklist para apertura y cierre del PR de release.
+- [operacion/CHECKLIST_KERNEL_HARDENING_PR_v1.0.md](operacion/CHECKLIST_KERNEL_HARDENING_PR_v1.0.md) — Checklist operativo para PRs de hardening por kernel.
+- [operacion/KERNEL_HARDENING_BASELINE_v1.1.md](operacion/KERNEL_HARDENING_BASELINE_v1.1.md) — Baseline de ejecución y mapeo matriz->código->tests.
+- [operacion/KERNEL_HARDENING_S1_ENDPOINT_MATRIX_v1.0.md](operacion/KERNEL_HARDENING_S1_ENDPOINT_MATRIX_v1.0.md) — Matriz de endpoints críticos para cobertura de scope/RBAC.
 
 ## CI / QA
 

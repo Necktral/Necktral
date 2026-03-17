@@ -165,3 +165,13 @@ def test_billing_doc_issue_idempotent():
     r2 = c.post(f"/api/billing/docs/{doc_id}/issue/", {"apply_inventory": False}, format="json")
     assert r2.status_code == 200
     assert r2.data.get("already_issued") is True
+
+
+@pytest.mark.django_db
+def test_billing_legacy_health_exposes_deprecation_headers():
+    client = APIClient()
+    r = client.get("/api/billing/health-legacy/")
+    assert r.status_code == 200
+    assert r.headers.get("Deprecation") == "true"
+    assert r.headers.get("Sunset")
+    assert r.headers.get("Link")

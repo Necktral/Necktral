@@ -1,4 +1,4 @@
-"""Autenticación + contexto organizacional (precedente).
+"""Autenticación + contexto organizacional (camino canónico).
 
 Este módulo es un punto crítico del sistema:
 - Entra un request autenticado (JWT) y se le inyecta contexto multiempresa.
@@ -9,6 +9,7 @@ Este módulo es un punto crítico del sistema:
 Contrato:
 - En endpoints operativos, X-Company-Id es obligatorio.
 - X-Branch-Id es opcional, pero si viene debe pertenecer a la empresa y el usuario debe tener membresía.
+- Este es el mecanismo canónico de contexto para DRF; el middleware legacy queda solo como referencia transicional.
 """
 
 from __future__ import annotations
@@ -123,7 +124,7 @@ class JWTAuthWithOrgContext(JWTAuthentication):
                     raise PermissionDenied("Sin acceso a esta sucursal.")
 
         # Inyectar contexto (DRF Request y Django HttpRequest).
-        # Precedente: otras capas (RBAC/auditoría) leen request.company/request.branch.
+        # Otras capas (RBAC/auditoría) leen request.company/request.branch desde aquí.
         self._set_context(request, company=company, branch=branch)
 
         # -----------------------------

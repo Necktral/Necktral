@@ -7,6 +7,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
+from apps.audit.writer import write_event
 from apps.integration.services import publish_outbox_event
 
 from .models import CashMovement, CashSession, PaymentIntent
@@ -45,6 +46,24 @@ def create_payment_intent(
             idempotency_key=idempotency_key or "",
             external_ref=external_ref or "",
             provider=provider or "",
+        )
+        write_event(
+            request=request,
+            module="PAYMENTS",
+            event_type="PAYMENT_INTENT_CREATED",
+            reason_code="PAYMENTS_OK",
+            actor_user=actor,
+            subject_type="PAYMENT_INTENT",
+            subject_id=str(intent.payment_id),
+            metadata={
+                "payment_id": str(intent.payment_id),
+                "status": intent.status,
+                "amount": str(intent.amount),
+                "currency": intent.currency,
+                "idempotency_key": intent.idempotency_key,
+                "external_ref": intent.external_ref,
+                "provider": intent.provider,
+            },
         )
         publish_outbox_event(
             request=request,
@@ -86,6 +105,20 @@ def open_cash_session(*, request, actor, opening_amount: Decimal = Decimal("0.00
             counted_amount=Decimal("0.00"),
             difference_amount=Decimal("0.00"),
             notes=notes or "",
+        )
+        write_event(
+            request=request,
+            module="PAYMENTS",
+            event_type="CASH_SESSION_OPENED",
+            reason_code="PAYMENTS_OK",
+            actor_user=actor,
+            subject_type="CASH_SESSION",
+            subject_id=str(session.id),
+            metadata={
+                "session_id": session.id,
+                "status": session.status,
+                "opening_amount": str(session.opening_amount),
+            },
         )
         publish_outbox_event(
             request=request,
@@ -131,6 +164,22 @@ def post_cash_movement(
             sign = Decimal("-1")
         session.expected_amount = Decimal(session.expected_amount) + (Decimal(amount) * sign)
         session.save(update_fields=["expected_amount"])
+        write_event(
+            request=request,
+            module="PAYMENTS",
+            event_type="CASH_MOVEMENT_POSTED",
+            reason_code="PAYMENTS_OK",
+            actor_user=actor,
+            subject_type="CASH_MOVEMENT",
+            subject_id=str(mov.id),
+            metadata={
+                "session_id": session.id,
+                "movement_id": mov.id,
+                "movement_type": mov.movement_type,
+                "amount": str(mov.amount),
+                "reference": mov.reference,
+            },
+        )
 
         publish_outbox_event(
             request=request,
@@ -185,6 +234,22 @@ def close_cash_session(*, request, actor, session_id: int, counted_amount: Decim
                 "difference_amount",
                 "notes",
             ]
+        )
+        write_event(
+            request=request,
+            module="PAYMENTS",
+            event_type="CASH_SESSION_CLOSED",
+            reason_code="PAYMENTS_OK",
+            actor_user=actor,
+            subject_type="CASH_SESSION",
+            subject_id=str(session.id),
+            metadata={
+                "session_id": session.id,
+                "status": session.status,
+                "expected_amount": str(session.expected_amount),
+                "counted_amount": str(session.counted_amount),
+                "difference_amount": str(session.difference_amount),
+            },
         )
 
         publish_outbox_event(

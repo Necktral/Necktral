@@ -1,11 +1,11 @@
-"""Middleware de contexto organizacional (precedente).
+"""Middleware de contexto organizacional (transicional / legacy).
 
 Responsabilidad:
 - Resolver e inyectar request.company y request.branch según headers.
 
 Nota:
-- En este repo también existe JWTAuthWithOrgContext que realiza una función similar.
-    El precedente es que *alguna* de estas capas debe garantizar que las vistas operen con contexto.
+- El camino canónico del repo es `JWTAuthWithOrgContext`.
+- Este middleware se conserva solo como fallback/documentación de precedentes para instalaciones legacy.
 """
 
 from __future__ import annotations
@@ -18,11 +18,11 @@ from apps.iam.models import OrgUnit, UserMembership
 
 class OrgContextMiddleware:
     """
-    Inyecta contexto organizacional:
+    Fallback legacy que inyecta contexto organizacional:
       - request.company (OrgUnit COMPANY)
       - request.branch (OrgUnit BRANCH | None)
 
-    En endpoints operativos exige X-Company-Id.
+    En endpoints operativos exige X-Company-Id si llega a usarse.
     """
 
     EXEMPT_PATH_PREFIXES = (
@@ -30,8 +30,11 @@ class OrgContextMiddleware:
         "/api/auth/login/",
         "/api/auth/refresh/",
         "/api/auth/logout/",
+        "/api/auth/2fa/verify/",
         "/api/auth/me/",
         "/api/auth/me/acl/",
+        "/api/auth/bootstrap/",
+        "/api/auth/password/",
         "/api/schema/",
         "/api/docs/",
     )

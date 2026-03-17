@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from decimal import Decimal
-
 from rest_framework import serializers
 
 from .models import InventoryItem, UoM, Warehouse
@@ -51,6 +49,14 @@ class TransferSerializer(serializers.Serializer):
     qty = serializers.DecimalField(max_digits=18, decimal_places=4)
     idempotency_key = serializers.CharField(max_length=96, required=False, allow_blank=True)
     note = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+
+class LedgerQuerySerializer(serializers.Serializer):
+    warehouse_id = serializers.IntegerField(required=False, min_value=1)
+    item_id = serializers.IntegerField(required=False, min_value=1)
+    movement_type = serializers.CharField(max_length=16, required=False, allow_blank=True)
+    page = serializers.IntegerField(required=False, min_value=1, default=1)
+    page_size = serializers.IntegerField(required=False, min_value=1, max_value=200, default=50)
 
 
 class WarehouseOut(serializers.ModelSerializer):

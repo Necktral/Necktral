@@ -6,6 +6,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
+from apps.audit.models import AuditEvent
 from apps.iam.models import OrgUnit, UserMembership
 from apps.integration.models import OutboxEvent
 from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
@@ -108,3 +109,11 @@ def test_payments_intent_cash_session_and_outbox():
     assert "CashSessionOpened" in emitted
     assert "CashMovementPosted" in emitted
     assert "CashSessionClosed" in emitted
+
+    audited = set(
+        AuditEvent.objects.filter(module="PAYMENTS").values_list("event_type", flat=True)
+    )
+    assert "PAYMENT_INTENT_CREATED" in audited
+    assert "CASH_SESSION_OPENED" in audited
+    assert "CASH_MOVEMENT_POSTED" in audited
+    assert "CASH_SESSION_CLOSED" in audited

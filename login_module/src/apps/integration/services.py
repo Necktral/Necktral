@@ -11,6 +11,18 @@ from apps.common.domain_errors import IntegrationError
 
 from .models import InboxEvent, OutboxEvent
 
+OUTBOX_CONTRACT_VERSION = "1.0"
+CANONICAL_OUTBOX_ENVELOPE_FIELDS = (
+    "schema_version",
+    "contract_version",
+    "occurred_at",
+    "scope",
+    "actor",
+    "correlation_id",
+    "causation_id",
+    "data",
+)
+
 OPERATIONAL_ACCOUNTING_CONTRACT_EVENTS = {
     ("BILLING", "DocumentIssued"),
     ("BILLING", "DocumentVoided"),
@@ -41,6 +53,32 @@ def _normalize_operational_contract_payload(*, source_module: str, event_type: s
     for key, default_value in defaults.items():
         data.setdefault(key, default_value)
     return data
+
+
+def _build_canonical_outbox_payload(
+    *,
+    schema_version: int,
+    occurred_at,
+    company,
+    branch,
+    actor_user,
+    correlation_id: str,
+    causation_id: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema_version": int(schema_version),
+        "contract_version": OUTBOX_CONTRACT_VERSION,
+        "occurred_at": occurred_at.isoformat(),
+        "scope": {
+            "company_id": getattr(company, "id", None),
+            "branch_id": getattr(branch, "id", None),
+        },
+        "actor": {"user_id": getattr(actor_user, "id", None)},
+        "correlation_id": correlation_id,
+        "causation_id": causation_id,
+        "data": payload,
+    }
 
 
 def publish_outbox_event(
@@ -84,19 +122,16 @@ def publish_outbox_event(
     )
 
     occurred_at = timezone.now()
-    canonical_payload = {
-        "schema_version": int(schema_version),
-        "contract_version": "1.0",
-        "occurred_at": occurred_at.isoformat(),
-        "scope": {
-            "company_id": getattr(effective_company, "id", None),
-            "branch_id": getattr(effective_branch, "id", None),
-        },
-        "actor": {"user_id": getattr(effective_actor, "id", None)},
-        "correlation_id": corr,
-        "causation_id": cause,
-        "data": normalized_payload,
-    }
+    canonical_payload = _build_canonical_outbox_payload(
+        schema_version=int(schema_version),
+        occurred_at=occurred_at,
+        company=effective_company,
+        branch=effective_branch,
+        actor_user=effective_actor,
+        correlation_id=corr,
+        causation_id=cause,
+        payload=normalized_payload,
+    )
 
     return OutboxEvent.objects.create(
         source_module=source_module,
