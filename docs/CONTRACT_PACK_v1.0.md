@@ -4,6 +4,9 @@ Versión: v1.0
 Fecha: 2026-01-26  
 Estado: **Guía de organización (viva)**
 
+> Nota de versión (2026-03-17): `docs/CONTRACT_PACK_v1.1.md` es la guía vigente de organización para escalamiento modular.  
+> Este `v1.0` se mantiene como base histórica y referencia de evolución.
+
 ## Propósito
 
 Este documento define el **contrato de organización** del ERP/CRM: cómo deben comportarse los kernels y módulos para que el sistema sea consistente, auditable, multiempresa y operable con QA determinista.

@@ -38,6 +38,8 @@ yarn-error.log*
 
 # Python
 system_wis/
+# Árbol legacy local no canónico (ver CONTRACT_PACK_v1.1 / repo_higiene)
+backend/
 __pycache__/
 *.pyc
 *.pyo

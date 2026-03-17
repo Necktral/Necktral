@@ -69,7 +69,7 @@ ensure_frontend_up() {
     return
   fi
 
-  echo "[qa] ensuring frontend is up on http://localhost:3000 ..."
+  echo "[qa] ensuring frontend is up on http://localhost:3100 ..."
   if docker compose up -d frontend; then
     echo "[qa] frontend service ensured."
   else
@@ -92,7 +92,8 @@ else
 fi
 
 if [[ "${run_status}" == "passed" ]]; then
-  if make_cmd qa-static-scan \
+  if make_cmd qa-repo-hygiene \
+    && make_cmd qa-static-scan \
     && make_cmd qa-backend-bandit \
     && make_cmd qa-backend-ruff \
     && make_cmd qa-backend-mypy \

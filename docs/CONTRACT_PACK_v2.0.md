@@ -10,7 +10,8 @@ Este documento define el **contrato canónico Sync v2**. Todo lo demás (v1.0) s
 
 Referencias:
 
-- Base contractual general: `docs/CONTRACT_PACK_v1.0.md`
+- Base contractual general vigente: `docs/CONTRACT_PACK_v1.1.md`
+- Referencia histórica: `docs/CONTRACT_PACK_v1.0.md`
 - Auditoría contractual: `login_module/src/apps/audit/contracts.py`
 
 ---

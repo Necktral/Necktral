@@ -67,7 +67,7 @@ docker compose up -d db backend
 
 Esto levanta por defecto:
 
-- Frontend (Quasar): http://localhost:3000
+- Frontend (Quasar): http://localhost:3100
 - Backend (Django/DRF): http://localhost:8000
 - DB (Postgres): localhost:5432
 
@@ -363,7 +363,9 @@ docker compose exec backend python src/manage.py bootstrap_company --company-nam
 
 Guías de organización:
 
-- Contract Pack v1.0: [docs/CONTRACT_PACK_v1.0.md](docs/CONTRACT_PACK_v1.0.md)
+- Contract Pack vigente (organización): [docs/CONTRACT_PACK_v1.1.md](docs/CONTRACT_PACK_v1.1.md)
+- Contract Pack histórico base: [docs/CONTRACT_PACK_v1.0.md](docs/CONTRACT_PACK_v1.0.md)
+- Contract Pack Sync canónico: [docs/CONTRACT_PACK_v2.0.md](docs/CONTRACT_PACK_v2.0.md)
 - Addendum Offline-first v1.0: [docs/ADDENDUM_OFFLINE_FIRST_v1.0.md](docs/ADDENDUM_OFFLINE_FIRST_v1.0.md)
 - Índice de docs: [docs/README.md](docs/README.md)
 

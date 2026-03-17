@@ -13,13 +13,17 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - [contexto_nucleos.md](contexto_nucleos.md) — Estado ejecutivo por fases, publicación GitHub y roadmap activo.
 - [ARQUITECTURA_DOMINIO_Y_CONTROL_v1.0.md](ARQUITECTURA_DOMINIO_Y_CONTROL_v1.0.md) — Blueprint maestro de kernels, CEC, adaptadores fiscales y evolución a GL formal.
 - [operacion/README.md](operacion/README.md) — Runbooks, toolchains y operación release F1–F12.
-- [CONTRACT_PACK_v1.0.md](CONTRACT_PACK_v1.0.md) — Guía contractual del sistema (organización de kernels/módulos).
+- [CONTRACT_PACK_v1.1.md](CONTRACT_PACK_v1.1.md) — Guía contractual vigente para organización y escalamiento modular.
+- [CONTRACT_PACK_v1.0.md](CONTRACT_PACK_v1.0.md) — Base histórica de organización contractual.
+- [CONTRACT_PACK_v2.0.md](CONTRACT_PACK_v2.0.md) — Contrato canónico vigente para Sync v2.
 - [ESTANDAR_COMENTARIOS.md](ESTANDAR_COMENTARIOS.md) — Estándar de comentarios en el código.
 - [ADDENDUM_OFFLINE_FIRST_v1.0.md](ADDENDUM_OFFLINE_FIRST_v1.0.md) — Reglas offline-first (sync, idempotencia y auditoría).
 - [ADDENDUM_SEGURIDAD_v1.0.md](ADDENDUM_SEGURIDAD_v1.0.md) — Plan de mejoras de seguridad y robustez.
 - [ADDENDUM_SEGURIDAD_BACKLOG_v1.0.md](ADDENDUM_SEGURIDAD_BACKLOG_v1.0.md) — Backlog ejecutable del addendum de seguridad.
 - [BILLING_KERNEL_v1.0.md](BILLING_KERNEL_v1.0.md) — Contrato operativo del kernel de facturación.
 - [FUTURAS_MEJORAS.md](FUTURAS_MEJORAS.md) — Roadmap de mejoras futuras (técnicas y de producto).
+- [repo_higiene/README.md](repo_higiene/README.md) — Índice de artefactos de reorganización y limpieza controlada.
+- [repo_higiene/resumen_reorganizacion_v1.1.md](repo_higiene/resumen_reorganizacion_v1.1.md) — Resumen de inventario técnico, decisiones KEEP/LEGACY/DELETE y checklist por lotes.
 
 ## Documentación operacional
 
@@ -53,5 +57,6 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - Todo en español.
 - Mantener los documentos cortos, accionables y versionados (título + versión + fecha).
 - Cuando un documento defina reglas/invariantes, enlazar a los módulos relevantes del código (p.ej. auditoría contractual, RBAC, sync engine).
+- Para backend, la ruta canónica de código es `login_module/`; `backend/` se considera legacy local no canónico.
 - La evidencia operativa masiva vive fuera del versionado normal de GitHub y se consume por rutas/convención en `docs/operacion/evidencia/**`.
 - En Git se mantienen solo runbooks, índices y referencias de evidencia (no dumps masivos).

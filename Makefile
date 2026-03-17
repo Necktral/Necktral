@@ -4,6 +4,7 @@
 	qa-operational-go-live \
 	qa-ci-up qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci \
 	qa-coverage-domains \
+	qa-repo-hygiene qa-repo-hygiene-inventory \
 	qa-repo-comment-audit \
 	qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-backend-mypy-baseline-refresh qa-backend-tests qa-static-scan qa-frontend-ci qa-audit-integrity \
 	docker-clean docker-clean-all \
@@ -127,8 +128,14 @@ qa-audit-integrity:
 qa-frontend-ci:
 	docker compose --profile qa run --rm frontend_ci
 
+qa-repo-hygiene:
+	python3 ./qa/repo_hygiene_guard.py
+
+qa-repo-hygiene-inventory:
+	python3 ./qa/repo_hygiene_inventory.py
+
 # Gate 1: calidad estática + typecheck
-qa-ci-gate1: qa-ci-up qa-static-scan qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-frontend-ci
+qa-ci-gate1: qa-repo-hygiene qa-ci-up qa-static-scan qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-frontend-ci
 
 # Gate 2: pruebas deterministas (pytest + cobertura)
 qa-ci-gate2: qa-ci-up qa-backend-tests qa-coverage-domains
