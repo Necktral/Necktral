@@ -48,7 +48,7 @@ export const useAclStore = defineStore('acl', {
   actions: {
     async loadAcl(client?: AxiosInstance) {
       const http = client ?? api;
-      const { data } = await http.get<AclSnapshot>('/auth/me/acl/');
+      const { data } = await http.get<AclSnapshot>('/backend/auth/me/acl/');
       this.snapshot = data;
       this.permissionsByCompany = buildPermIndex(data.companies ?? []);
       this.loaded = true;

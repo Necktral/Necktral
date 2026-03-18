@@ -1,0 +1,29 @@
+module_id: "accounts_storage"
+module_type: "core"
+contract_version: "1.0"
+
+ownership:
+  owns:
+    - "user_identity_persistence"
+    - "refresh_token_session_persistence"
+    - "two_factor_challenge_persistence"
+    - "auth_related_migrations"
+  invariants:
+    - "AUTH_USER_MODEL remains accounts.User during stage 1"
+
+forbidden_writes:
+  - "org_bootstrap_orchestration"
+  - "rbac_seed_or_assignment_orchestration"
+
+upstream_dependencies: []
+
+published_events: []
+
+consumed_events: []
+
+rbac_surface:
+  permissions: []
+
+audit_catalog:
+  event_types: []
+  reason_codes: []

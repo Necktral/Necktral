@@ -43,12 +43,23 @@ export const authApi = axios.create({
 
 // Endpoints exentos de contexto (no requieren X-Company-Id)
 const CONTEXT_EXEMPT_PREFIXES = [
+  '/backend/auth/login/',
+  '/backend/auth/refresh/',
+  '/backend/auth/logout/',
+  '/backend/auth/me/',
+  '/backend/auth/me/acl/',
+  '/backend/auth/bootstrap/',
+  '/backend/iam/bootstrap/',
+  '/backend/org/bootstrap/',
+  '/backend/auth/password/',
   '/auth/login/',
   '/auth/refresh/',
   '/auth/logout/',
   '/auth/me/',
   '/auth/me/acl/',
   '/auth/bootstrap/',
+  '/iam/bootstrap/',
+  '/org/bootstrap/',
   '/auth/password/',
   '/schema/',
 ];

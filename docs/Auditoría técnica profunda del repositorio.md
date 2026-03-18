@@ -27,10 +27,10 @@ Opinión avanzada consolidada:
 
 | ID | Riesgo | Severidad | Impacto | Probabilidad | Estado | Evidencia verificable | Acción prioritaria | KPI de cierre |
 |---|---|---|---|---|---|---|---|---|
-| R-01 | Dualidad de protocolos Sync (`/api/sync/` vs `/api/sync-hmac/`) | Critical | Inconsistencia funcional, mayor superficie y deuda operativa | Alta | Pendiente | [config/urls.py](../login_module/src/config/urls.py) (L38-L39), [sync_engine/views.py](../login_module/src/apps/sync_engine/views.py) (L277-L313), [sync/views.py](../login_module/src/apps/sync/views.py) (L33-L120) | Definir núcleo único de ejecución y dejar legacy como wrapper sin lógica de negocio | 100% de batches legacy ejecutan core v2; 0 rutas con idempotencia paralela |
-| R-02 | Contrato v2 no convergido completamente al core (`protocol_version/ts/nonce/auth`) | High | Riesgo contractual y de compatibilidad futura | Alta | Pendiente | [docs/CONTRACT_PACK_v2.0.md](CONTRACT_PACK_v2.0.md) (L20-L22, L40), [sync_engine/views.py](../login_module/src/apps/sync_engine/views.py) (L286-L313) | Definir y ejecutar plan de convergencia por fases (gateway/request-level + core) | Suite de contrato Sync v2 en verde + matriz de compatibilidad publicada |
-| R-03 | OpenAPI expuesto con `AllowAny` en rutas de schema | High | Enumeración de superficie API en despliegues no aislados | Media | Parcial | [config/urls.py](../login_module/src/config/urls.py) (L27-L29) | Aplicar política por entorno (`DEBUG/flag`) y control de acceso en prod | En prod, `/api/schema/*` no accesible anónimamente |
-| R-04 | Cobertura reportada sesgada por alcance de `sync_engine` | High | Señal incompleta para ORG/HR/RBAC/AUDIT | Alta | Parcial | [login_module/.coveragerc](../login_module/.coveragerc) (L1-L3), [Makefile](../Makefile) (L102-L103), [docs/QUALITY_COVERAGE_DIAGNOSTIC.md](QUALITY_COVERAGE_DIAGNOSTIC.md) (L9-L12) | Introducir cobertura por invariantes y tablero por dominios críticos | KPI por dominio (accounts/iam/rbac/audit/sync) con umbrales explícitos |
+| R-01 | Dualidad de protocolos Sync (`/api/sync/` vs `/api/sync-hmac/`) | Critical | Inconsistencia funcional, mayor superficie y deuda operativa | Alta | Pendiente | [config/urls.py](../backend/src/config/urls.py) (L38-L39), [sync_engine/views.py](../backend/src/apps/sync_engine/views.py) (L277-L313), [sync/views.py](../backend/src/apps/sync/views.py) (L33-L120) | Definir núcleo único de ejecución y dejar legacy como wrapper sin lógica de negocio | 100% de batches legacy ejecutan core v2; 0 rutas con idempotencia paralela |
+| R-02 | Contrato v2 no convergido completamente al core (`protocol_version/ts/nonce/auth`) | High | Riesgo contractual y de compatibilidad futura | Alta | Pendiente | [docs/CONTRACT_PACK_v2.0.md](CONTRACT_PACK_v2.0.md) (L20-L22, L40), [sync_engine/views.py](../backend/src/apps/sync_engine/views.py) (L286-L313) | Definir y ejecutar plan de convergencia por fases (gateway/request-level + core) | Suite de contrato Sync v2 en verde + matriz de compatibilidad publicada |
+| R-03 | OpenAPI expuesto con `AllowAny` en rutas de schema | High | Enumeración de superficie API en despliegues no aislados | Media | Parcial | [config/urls.py](../backend/src/config/urls.py) (L27-L29) | Aplicar política por entorno (`DEBUG/flag`) y control de acceso en prod | En prod, `/api/schema/*` no accesible anónimamente |
+| R-04 | Cobertura reportada sesgada por alcance de `sync_engine` | High | Señal incompleta para ORG/HR/RBAC/AUDIT | Alta | Parcial | [backend/.coveragerc](../backend/.coveragerc) (L1-L3), [Makefile](../Makefile) (L102-L103), [docs/QUALITY_COVERAGE_DIAGNOSTIC.md](QUALITY_COVERAGE_DIAGNOSTIC.md) (L9-L12) | Introducir cobertura por invariantes y tablero por dominios críticos | KPI por dominio (accounts/iam/rbac/audit/sync) con umbrales explícitos |
 
 ## Evidencia verificable
 
@@ -38,16 +38,16 @@ Opinión avanzada consolidada:
 
 | Hallazgo | Estado observado | Evidencia |
 |---|---|---|
-| Existen dos rutas de sincronización activas | Confirmado | [config/urls.py](../login_module/src/config/urls.py) (L38-L39) |
-| `sync_engine` procesa batch con `X-Device-Id` y firma por comando | Confirmado | [sync_engine/views.py](../login_module/src/apps/sync_engine/views.py) (L279-L313) |
-| `sync-hmac` usa headers `X-Device-Ts/Nonce/Signature` + anti-replay propio | Confirmado | [sync/views.py](../login_module/src/apps/sync/views.py) (L33-L101) |
+| Existen dos rutas de sincronización activas | Confirmado | [config/urls.py](../backend/src/config/urls.py) (L38-L39) |
+| `sync_engine` procesa batch con `X-Device-Id` y firma por comando | Confirmado | [sync_engine/views.py](../backend/src/apps/sync_engine/views.py) (L279-L313) |
+| `sync-hmac` usa headers `X-Device-Ts/Nonce/Signature` + anti-replay propio | Confirmado | [sync/views.py](../backend/src/apps/sync/views.py) (L33-L101) |
 | Contrato v2 exige endpoint canónico y wrappers legacy, y documenta lag request-level en core | Confirmado | [CONTRACT_PACK_v2.0.md](CONTRACT_PACK_v2.0.md) (L20-L22, L40) |
-| OpenAPI está abierto con `AllowAny` | Confirmado | [config/urls.py](../login_module/src/config/urls.py) (L27-L29) |
-| Gate 2 corre coverage con rcfile centrado en `sync_engine` | Confirmado | [login_module/.coveragerc](../login_module/.coveragerc) (L1-L3), [Makefile](../Makefile) (L102-L103) |
+| OpenAPI está abierto con `AllowAny` | Confirmado | [config/urls.py](../backend/src/config/urls.py) (L27-L29) |
+| Gate 2 corre coverage con rcfile centrado en `sync_engine` | Confirmado | [backend/.coveragerc](../backend/.coveragerc) (L1-L3), [Makefile](../Makefile) (L102-L103) |
 
 ### Recalibración de seguridad (evitar trabajo duplicado)
 
-- `TLS/HSTS/cookies secure` en settings productivos ya está implementado a nivel Django: [prod.py](../login_module/src/config/settings/prod.py) (L19-L32).
+- `TLS/HSTS/cookies secure` en settings productivos ya está implementado a nivel Django: [prod.py](../backend/src/config/settings/prod.py) (L19-L32).
 - El backlog operativo todavía marca trabajo de borde/terminación TLS y validación de rutas HTTP/HTTPS: [ADDENDUM_SEGURIDAD_BACKLOG_v1.0.md](ADDENDUM_SEGURIDAD_BACKLOG_v1.0.md) (EPICA A2, L53-L67).
 - El `compose.prod.yaml` expone `web` en puerto 80, por lo que la terminación TLS puede estar fuera del stack y debe verificarse en infraestructura real: [compose.prod.yaml](../compose.prod.yaml) (L61-L62).
 
@@ -106,9 +106,9 @@ Entregable de salida: acta de cierre de riesgos R-01/R-02 y downgrade de severid
 
 ### A. Opciones de parche (solo referencia)
 
-1. OpenAPI por entorno en [config/urls.py](../login_module/src/config/urls.py): reemplazar `AllowAny` por política condicional (`AllowAny` en dev, autenticado/permiso en prod).
-2. Deprecation headers en legacy sync ([sync/views.py](../login_module/src/apps/sync/views.py)): añadir `Deprecation`, `Sunset`, `Link` para hacer observable el retiro.
-3. Cobertura por dominios en [login_module/.coveragerc](../login_module/.coveragerc): extender `source` y sostener umbrales por componente.
+1. OpenAPI por entorno en [config/urls.py](../backend/src/config/urls.py): reemplazar `AllowAny` por política condicional (`AllowAny` en dev, autenticado/permiso en prod).
+2. Deprecation headers en legacy sync ([sync/views.py](../backend/src/apps/sync/views.py)): añadir `Deprecation`, `Sunset`, `Link` para hacer observable el retiro.
+3. Cobertura por dominios en [backend/.coveragerc](../backend/.coveragerc): extender `source` y sostener umbrales por componente.
 
 ### B. Checklist de validación de consistencia documental
 

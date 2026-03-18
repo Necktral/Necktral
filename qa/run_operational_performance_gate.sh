@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 K6_BIN="${K6_BIN:-k6}"
-MANAGE_PY="${ROOT_DIR}/login_module/src/manage.py"
+MANAGE_PY="${ROOT_DIR}/backend/src/manage.py"
 K6_SCRIPT="${ROOT_DIR}/qa/k6/operational_posting_load.js"
 
 BASE_URL="${BASE_URL:-http://localhost:8000/api}"

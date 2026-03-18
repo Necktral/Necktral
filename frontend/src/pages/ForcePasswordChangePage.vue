@@ -76,7 +76,7 @@ const form = reactive({
 async function submitChange() {
   loading.value = true;
   try {
-    await api.post('/auth/password/', form);
+    await api.post('/backend/auth/password/', form);
 
     $q.notify({ type: 'positive', message: 'Password updated successfully' });
 

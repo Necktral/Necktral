@@ -10,13 +10,20 @@ Este paquete ejecuta una simulacion realista del flujo de autenticacion en modo 
 - Confirmar robustez frente a tokens invalidos
 - **Auditoría de Seguridad**: Detectar vulnerabilidades de Replay Attack (2FA) y persistencia de cookies.
 
+## Perfiles de simulación (dual por perfil)
+
+| Perfil | Uso | Variables clave |
+|---|---|---|
+| `auth-local` | Validación funcional y seguridad auth en runtime base | `AUTH_FLOW_MODE=auto` (o `cookie/header`), `BASE_URL=http://.../api` |
+| `integral-loadtest` | Corrida integral auth + operacional + gates | `SIM_PROFILE=integral`, `AUTH_TOKEN_TRANSPORT=header`, `AUTH_ALLOW_TRANSPORT_OVERRIDE=1`, `AUTH_TRANSPORT=header` |
+
 ## Contenido
 
 ### Archivos clave
 
 - Script base k6: simulacion/auth_load_simulation.js
 - Script extendido k6: simulacion/auth_load_simulation_extended.js
-- Seed de usuarios: login_module/src/apps/accounts/management/commands/seed_auth_users.py
+- Seed de usuarios: backend/src/apps/accounts/management/commands/seed_auth_users.py
 - Workflow de referencia: simulacion/auth-load-simulation.yml
 - Workflow oficial (GitHub Actions): .github/workflows/auth-load-simulation.yml
 
@@ -240,8 +247,14 @@ cp .env.loadtest.example .env.loadtest
 2. Ejecuta precheck de autenticación y transporte:
 
 ```bash
-make loadtest-precheck-auth
+SIM_PROFILE=integral make loadtest-precheck-auth
 # esperado: PRECHECK_STATUS=OK
+```
+
+Para validar únicamente contexto auth (sin enforcement estricto de transporte integral):
+
+```bash
+SIM_PROFILE=auth-only make loadtest-precheck-auth
 ```
 
 3. Ejecuta la corrida integral:
@@ -274,8 +287,9 @@ make loadtest-150k
 - AUTH_ADMIN_2FA_VUS: VUs dedicados a 2FA (default 6)
 - OPER_BILLING_VUS / OPER_INVENTORY_VUS / OPER_POSTING_VUS: VUs operacionales
 - LOADTEST_ENV_FILE: archivo opcional de override (default `.env.loadtest`)
-- AUTH_TOKEN_TRANSPORT/AUTH_ALLOW_TRANSPORT_OVERRIDE: recomendado `header`/`1`
-  para compatibilizar corrida operacional (header) con escenarios auth mixtos
+- SIM_PROFILE: `integral` (default en precheck de loadtest) o `auth-only`
+- AUTH_TOKEN_TRANSPORT/AUTH_ALLOW_TRANSPORT_OVERRIDE: en `integral` se exige `header`/`1`
+- AUTH_TRANSPORT: transporte para `operational_posting_load.js`; en corrida integral se fuerza `header`
 - Variables obligatorias del perfil: `AUTH_SIM_ADMIN_PASSWORD`,
   `AUTH_SIM_USER_PASSWORD`, `AUTH_SIM_ADMIN_TOTP_SECRET`, `COMPANY_ID`,
   `BRANCH_ID`, `USERNAME`, `PASSWORD`

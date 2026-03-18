@@ -3,7 +3,7 @@
 Fecha: 2026-03-17
 
 ## Cobertura
-- Rutas auditadas: `login_module/src`, `modulos`, `frontend/src`, `qa`, `docs`, `backend`.
+- Rutas auditadas: `backend/src`, `modulos`, `frontend/src`, `qa`, `docs`, `backend`.
 - Exclusiones: terceros/artefactos masivos (`node_modules`, `system_wis`, evidencias operativas, outputs de build).
 
 ## Resumen cuantitativo
@@ -44,7 +44,7 @@ Fecha: 2026-03-17
 
 ## Checklist por lotes
 - Lote A (Documentación contractual): crear/normalizar `CONTRACT_PACK_v1.1` y referencias cruzadas.
-- Lote B (Canónico backend): declarar `login_module/` como raíz oficial y `backend/` como legacy local.
+- Lote B (Canónico backend): declarar `backend/` como raíz oficial y `backend/` como legacy local.
 - Lote C (Limpieza conservadora): eliminar residuos `DELETE` confirmados del árbol legacy y caches generados.
 - Lote D (Guardas): activar chequeo de higiene en QA para evitar reintroducción de residuos/duplicados.
 

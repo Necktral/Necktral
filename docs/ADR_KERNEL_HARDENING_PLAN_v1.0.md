@@ -6,7 +6,7 @@ Estado: Aprobado para ejecución
 
 ## Decisión
 
-Necktral adopta un programa de hardening backend-first, sprintable, centrado en `login_module/src` y `modulos`.
+Necktral adopta un programa de hardening backend-first, sprintable, centrado en `backend/src` y `modulos`.
 
 El orden oficial de ejecución es:
 
@@ -29,7 +29,7 @@ El orden oficial de ejecución es:
 
 ## Reglas operativas
 
-- Ruta backend canónica: `login_module/src`.
+- Ruta backend canónica: `backend/src`.
 - `backend/` se considera árbol legacy/duplicado local no canónico.
 - No introducir nuevos ownerships de dominio.
 - No introducir reglas contables finales fuera de Accounting.

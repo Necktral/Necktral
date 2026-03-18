@@ -149,7 +149,7 @@ function getCookieValue(jar, name) {
 
 function loginCookie(username, password) {
   const res = http.post(
-    `${BASE_URL}/auth/login/`,
+    `${BASE_URL}/backend/auth/login/`,
     JSON.stringify({ username, password }),
     {
       headers: {
@@ -164,7 +164,7 @@ function loginCookie(username, password) {
 
 function verifyTwoFa(challenge, code) {
   const res = http.post(
-    `${BASE_URL}/auth/2fa/verify/`,
+    `${BASE_URL}/backend/auth/2fa/verify/`,
     JSON.stringify({ challenge, code }),
     {
       headers: {
@@ -178,7 +178,7 @@ function verifyTwoFa(challenge, code) {
 }
 
 function refreshWithCookies(csrfToken) {
-  return http.post(`${BASE_URL}/auth/refresh/`, JSON.stringify({}), {
+  return http.post(`${BASE_URL}/backend/auth/refresh/`, JSON.stringify({}), {
     headers: {
       "Content-Type": "application/json",
       "X-Auth-Transport": AUTH_TRANSPORT,
@@ -189,7 +189,7 @@ function refreshWithCookies(csrfToken) {
 }
 
 function logoutWithCookies(csrfToken) {
-  return http.post(`${BASE_URL}/auth/logout/`, JSON.stringify({}), {
+  return http.post(`${BASE_URL}/backend/auth/logout/`, JSON.stringify({}), {
     headers: {
       "Content-Type": "application/json",
       "X-Auth-Transport": AUTH_TRANSPORT,

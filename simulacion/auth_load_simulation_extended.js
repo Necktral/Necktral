@@ -196,7 +196,7 @@ function clearJar(jar) {
 
 function loginCookie(username, password) {
   return http.post(
-    `${BASE_URL}/auth/login/`,
+    `${BASE_URL}/backend/auth/login/`,
     JSON.stringify({ username, password }),
     {
       headers: {
@@ -210,7 +210,7 @@ function loginCookie(username, password) {
 
 function loginHeader(username, password) {
   const res = http.post(
-    `${BASE_URL}/auth/login/`,
+    `${BASE_URL}/backend/auth/login/`,
     JSON.stringify({ username, password }),
     {
       headers: {
@@ -232,7 +232,7 @@ function loginHeader(username, password) {
 
 function refreshHeader(refreshToken) {
   return http.post(
-    `${BASE_URL}/auth/refresh/`,
+    `${BASE_URL}/backend/auth/refresh/`,
     JSON.stringify({ refresh: refreshToken }),
     {
       headers: {
@@ -246,7 +246,7 @@ function refreshHeader(refreshToken) {
 
 function logoutHeader(accessToken, refreshToken) {
   return http.post(
-    `${BASE_URL}/auth/logout/`,
+    `${BASE_URL}/backend/auth/logout/`,
     JSON.stringify({ refresh: refreshToken }),
     {
       headers: {
@@ -259,7 +259,7 @@ function logoutHeader(accessToken, refreshToken) {
 }
 
 function refreshCookie(csrfToken) {
-  return http.post(`${BASE_URL}/auth/refresh/`, JSON.stringify({}), {
+  return http.post(`${BASE_URL}/backend/auth/refresh/`, JSON.stringify({}), {
     headers: {
       "Content-Type": "application/json",
       "X-Auth-Transport": TRANSPORT_COOKIE,
@@ -270,7 +270,7 @@ function refreshCookie(csrfToken) {
 }
 
 function logoutCookie(csrfToken, tags) {
-  return http.post(`${BASE_URL}/auth/logout/`, JSON.stringify({}), {
+  return http.post(`${BASE_URL}/backend/auth/logout/`, JSON.stringify({}), {
     headers: {
       "Content-Type": "application/json",
       "X-Auth-Transport": TRANSPORT_COOKIE,
@@ -282,7 +282,7 @@ function logoutCookie(csrfToken, tags) {
 
 function verifyTwoFa(challenge, code) {
   return http.post(
-    `${BASE_URL}/auth/2fa/verify/`,
+    `${BASE_URL}/backend/auth/2fa/verify/`,
     JSON.stringify({ challenge, code }),
     {
       headers: {
@@ -310,7 +310,7 @@ export function cookieLoginFlow() {
   }
 
   const refreshNoCsrf = http.post(
-    `${BASE_URL}/auth/refresh/`,
+    `${BASE_URL}/backend/auth/refresh/`,
     JSON.stringify({}),
     {
       headers: {
@@ -331,7 +331,7 @@ export function cookieLoginFlow() {
   });
 
   const logoutNoCsrf = http.post(
-    `${BASE_URL}/auth/logout/`,
+    `${BASE_URL}/backend/auth/logout/`,
     JSON.stringify({}),
     {
       headers: {
@@ -420,7 +420,7 @@ export function adminTwoFaFlow() {
   // We explicitly strip cookies to simulate a replay from a different context/browser/tool
   // and to avoid CSRF 403 failure masking the logic check.
   const replayRes = http.post(
-    `${BASE_URL}/auth/2fa/verify/`,
+    `${BASE_URL}/backend/auth/2fa/verify/`,
     JSON.stringify({ challenge, code }),
     {
       headers: {
@@ -468,7 +468,7 @@ export function refreshRotationFlow() {
   });
 
   const resReuse = http.post(
-    `${BASE_URL}/auth/refresh/`,
+    `${BASE_URL}/backend/auth/refresh/`,
     JSON.stringify({ refresh: firstRefresh }),
     {
       headers: {
@@ -522,7 +522,7 @@ export function logoutFlow() {
 export function attackFlow() {
   const badToken = Math.random().toString(36).slice(2);
   const res = http.post(
-    `${BASE_URL}/auth/refresh/`,
+    `${BASE_URL}/backend/auth/refresh/`,
     JSON.stringify({ refresh: badToken }),
     {
       headers: {

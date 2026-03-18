@@ -93,6 +93,8 @@ fi
 
 if [[ "${run_status}" == "passed" ]]; then
   if make_cmd qa-repo-hygiene \
+    && make_cmd qa-architecture-boundaries \
+    && make_cmd qa-simulation-contract-guard \
     && make_cmd qa-static-scan \
     && make_cmd qa-backend-bandit \
     && make_cmd qa-backend-ruff \

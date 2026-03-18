@@ -12,7 +12,7 @@ fi
 REPORT_PARENT="$(dirname "${REPORT_FILE}")"
 mkdir -p "${REPORT_PARENT}"
 
-TARGET_DIR="${ROOT_DIR}/login_module/src/apps"
+TARGET_DIR="${ROOT_DIR}/backend/src/apps"
 
 # Scan enfocado en indicadores típicos de deuda crítica en rutas sensibles.
 # Evita falsos positivos excluyendo migraciones.

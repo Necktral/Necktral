@@ -62,6 +62,18 @@ set -a
 source "${LOADTEST_ENV_FILE}"
 set +a
 
+sim_profile_raw="$(printf '%s' "${SIM_PROFILE:-integral}" | tr '[:upper:]' '[:lower:]')"
+case "${sim_profile_raw}" in
+  integral|auth-only)
+    SIM_PROFILE="${sim_profile_raw}"
+    ;;
+  *)
+    echo "ERROR: SIM_PROFILE invalido: ${SIM_PROFILE:-}" >&2
+    echo "Valores permitidos: integral | auth-only" >&2
+    exit 2
+    ;;
+esac
+
 if ! (
   cd "${ROOT_DIR}"
   docker compose exec -T backend true >/dev/null 2>&1
@@ -120,6 +132,7 @@ expected_throttle_auth_sensitive="${DRF_THROTTLE_AUTH_SENSITIVE:-}"
 
 echo "AUTH_TOKEN_TRANSPORT=${transport_value:-}"
 echo "AUTH_ALLOW_TRANSPORT_OVERRIDE=${override_enabled}"
+echo "SIM_PROFILE=${SIM_PROFILE}"
 echo "DRF_THROTTLE_ANON=${expected_throttle_anon:-}"
 echo "DRF_THROTTLE_USER=${expected_throttle_user:-}"
 echo "DRF_THROTTLE_AUTH_LOGIN=${expected_throttle_auth_login:-}"
@@ -128,11 +141,13 @@ echo "DRF_THROTTLE_AUTH_LOGOUT=${expected_throttle_auth_logout:-}"
 echo "DRF_THROTTLE_AUTH_SENSITIVE=${expected_throttle_auth_sensitive:-}"
 
 config_errors=()
-if [[ "${transport_value}" != "header" ]]; then
-  config_errors+=("AUTH_TOKEN_TRANSPORT must be 'header'")
-fi
-if [[ "${override_enabled}" != "1" ]]; then
-  config_errors+=("AUTH_ALLOW_TRANSPORT_OVERRIDE must be 1")
+if [[ "${SIM_PROFILE}" == "integral" ]]; then
+  if [[ "${transport_value}" != "header" ]]; then
+    config_errors+=("AUTH_TOKEN_TRANSPORT must be 'header' for SIM_PROFILE=integral")
+  fi
+  if [[ "${override_enabled}" != "1" ]]; then
+    config_errors+=("AUTH_ALLOW_TRANSPORT_OVERRIDE must be 1 for SIM_PROFILE=integral")
+  fi
 fi
 for item in "${config_errors[@]}"; do
   echo " - ${item}"
@@ -140,6 +155,7 @@ done
 
 set +e
 docker compose exec -T backend env \
+  LT_SIM_PROFILE="${SIM_PROFILE}" \
   LT_EXPECT_AUTH_TOKEN_TRANSPORT="${transport_value:-header}" \
   LT_EXPECT_AUTH_ALLOW_TRANSPORT_OVERRIDE="${override_enabled}" \
   LT_EXPECT_DRF_THROTTLE_ANON="${expected_throttle_anon}" \
@@ -186,20 +202,25 @@ expected = {
     "DRF_THROTTLE_AUTH_SENSITIVE": (os.environ.get("LT_EXPECT_DRF_THROTTLE_AUTH_SENSITIVE") or "").strip(),
 }
 
+profile = (os.environ.get("LT_SIM_PROFILE") or "integral").strip().lower()
 errors = []
-if actual["AUTH_TOKEN_TRANSPORT"] != expected["AUTH_TOKEN_TRANSPORT"]:
-    errors.append(
-        "AUTH_TOKEN_TRANSPORT runtime mismatch: "
-        f"expected={expected['AUTH_TOKEN_TRANSPORT']} actual={actual['AUTH_TOKEN_TRANSPORT']}"
-    )
+if profile not in {"integral", "auth-only"}:
+    errors.append(f"LT_SIM_PROFILE invalido: {profile}")
 
-expected_override = parse_truthy(expected["AUTH_ALLOW_TRANSPORT_OVERRIDE"])
-actual_override = actual["AUTH_ALLOW_TRANSPORT_OVERRIDE"] == "1"
-if actual_override != expected_override:
-    errors.append(
-        "AUTH_ALLOW_TRANSPORT_OVERRIDE runtime mismatch: "
-        f"expected={expected_override} actual={actual_override}"
-    )
+if profile == "integral":
+    if actual["AUTH_TOKEN_TRANSPORT"] != expected["AUTH_TOKEN_TRANSPORT"]:
+        errors.append(
+            "AUTH_TOKEN_TRANSPORT runtime mismatch: "
+            f"expected={expected['AUTH_TOKEN_TRANSPORT']} actual={actual['AUTH_TOKEN_TRANSPORT']}"
+        )
+
+    expected_override = parse_truthy(expected["AUTH_ALLOW_TRANSPORT_OVERRIDE"])
+    actual_override = actual["AUTH_ALLOW_TRANSPORT_OVERRIDE"] == "1"
+    if actual_override != expected_override:
+        errors.append(
+            "AUTH_ALLOW_TRANSPORT_OVERRIDE runtime mismatch: "
+            f"expected={expected_override} actual={actual_override}"
+        )
 
 for key in (
     "DRF_THROTTLE_ANON",
@@ -213,6 +234,7 @@ for key in (
     if expected_value and actual[key] != expected_value:
         errors.append(f"{key} runtime mismatch: expected={expected_value} actual={actual[key]}")
 
+print(f"runtime.SIM_PROFILE={profile}")
 print(f"runtime.AUTH_TOKEN_TRANSPORT={actual['AUTH_TOKEN_TRANSPORT']}")
 print(f"runtime.AUTH_ALLOW_TRANSPORT_OVERRIDE={actual['AUTH_ALLOW_TRANSPORT_OVERRIDE']}")
 print(f"runtime.DRF_THROTTLE_ANON={actual['DRF_THROTTLE_ANON']}")

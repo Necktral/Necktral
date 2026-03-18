@@ -33,6 +33,7 @@ Esta sección contiene documentación de **operación del negocio** (playbooks, 
 - [Go-Live Fase 4/5 Billing-Inventory (staging/piloto)](GO_LIVE_BILLING_INVENTORY_F4_F5_v1.0.md)
 - [Plan maestro F1-F12 + cierre operativo](PLAN_MAESTRO_F1_F12_CIERRE_OPERATIVO_v1.0.md)
 - [Checklist PR release F1-F12](PR_RELEASE_F1_F12_CHECKLIST.md)
+- [Publicación release F6-F12 (2026-03-18)](PUBLICACION_RELEASE_F6_F12_20260318.md)
 
 ## Reglas
 
@@ -40,7 +41,7 @@ Esta sección contiene documentación de **operación del negocio** (playbooks, 
 - Documentos cortos, accionables y versionados (título + versión + fecha).
 - Plantillas deben ser “copiables”: incluir campos obligatorios y checklist.
 - La evidencia operativa pesada en `docs/operacion/evidencia/` no se versiona en GitHub; se mantiene como artefacto local/CI con hash y firma.
-- El backend canónico para operación/QA es `login_module/`; `backend/` se trata como legacy local no canónico.
+- El backend canónico para operación/QA es `backend/`; `login_module` se conserva solo como alias legacy transicional.
 
 ## Changelog
 
@@ -70,3 +71,4 @@ Esta sección contiene documentación de **operación del negocio** (playbooks, 
 - 2026-03-10: Preparación de publicación release F1-F12: inclusión de artefactos QA de auditoría y reubicación de `etup-git` a evidencia operativa versionada.
 - 2026-03-10: Se agrega plan maestro de cierre F1-F12 (`PLAN_MAESTRO_F1_F12_CIERRE_OPERATIVO_v1.0.md`) y checklist de PR release.
 - 2026-03-11: Se agrega runbook operativo de Fase 4/5 Billing-Inventory (`GO_LIVE_BILLING_INVENTORY_F4_F5_v1.0.md`) con gate k6, rollout por etapas y rollback determinista.
+- 2026-03-18: Publicación integral de rama release F6-F12 con backend canónico `backend/`, perfiles de simulación dual y nota de release operativa.

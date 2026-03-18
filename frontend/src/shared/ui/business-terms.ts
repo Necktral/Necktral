@@ -24,9 +24,9 @@ export const UI_ROUTE_PATHS = {
 } as const;
 
 export const LEGACY_ROUTE_PATHS = {
-  organizationCompanies: '/org/companies',
-  organizationCompanyProfile: '/org/company-profile',
-  organizationBranches: '/org/branches',
+  organizationCompanies: '/backend/org/companies',
+  organizationCompanyProfile: '/backend/org/company-profile',
+  organizationBranches: '/backend/org/branches',
   humanResourcesPositions: '/hr/positions',
   humanResourcesEmployees: '/hr/employees',
   fuelDashboard: '/fuel',

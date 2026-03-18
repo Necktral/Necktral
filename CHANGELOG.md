@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Operación (Release):** nota de publicación integral `docs/operacion/PUBLICACION_RELEASE_F6_F12_20260318.md` con evidencia de checks, riesgo residual y rollback.
 - **Fase 4 (Performance):** suite de carga operacional `qa/k6/operational_posting_load.js` para flujos Billing/Inventory/Accounting.
 - **Fase 4 (Gate):** runner `qa/run_operational_performance_gate.sh` con evidencia `snapshot_before/after`, `k6_summary`, `gate_report` y hash.
 - **Fase 5 (Pilot):** comando `manage_operational_posting_pilot` + runner `qa/run_operational_pilot_rollout.sh` para activación por etapas y rollback controlado.

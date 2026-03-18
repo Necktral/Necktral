@@ -53,7 +53,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async login(username: string, password: string) {
-      const { data } = await authApi.post('/auth/login/', { username, password });
+      const { data } = await authApi.post('/backend/auth/login/', { username, password });
       if (data && typeof data === 'object' && '2fa_required' in data) {
         this.status = 'two_factor';
         this.twoFactor.required = true;
@@ -70,7 +70,7 @@ export const useAuthStore = defineStore('auth', {
     async verifyTwoFactor(code: string) {
       const challenge = this.twoFactor.challenge;
       if (!challenge) throw new Error('2FA challenge missing');
-      await authApi.post('/auth/2fa/verify/', { challenge, code });
+      await authApi.post('/backend/auth/2fa/verify/', { challenge, code });
       this.status = 'authenticated';
       this.twoFactor.required = false;
       this.twoFactor.challenge = null;
@@ -79,7 +79,7 @@ export const useAuthStore = defineStore('auth', {
 
     async fetchMe() {
       try {
-        const { data } = await api.get('/auth/me/');
+        const { data } = await api.get('/backend/auth/me/');
         this.user = data;
         this.status = 'authenticated';
       } catch (e) {
@@ -98,7 +98,7 @@ export const useAuthStore = defineStore('auth', {
     async checkBootstrap() {
       try {
         if (this.bootstrapChecked) return this.bootstrapState;
-        const { data } = await authApi.get('/auth/bootstrap/status/');
+        const { data } = await authApi.get('/backend/iam/bootstrap/status/');
         this.bootstrapState = data;
         this.bootstrapChecked = true;
 
@@ -119,7 +119,7 @@ export const useAuthStore = defineStore('auth', {
       this.status = 'refreshing';
       this.refreshInFlight = (async () => {
         try {
-          await authApi.post('/auth/refresh/', {});
+          await authApi.post('/backend/auth/refresh/', {});
           this.status = 'authenticated';
         } finally {
           this.refreshInFlight = null;
@@ -134,7 +134,7 @@ export const useAuthStore = defineStore('auth', {
       this.hardClearLocal();
       try {
         // Best-effort: avisar al backend aunque no haya refresh en el cliente.
-        await authApi.post('/auth/logout/', {});
+        await authApi.post('/backend/auth/logout/', {});
       } catch {
         // intencional: no bloqueamos el logout local
       }

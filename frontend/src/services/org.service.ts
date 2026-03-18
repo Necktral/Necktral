@@ -76,7 +76,7 @@ export type PatchBranchPayload = Partial<{
 }>;
 
 export async function getCompanyProfile() {
-  const { data } = await api.get<CompanyProfile>('/org/company/profile/');
+  const { data } = await api.get<CompanyProfile>('/backend/org/company/profile/');
   return data;
 }
 
@@ -87,12 +87,12 @@ export async function listCompanies(params?: ListParams) {
 }
 
 export async function createCompany(payload: CreateCompanyPayload) {
-  const { data } = await api.post<{ id: number }>('/org/companies/', payload);
+  const { data } = await api.post<{ id: number }>('/backend/org/companies/', payload);
   return data.id;
 }
 
 export async function updateCompanyProfile(payload: Partial<CompanyProfile>) {
-  const { data } = await api.put<{ ok: true }>('/org/company/profile/', payload);
+  const { data } = await api.put<{ ok: true }>('/backend/org/company/profile/', payload);
   return data;
 }
 
@@ -103,7 +103,7 @@ export async function listBranches(params?: ListParams) {
 }
 
 export async function createBranch(payload: CreateBranchPayload) {
-  const { data } = await api.post<{ id: number }>('/org/branches/', payload);
+  const { data } = await api.post<{ id: number }>('/backend/org/branches/', payload);
   return data.id;
 }
 

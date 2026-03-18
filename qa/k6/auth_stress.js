@@ -2,8 +2,16 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8000/api";
+const ROOT_URL = BASE_URL.replace(/\/api\/?$/, "");
 const USERNAME = __ENV.USERNAME || "k6";
 const PASSWORD = __ENV.PASSWORD || "";
+const ACCESS_COOKIE_NAME = __ENV.ACCESS_COOKIE_NAME || "nt_access";
+const REFRESH_COOKIE_NAME = __ENV.REFRESH_COOKIE_NAME || "nt_refresh";
+const AUTH_FLOW_MODE_RAW = String(__ENV.AUTH_FLOW_MODE || "auto").toLowerCase();
+const AUTH_FLOW_MODE =
+  AUTH_FLOW_MODE_RAW === "header" || AUTH_FLOW_MODE_RAW === "cookie"
+    ? AUTH_FLOW_MODE_RAW
+    : "auto";
 
 // Opcional: bootstrap automático si el entorno está "fresh".
 const BOOTSTRAP =
@@ -73,8 +81,36 @@ function jsonOrNull(res) {
   }
 }
 
+function authTransportHeader() {
+  if (AUTH_FLOW_MODE === "header") {
+    return { "X-Auth-Transport": "header" };
+  }
+  if (AUTH_FLOW_MODE === "cookie") {
+    return { "X-Auth-Transport": "cookie" };
+  }
+  return {};
+}
+
+function getCookieValue(name) {
+  const jar = http.cookieJar();
+  const cookies = jar.cookiesForURL(ROOT_URL);
+  const entry = cookies && cookies[name] ? cookies[name] : null;
+  if (!entry || !entry.length) {
+    return null;
+  }
+  return entry[0].value;
+}
+
+function buildAuthHeaders(session) {
+  const headers = { ...authTransportHeader() };
+  if (session && session.access) {
+    headers.Authorization = `Bearer ${session.access}`;
+  }
+  return headers;
+}
+
 function ensureBootstrapped() {
-  const statusRes = http.get(`${BASE_URL}/auth/bootstrap/status/`, {
+  const statusRes = http.get(`${BASE_URL}/backend/iam/bootstrap/status/`, {
     tags: { name: "auth_bootstrap_status" },
   });
   if (!statusRes || statusRes.status !== 200) {
@@ -88,7 +124,7 @@ function ensureBootstrapped() {
   }
 
   const initRes = http.post(
-    `${BASE_URL}/auth/bootstrap/init/`,
+    `${BASE_URL}/backend/iam/bootstrap/init-admin/`,
     JSON.stringify({
       username: BOOTSTRAP_USERNAME,
       email: BOOTSTRAP_EMAIL,
@@ -109,41 +145,57 @@ function ensureBootstrapped() {
 
 function login(username, password) {
   const res = http.post(
-    `${BASE_URL}/auth/login/`,
+    `${BASE_URL}/backend/auth/login/`,
     JSON.stringify({ username, password }),
     {
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...authTransportHeader(),
+      },
       tags: { name: "auth_login" },
     },
   );
 
   const body = jsonOrNull(res);
   const access = body && body.access ? body.access : null;
+  const hasCookieSession =
+    !!getCookieValue(ACCESS_COOKIE_NAME) || !!getCookieValue(REFRESH_COOKIE_NAME);
+
+  let usable = false;
+  if (AUTH_FLOW_MODE === "header") {
+    usable = !!access;
+  } else if (AUTH_FLOW_MODE === "cookie") {
+    usable = hasCookieSession;
+  } else {
+    usable = !!access || hasCookieSession;
+  }
 
   check(res, {
     "login status 200": (r) => r && r.status === 200,
-    "login has access": () => !!access,
+    "login usable session": () => usable,
   });
 
-  return access;
+  return { access, hasCookieSession, usable };
 }
 
-let cachedToken = null;
+let cachedSession = null;
 let cachedAtMs = 0;
 
-function getToken() {
+function getSession() {
   const now = Date.now();
   const ttlMs = Number(__ENV.TOKEN_TTL_MS || 9 * 60 * 1000); // por defecto ~9 min
-  if (cachedToken && now - cachedAtMs < ttlMs) {
-    return cachedToken;
+  if (cachedSession && cachedSession.usable && now - cachedAtMs < ttlMs) {
+    return cachedSession;
   }
 
-  const token = login(USERNAME, PASSWORD);
-  if (token) {
-    cachedToken = token;
+  const session = login(USERNAME, PASSWORD);
+  if (session && session.usable) {
+    cachedSession = session;
     cachedAtMs = now;
+  } else {
+    cachedSession = null;
   }
-  return token;
+  return session;
 }
 
 export function setup() {
@@ -154,32 +206,37 @@ export function setup() {
 }
 
 export function loginOnly() {
-  const token = login(USERNAME, PASSWORD);
-  if (!token) {
+  const session = login(USERNAME, PASSWORD);
+  if (!session || !session.usable) {
     sleep(0.1);
   }
 }
 
 export function meAclFlow() {
-  const token = getToken();
-  if (!token) {
+  const session = getSession();
+  if (!session || !session.usable) {
     sleep(0.2);
     return;
   }
 
-  const authHeaders = { Authorization: `Bearer ${token}` };
+  const authHeaders = buildAuthHeaders(session);
 
-  const me = http.get(`${BASE_URL}/auth/me/`, {
+  const me = http.get(`${BASE_URL}/backend/auth/me/`, {
     headers: authHeaders,
     tags: { name: "auth_me" },
   });
-  check(me, { "me status 200": (r) => r && r.status === 200 });
+  const meOk = check(me, { "me status 200": (r) => r && r.status === 200 });
 
-  const acl = http.get(`${BASE_URL}/auth/me/acl/`, {
+  const acl = http.get(`${BASE_URL}/backend/auth/me/acl/`, {
     headers: authHeaders,
     tags: { name: "auth_acl" },
   });
-  check(acl, { "acl status 200": (r) => r && r.status === 200 });
+  const aclOk = check(acl, { "acl status 200": (r) => r && r.status === 200 });
+
+  if (!meOk || !aclOk) {
+    cachedSession = null;
+    cachedAtMs = 0;
+  }
 
   sleep(Number(__ENV.SLEEP || 0.1));
 }

@@ -15,7 +15,7 @@ Este paquete ejecuta una simulacion realista del flujo de autenticacion en modo 
 
 - Script base k6: simulacion/auth_load_simulation.js
 - Script extendido k6: simulacion/auth_load_simulation_extended.js
-- Seed de usuarios: login_module/src/apps/accounts/management/commands/seed_auth_users.py
+- Seed de usuarios: backend/src/apps/accounts/management/commands/seed_auth_users.py
 - Workflow de referencia: simulacion/auth-load-simulation.yml
 - Workflow oficial (GitHub Actions): .github/workflows/auth-load-simulation.yml
 

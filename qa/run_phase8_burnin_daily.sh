@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_DIR="${ROOT_DIR}/login_module/src"
+APP_DIR="${ROOT_DIR}/backend/src"
 TS="${TS:-$(date +%Y%m%d_%H%M%S)}"
 TODAY_LOCAL="${TODAY_LOCAL:-$(date +%F)}"
 DAY_TAG="${DAY_TAG:-${TODAY_LOCAL//-/}}"

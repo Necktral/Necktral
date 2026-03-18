@@ -77,7 +77,7 @@ describe('auth.store', () => {
     expect(storageMocks.clearTokens).toHaveBeenCalled();
     expect(acl.loaded).toBe(false);
     expect(ctx.activeCompanyId).toBe(null);
-    expect(authApi.post).toHaveBeenCalledWith('/auth/logout/', {});
+    expect(authApi.post).toHaveBeenCalledWith('/backend/auth/logout/', {});
   });
 
   it('reusa el refresh en vuelo', async () => {

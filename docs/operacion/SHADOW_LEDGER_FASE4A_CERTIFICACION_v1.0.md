@@ -104,7 +104,7 @@ python manage.py run_shadow_ledger_cycle \
 Ejemplo `cron` (cada 5 min):
 
 ```cron
-*/5 * * * * cd /srv/erp_crm/login_module && /srv/venv/bin/python manage.py run_shadow_ledger_cycle --company-id <COMPANY_ID> --project-limit 100 --dispatch-limit 200 --max-inbox-failed 0 --max-outbox-failed 0 --max-stale-pending-triggers 0 --max-projection-failed 0 >> /var/log/erp/shadow_ledger_cycle.log 2>&1
+*/5 * * * * cd /srv/erp_crm/backend && /srv/venv/bin/python manage.py run_shadow_ledger_cycle --company-id <COMPANY_ID> --project-limit 100 --dispatch-limit 200 --max-inbox-failed 0 --max-outbox-failed 0 --max-stale-pending-triggers 0 --max-projection-failed 0 >> /var/log/erp/shadow_ledger_cycle.log 2>&1
 ```
 
 ## 6) Ownership y SLA

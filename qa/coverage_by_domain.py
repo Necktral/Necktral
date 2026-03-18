@@ -31,7 +31,7 @@ DOMAIN_SPECS: tuple[DomainSpec, ...] = (
 
 def _normalize_file_path(path_value: str) -> str:
     normalized = path_value.replace("\\", "/")
-    marker = "/login_module/"
+    marker = "/backend/"
     idx = normalized.find(marker)
     if idx >= 0:
         normalized = normalized[idx + len(marker) :]

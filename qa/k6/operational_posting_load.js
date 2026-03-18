@@ -85,7 +85,7 @@ function recordOutcome(res, { name, flow, okStatuses }) {
 
 function login() {
   const loginRes = http.post(
-    `${BASE_URL}/auth/login/`,
+    `${BASE_URL}/backend/auth/login/`,
     JSON.stringify({ username: USERNAME, password: PASSWORD }),
     {
       headers: {
@@ -177,6 +177,12 @@ function ensureItem(token) {
 }
 
 export function setup() {
+  if (AUTH_TRANSPORT !== "header") {
+    fail(
+      `operational_posting_load.js requiere AUTH_TRANSPORT=header (actual=${AUTH_TRANSPORT}). ` +
+        "Este perfil usa access token en body + Authorization Bearer para carga operacional.",
+    );
+  }
   if (!PASSWORD) {
     fail("PASSWORD es requerido.");
   }

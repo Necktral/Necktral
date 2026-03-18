@@ -24,9 +24,9 @@ El repo ya incluye un motor de sync (`sync_engine`) con un contrato claro:
 
 Referencias del repo:
 
-- Serializers y contrato: `login_module/src/apps/sync_engine/serializers.py`
-- Vistas: `login_module/src/apps/sync_engine/views.py`
-- Servicios/idempotencia: `login_module/src/apps/sync_engine/services.py`
+- Serializers y contrato: `backend/src/apps/sync_engine/serializers.py`
+- Vistas: `backend/src/apps/sync_engine/views.py`
+- Servicios/idempotencia: `backend/src/apps/sync_engine/services.py`
 
 ## Contrato offline-first (normativo)
 
@@ -58,7 +58,7 @@ Referencias del repo:
 
 Referencia del contrato de auditoría:
 
-- `login_module/src/apps/audit/contracts.py`
+- `backend/src/apps/audit/contracts.py`
 
 ## Extensiones recomendadas (pendientes / por implementar)
 

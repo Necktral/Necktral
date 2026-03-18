@@ -31,8 +31,8 @@ Este documento define la evolución contractual de organización del ERP/CRM par
 
 ### Backend canónico
 
-- La raíz canónica de backend es: `login_module/` (código en `login_module/src/`).
-- Todo contrato, CI, QA y documentación operativa debe apuntar a `login_module/`.
+- La raíz canónica de backend es: `backend/` (código en `backend/src/`).
+- Todo contrato, CI, QA y documentación operativa debe apuntar a `backend/`.
 
 ### Árbol legacy local
 
@@ -68,7 +68,7 @@ Este documento define la evolución contractual de organización del ERP/CRM par
 - `event_type`, `reason_code` y `subject_type` deben pertenecer al catálogo permitido.
 - Integridad encadenada + firma HMAC según política del entorno.
 
-Referencia de catálogo: `login_module/src/apps/audit/contracts.py`.
+Referencia de catálogo: `backend/src/apps/audit/contracts.py`.
 
 ### 4) Sync / offline
 

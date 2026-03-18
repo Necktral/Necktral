@@ -237,7 +237,7 @@ async function createAdmin() {
   try {
     // Initial Admin Check
     // We can use the public endpoint
-    await api.post('/auth/bootstrap/init/', adminForm);
+    await api.post('/backend/iam/bootstrap/init-admin/', adminForm);
     $q.notify({ type: 'positive', message: 'Admin created successfully' });
 
     // Pre-fill login
@@ -268,7 +268,7 @@ async function doLogin() {
 async function createOrg() {
   loading.value = true;
   try {
-    await api.post('/auth/bootstrap/org/', orgForm);
+    await api.post('/backend/org/bootstrap/organization/', orgForm);
     $q.notify({ type: 'positive', message: 'Organization setup complete!' });
 
     // Refresh me to update is_setup_complete

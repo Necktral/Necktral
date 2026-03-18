@@ -66,24 +66,24 @@ fi
 
 manage_check_rc=0
 (
-  cd "${ROOT_DIR}/login_module"
+  cd "${ROOT_DIR}/backend"
   python3 src/manage.py check > "${OUT_DIR}/20_django_check.txt" 2>&1
 ) || manage_check_rc=$?
 
 audit_chain_rc=0
 (
-  cd "${ROOT_DIR}/login_module"
+  cd "${ROOT_DIR}/backend"
   python3 src/manage.py audit_verify_chain --seed-minimal --format json > "${OUT_DIR}/21_audit_integrity.json" 2>&1
 ) || audit_chain_rc=$?
 
 security_pytest_rc=0
 pytest -q \
-  "${ROOT_DIR}/login_module/tests/test_axes_lockout.py" \
-  "${ROOT_DIR}/login_module/tests/test_2fa_challenge.py" \
-  "${ROOT_DIR}/login_module/tests/test_access_denied_audit.py" \
-  "${ROOT_DIR}/login_module/tests/test_audit_chain_integrity.py" \
-  "${ROOT_DIR}/login_module/tests/test_rbac_scoped_enforcement.py" \
-  "${ROOT_DIR}/login_module/tests/test_intercompany_grants.py" \
+  "${ROOT_DIR}/backend/tests/test_axes_lockout.py" \
+  "${ROOT_DIR}/backend/tests/test_2fa_challenge.py" \
+  "${ROOT_DIR}/backend/tests/test_access_denied_audit.py" \
+  "${ROOT_DIR}/backend/tests/test_audit_chain_integrity.py" \
+  "${ROOT_DIR}/backend/tests/test_rbac_scoped_enforcement.py" \
+  "${ROOT_DIR}/backend/tests/test_intercompany_grants.py" \
   > "${OUT_DIR}/22_security_pytest.txt" 2>&1 || security_pytest_rc=$?
 
 BUG_BOUNTY_OUT="${OUT_DIR}" \

@@ -13,7 +13,7 @@ Estado: Ejecutable
 
 ## Lote B — Canónico vs legacy
 
-- [x] Congelar `login_module/` como backend canónico en contrato y runbooks.
+- [x] Congelar `backend/` como backend canónico en contrato y runbooks.
 - [x] Declarar `backend/` como legacy local no canónico.
 - [x] Normalizar `.gitignore` para bloquear `backend/` en git.
 - [x] Publicar política única en `docs/repo_higiene/POLITICA_CANONICO_Y_LEGACY_v1.1.md`.

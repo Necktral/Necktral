@@ -26,14 +26,14 @@ LANG_BY_EXT = {
 }
 
 CRITICAL_MODULES: dict[str, tuple[str, ...]] = {
-    "accounting_backend": ("login_module/src/apps/accounting/",),
-    "accounting_phase7_core": ("login_module/src/apps/accounting/phase7.py",),
-    "accounting_views_api": ("login_module/src/apps/accounting/views.py",),
+    "accounting_backend": ("backend/src/apps/accounting/",),
+    "accounting_phase7_core": ("backend/src/apps/accounting/phase7.py",),
+    "accounting_views_api": ("backend/src/apps/accounting/views.py",),
     "hr_employees_frontend": ("frontend/src/pages/HrEmployeesPage.vue",),
 }
 
 CRITICAL_FILE_POLICIES: dict[str, dict[str, Any]] = {
-    "login_module/src/apps/accounting/views.py": {
+    "backend/src/apps/accounting/views.py": {
         "require_module_docstring": True,
         "required_symbol_docstrings": (
             "HealthView",
@@ -43,7 +43,7 @@ CRITICAL_FILE_POLICIES: dict[str, dict[str, Any]] = {
         ),
         "min_annotation_lines": 10,
     },
-    "login_module/src/apps/accounting/phase7.py": {
+    "backend/src/apps/accounting/phase7.py": {
         "require_module_docstring": True,
         "required_symbol_docstrings": (
             "get_or_create_accounting_config",

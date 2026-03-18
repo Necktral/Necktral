@@ -9,7 +9,7 @@
 - [ ] CI backend en verde.
 - [ ] CI seguridad en verde.
 - [ ] `manage.py check` PASS.
-- [ ] `pytest -q login_module/src` PASS.
+- [ ] `pytest -q backend/src` PASS.
 - [ ] `npm run lint/typecheck/test/build` PASS.
 - [ ] Bug bounty local vigente en PASS.
 - [ ] `docs/contexto_nucleos.md` actualizado (estado ejecutivo).

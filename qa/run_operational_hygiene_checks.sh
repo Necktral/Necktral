@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-MANAGE_PY="${ROOT_DIR}/login_module/src/manage.py"
+MANAGE_PY="${ROOT_DIR}/backend/src/manage.py"
 
 echo "[1/3] Verificando migraciones aplicadas..."
 "${PYTHON_BIN}" "${MANAGE_PY}" migrate --check
@@ -13,7 +13,7 @@ echo "[2/3] Verificando que no existan migraciones pendientes..."
 
 echo "[3/3] Verificando suites operacionales clave..."
 (
-  cd "${ROOT_DIR}/login_module"
+  cd "${ROOT_DIR}/backend"
   pytest -q \
     src/tests/test_phase1_operational_contracts.py \
     src/tests/test_fuel_compensation_phase2.py \

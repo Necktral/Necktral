@@ -13,8 +13,12 @@ ALLOWED_EVIDENCE_TRACKED = {
     "docs/operacion/evidencia/etup-git-less-help.txt",
 }
 
+ALLOWED_TRANSITIONAL_TRACKED = {
+    # Compat temporal durante la ventana de deprecación (symlink backend alias).
+    "login_module",
+}
+
 BLOCKED_PREFIXES = (
-    "backend/",
     "frontend/node_modules/",
     "frontend/dist/",
     "frontend/.quasar/",
@@ -46,8 +50,18 @@ def main() -> int:
 
     if not (ROOT / "docs/CONTRACT_PACK_v1.1.md").exists():
         errors.append("Falta docs/CONTRACT_PACK_v1.1.md")
+    if not (ROOT / "backend").exists():
+        errors.append("Falta directorio canónico backend/")
 
     for path in files:
+        if path.startswith("login_module/"):
+            errors.append(f"Ruta legacy no permitida (usa backend/): {path}")
+            continue
+
+        if path == "login_module" and path not in ALLOWED_TRANSITIONAL_TRACKED:
+            errors.append(f"Alias legacy no permitido: {path}")
+            continue
+
         if path.startswith("docs/operacion/evidencia/") and path not in ALLOWED_EVIDENCE_TRACKED:
             errors.append(f"Evidencia masiva trackeada fuera de allowlist: {path}")
 

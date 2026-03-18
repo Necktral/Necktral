@@ -41,10 +41,10 @@ docker compose exec backend python src/manage.py migrate --noinput
 
 ### 5. Endpoints clave del backend
 
-- `/api/auth/bootstrap/status/` — Verifica si el sistema está vacío.
-- `/api/auth/bootstrap/init/` — Crea el admin inicial.
-- `/api/auth/bootstrap/org/` — Crea la estructura Holding/Empresa/Sucursal.
-- `/api/auth/password/` — Forzado de cambio de contraseña.
+- `/api/backend/iam/bootstrap/status/` — Verifica si el sistema está vacío.
+- `/api/backend/iam/bootstrap/init-admin/` — Crea el admin inicial.
+- `/api/backend/org/bootstrap/organization/` — Crea la estructura Holding/Empresa/Sucursal.
+- `/api/backend/auth/password/` — Forzado de cambio de contraseña.
 - `/api/metrics/` — Métricas básicas (solo staff/superuser).
 
 ### 6. Variables de entorno principales (.env)

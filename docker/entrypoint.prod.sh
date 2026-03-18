@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd /app/login_module
+cd /app/backend
 
 # En PROD: settings prod (tienes fail-fast de llaves en config.settings.prod)
 : "${DJANGO_SETTINGS_MODULE:=config.settings.prod}"

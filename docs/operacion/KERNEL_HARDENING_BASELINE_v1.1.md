@@ -8,7 +8,7 @@ Estado: Activo (implementación S0-S8)
 
 - Rama con cambios locales activos; no se asume árbol limpio.
 - ADRs de hardening y ownership publicados en `docs/`.
-- Backend canónico: `login_module/src` + módulos de dominio en `modulos/`.
+- Backend canónico: `backend/src` + módulos de dominio en `modulos/`.
 
 ## Mapeo matriz -> código -> pruebas
 

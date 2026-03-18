@@ -213,11 +213,34 @@ RUN_QA_GATES="${RUN_QA_GATES:-1}"
 RUN_SECURITY_SCAN="${RUN_SECURITY_SCAN:-1}"
 TARGET_HTTP_REQS="${TARGET_HTTP_REQS:-150000}"
 AUTH_TRANSPORT="${AUTH_TRANSPORT:-header}"
+SIM_PROFILE="${SIM_PROFILE:-integral}"
 ADAPTIVE_RETRY_ON_FAILURE="${ADAPTIVE_RETRY_ON_FAILURE:-0}"
 ADAPTIVE_BILLING_SCALE="${ADAPTIVE_BILLING_SCALE:-0.5}"
 ADAPTIVE_DURATION="${ADAPTIVE_DURATION:-5m}"
 REGRESSION_BUDGET_PCT="${REGRESSION_BUDGET_PCT:-10}"
 BASELINE_RUN_DIR="${BASELINE_RUN_DIR:-}"
+
+sim_profile_raw="$(printf '%s' "${SIM_PROFILE}" | tr '[:upper:]' '[:lower:]')"
+case "${sim_profile_raw}" in
+  integral|auth-only)
+    SIM_PROFILE="${sim_profile_raw}"
+    ;;
+  *)
+    echo "ERROR: SIM_PROFILE invalido: ${SIM_PROFILE}" >&2
+    OVERALL_STATUS="hard-fail"
+    exit 2
+    ;;
+esac
+
+if [ "${SIM_PROFILE}" != "integral" ]; then
+  warn "SIM_PROFILE=${SIM_PROFILE} ignorado para corrida integral; se fuerza SIM_PROFILE=integral."
+fi
+SIM_PROFILE="integral"
+
+if [ "${AUTH_TRANSPORT}" != "header" ]; then
+  warn "AUTH_TRANSPORT=${AUTH_TRANSPORT} ignorado para corrida integral; se fuerza AUTH_TRANSPORT=header."
+fi
+AUTH_TRANSPORT="header"
 
 NETWORK_NAME="erp_crm_default"
 BASE_URL="${BASE_URL:-http://backend:8000/api}"
@@ -709,6 +732,7 @@ fi
 
 log "Perfil base .env: $( [ -f "${ROOT_DIR}/.env" ] && echo "cargado" || echo "no encontrado" )"
 log "Perfil loadtest (${LOADTEST_ENV_FILE}): ${LOADTEST_ENV_LOADED}"
+log "Perfil simulacion forzado: ${SIM_PROFILE}"
 log "DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-unset}"
 log "Throttles: login=${DRF_THROTTLE_AUTH_LOGIN:-unset}, refresh=${DRF_THROTTLE_AUTH_REFRESH:-unset}, logout=${DRF_THROTTLE_AUTH_LOGOUT:-unset}, auth_sensitive=${DRF_THROTTLE_AUTH_SENSITIVE:-10/min}"
 

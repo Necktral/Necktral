@@ -266,9 +266,9 @@ Flujo recomendado:
 
 Implementacion actual alineada parcialmente:
 
-- IAM/RBAC/contexto: `login_module/src/apps/iam`, `login_module/src/apps/rbac`
-- Auditoria: `login_module/src/apps/audit`
-- Sync backbone (en transicion): `login_module/src/apps/sync_engine`, `login_module/src/apps/sync`
+- IAM/RBAC/contexto: `backend/src/apps/iam`, `backend/src/apps/rbac`
+- Auditoria: `backend/src/apps/audit`
+- Sync backbone (en transicion): `backend/src/apps/sync_engine`, `backend/src/apps/sync`
 - Billing kernel: `modulos/facturacion`
 - Inventory kernel: `modulos/inventarios`
 - Vertical Fuel: `modulos/estacion_servicios`

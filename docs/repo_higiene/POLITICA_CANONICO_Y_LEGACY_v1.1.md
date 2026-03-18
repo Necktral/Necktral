@@ -6,7 +6,7 @@ Estado: Vigente
 
 ## Regla normativa única
 
-- `login_module/` es la única raíz canónica de backend para desarrollo, QA y release.
+- `backend/` es la única raíz canónica de backend para desarrollo, QA y release.
 - `backend/` es legacy local no canónico.
 
 ## Interpretación de “duplicado”

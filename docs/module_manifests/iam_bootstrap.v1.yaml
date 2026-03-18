@@ -1,0 +1,36 @@
+module_id: "iam_bootstrap"
+module_type: "kernel"
+contract_version: "1.0"
+
+ownership:
+  owns:
+    - "bootstrap_status"
+    - "initial_admin_bootstrap"
+    - "tenant_scope_policy"
+  invariants:
+    - "bootstrap init-admin only allowed when system is fresh"
+
+forbidden_writes:
+  - "session_token_lifecycle"
+  - "organization_branch_creation_flow"
+
+upstream_dependencies:
+  - module_id: "accounts_storage"
+    contract_version: "1.0"
+    mode: "query"
+
+published_events:
+  - event_type: "AUTH_BOOTSTRAP_ADMIN_CREATED"
+    schema_version: "1"
+
+consumed_events: []
+
+rbac_surface:
+  permissions:
+    - "iam.context.read"
+
+audit_catalog:
+  event_types:
+    - "AUTH_BOOTSTRAP_ADMIN_CREATED"
+  reason_codes:
+    - "OK"

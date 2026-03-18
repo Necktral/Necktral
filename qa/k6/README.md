@@ -9,6 +9,13 @@ Requisitos:
 - Docker (recomendado) o k6 instalado localmente.
 - Backend arriba en `http://localhost:8000` (por ejemplo con `docker compose up`).
 
+### Perfiles de ejecución (dual por perfil)
+
+| Perfil | Objetivo | Variables clave |
+|---|---|---|
+| `auth-local` | Smoke/stress sobre runtime base (cookie o auto-detección) | `AUTH_FLOW_MODE=auto` (default), `BASE_URL=http://.../api` |
+| `integral-loadtest` | Corrida integral con contrato operacional header-first | `AUTH_FLOW_MODE=header` para smoke/stress de validación, `AUTH_TRANSPORT=header` para operacional |
+
 ### Crear un usuario para k6 (determinista)
 
 Si no tienes credenciales conocidas (o tu entorno no está "fresh"), crea un usuario dedicado para carga:
@@ -33,10 +40,10 @@ Luego corre k6 con:
 
 Ejecuta un smoke test que hace:
 
-- `POST /api/auth/login/`
-- `GET /api/auth/me/`
-- `GET /api/auth/me/acl/`
-- opcional: `GET /api/org/companies/` con `X-Company-Id` recomendado
+- `POST /api/backend/auth/login/`
+- `GET /api/backend/auth/me/`
+- `GET /api/backend/auth/me/acl/`
+- opcional: `GET /api/backend/org/companies/` con `X-Company-Id` recomendado
 
 Comando (Docker):
 
@@ -47,6 +54,7 @@ docker run --rm -i --network host \
   -e BASE_URL=http://localhost:8000/api \
   -e USERNAME=admin \
   -e PASSWORD=admin \
+  -e AUTH_FLOW_MODE=auto \
   -e VUS=5 \
   -e DURATION=30s \
   grafana/k6 run - < qa/k6/auth_smoke.js
@@ -60,6 +68,7 @@ docker run --rm -i \
   -e BASE_URL=http://host.docker.internal:8000/api \
   -e USERNAME=admin \
   -e PASSWORD=admin \
+  -e AUTH_FLOW_MODE=auto \
   -e VUS=5 \
   -e DURATION=30s \
   grafana/k6 run - < qa/k6/auth_smoke.js
@@ -68,6 +77,7 @@ docker run --rm -i \
 Notas:
 
 - Ajusta `USERNAME/PASSWORD` a credenciales reales.
+- `AUTH_FLOW_MODE` soporta `auto|cookie|header` (default `auto`).
 - Si el entorno está "fresh" (sin usuarios), puedes habilitar bootstrap automático con `-e BOOTSTRAP=1` para crear el primer admin y la org de ejemplo.
 - Si ejecutas k6 con credenciales erróneas, `django-axes` puede bloquear por IP. Para desbloquear en dev: `docker compose exec -T backend python manage.py axes_reset`.
 - Para CI, recomienda levantar `db` + `backend` y crear un usuario seed (bootstrap) antes del k6.
@@ -83,6 +93,7 @@ docker run --rm -i --network host \
   -e BASE_URL=http://localhost:8000/api \
   -e USERNAME=k6 \
   -e PASSWORD=<SET_STRONG_PASSWORD> \
+  -e AUTH_FLOW_MODE=auto \
   -e VUS_WARMUP=5 -e WARMUP=15s \
   -e VUS_TARGET=20 -e SUSTAIN=30s \
   -e COOLDOWN=10s \
@@ -111,6 +122,7 @@ k6 run qa/k6/operational_posting_load.js \
   -e BASE_URL=http://localhost:8000/api \
   -e USERNAME=<OPER_USER> \
   -e PASSWORD=<OPER_PASSWORD> \
+  -e AUTH_TRANSPORT=header \
   -e COMPANY_ID=<COMPANY_ID> \
   -e BRANCH_ID=<BRANCH_ID> \
   -e DURATION=2m \
@@ -122,6 +134,7 @@ k6 run qa/k6/operational_posting_load.js \
 Notas:
 - Si no defines `WAREHOUSE_ID`/`ITEM_ID`, el script intentará crearlos (requiere permisos `inventory.warehouse.create` e `inventory.item.create`).
 - El usuario de carga debe tener 2FA deshabilitado para login automático en k6.
+- `operational_posting_load.js` es contractual `header-only` y falla rápido si `AUTH_TRANSPORT=cookie`.
 - El runner recomendado para evidencia completa es `qa/run_operational_performance_gate.sh`.
 
 ### Overrides QA (throttles)

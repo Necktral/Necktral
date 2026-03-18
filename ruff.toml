@@ -6,4 +6,4 @@ line-length = 120
 
 [lint.per-file-ignores]
 # En settings de Django es común tener imports tardíos y star-imports.
-"login_module/src/config/settings/*.py" = ["E402", "F403", "F405"]
+"backend/src/config/settings/*.py" = ["E402", "F403", "F405"]

@@ -14,7 +14,7 @@ from typing import Iterable
 ROOT = Path(__file__).resolve().parents[1]
 
 TARGET_ROOTS = (
-    "login_module/src",
+    "backend/src",
     "modulos",
     "frontend/src",
     "qa",
@@ -45,17 +45,17 @@ GENERATED_FILES = (
 )
 
 OWNERS_BY_PREFIX = (
-    ("login_module/src/apps/accounting", "owner.accounting"),
-    ("login_module/src/apps/iam", "owner.iam"),
-    ("login_module/src/apps/rbac", "owner.rbac"),
-    ("login_module/src/apps/audit", "owner.audit"),
-    ("login_module/src/apps/org", "owner.org"),
-    ("login_module/src/apps/hr", "owner.hr"),
-    ("login_module/src/apps/payments", "owner.payments"),
-    ("login_module/src/apps/integration", "owner.integration"),
-    ("login_module/src/apps/sync_engine", "owner.sync"),
-    ("login_module/src/apps", "owner.backend"),
-    ("login_module/src/config", "owner.platform"),
+    ("backend/src/apps/accounting", "owner.accounting"),
+    ("backend/src/apps/iam", "owner.iam"),
+    ("backend/src/apps/rbac", "owner.rbac"),
+    ("backend/src/apps/audit", "owner.audit"),
+    ("backend/src/apps/org", "owner.org"),
+    ("backend/src/apps/hr", "owner.hr"),
+    ("backend/src/apps/payments", "owner.payments"),
+    ("backend/src/apps/integration", "owner.integration"),
+    ("backend/src/apps/sync_engine", "owner.sync"),
+    ("backend/src/apps", "owner.backend"),
+    ("backend/src/config", "owner.platform"),
     ("modulos/facturacion", "owner.billing"),
     ("modulos/inventarios", "owner.inventory"),
     ("modulos/estacion_servicios", "owner.fuel"),
@@ -165,7 +165,7 @@ def classify(path: str) -> InventoryRow | None:
     suffix = Path(normalized).suffix.lower()
     if suffix in TEXT_EXTENSIONS or Path(normalized).name in {"Dockerfile", "Makefile"}:
         tipo = "codigo-fuente" if normalized.startswith(
-            ("login_module/src/", "modulos/", "frontend/src/", "qa/")
+            ("backend/src/", "modulos/", "frontend/src/", "qa/")
         ) else "documentacion"
         return InventoryRow(
             ruta=normalized,
@@ -271,7 +271,7 @@ def write_summary_md(rows: list[InventoryRow], duplicates_csv: Path, summary_md:
                 "Fecha: 2026-03-17",
                 "",
                 "## Cobertura",
-                "- Rutas auditadas: `login_module/src`, `modulos`, `frontend/src`, `qa`, `docs`, `backend`.",
+                "- Rutas auditadas: `backend/src`, `modulos`, `frontend/src`, `qa`, `docs`, `backend`.",
                 "- Exclusiones: terceros/artefactos masivos (`node_modules`, `system_wis`, evidencias operativas, outputs de build).",
                 "",
                 "## Resumen cuantitativo",
@@ -292,7 +292,7 @@ def write_summary_md(rows: list[InventoryRow], duplicates_csv: Path, summary_md:
                 "",
                 "## Checklist por lotes",
                 "- Lote A (Documentación contractual): crear/normalizar `CONTRACT_PACK_v1.1` y referencias cruzadas.",
-                "- Lote B (Canónico backend): declarar `login_module/` como raíz oficial y `backend/` como legacy local.",
+                "- Lote B (Canónico backend): declarar `backend/` como raíz oficial y `backend/` como legacy local.",
                 "- Lote C (Limpieza conservadora): eliminar residuos `DELETE` confirmados del árbol legacy y caches generados.",
                 "- Lote D (Guardas): activar chequeo de higiene en QA para evitar reintroducción de residuos/duplicados.",
                 "",

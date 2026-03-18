@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_DIR="${ROOT_DIR}/login_module/src"
+APP_DIR="${ROOT_DIR}/backend/src"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 MODE="${1:-full}"
 

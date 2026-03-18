@@ -12,7 +12,7 @@ Referencias:
 
 - Base contractual general vigente: `docs/CONTRACT_PACK_v1.1.md`
 - Referencia histórica: `docs/CONTRACT_PACK_v1.0.md`
-- Auditoría contractual: `login_module/src/apps/audit/contracts.py`
+- Auditoría contractual: `backend/src/apps/audit/contracts.py`
 
 ---
 

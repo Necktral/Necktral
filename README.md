@@ -4,9 +4,9 @@ Sistema ERP/CRM modular con backend Django + DRF y frontend Quasar. Incluye RBAC
 
 ## Estructura del repo
 
-- `login_module/`: backend Django/DRF (código en `login_module/src/`)
+- `backend/`: backend Django/DRF (código en `backend/src/`)
 - `frontend/`: consola web (Vue 3 + Quasar)
-- `modulos/`: módulos de dominio en la raíz del repo (ej: `modulos.estacion_servicios`)
+- `modulos/`: módulos de dominio/kernels en la raíz del repo (ej: `modulos.auth_kernel`, `modulos.estacion_servicios`)
 - `compose.yaml`: entorno Docker (backend + Postgres)
 - `system_wis/`: entorno virtual Python (dev)
 
@@ -117,7 +117,7 @@ docker compose up -d
 Para verificar el estado fresh:
 
 ```bash
-curl http://localhost:8000/api/auth/bootstrap/status/
+curl http://localhost:8000/api/backend/iam/bootstrap/status/
 ```
 
 ### Bootstrap inicial (después de reset DB)
@@ -153,7 +153,7 @@ docker compose exec backend python src/manage.py bootstrap_company \
 source system_wis/bin/activate
 pip install -r requirements/dev.txt
 
-cd login_module
+cd backend
 python src/manage.py migrate --noinput
 python src/manage.py runserver
 ```
@@ -219,7 +219,7 @@ Artefactos generados:
 
   ```bash
   source system_wis/bin/activate
-  cd login_module
+  cd backend
   pytest
   ```
 
@@ -230,7 +230,7 @@ Artefactos generados:
 - Lint (ruff):
   ```bash
   source system_wis/bin/activate
-  cd login_module
+  cd backend
   ruff check .
   ```
 
@@ -294,13 +294,13 @@ cat pm_snapshot.md
 
 - Todos los listados soportan `limit/offset` y responden `count/limit/offset/results`.
 
-- `GET /api/org/company/profile/` — Ver perfil de la empresa (requiere permiso: org.company.read)
-- `PUT /api/org/company/profile/` — Actualizar perfil de la empresa (requiere permiso: org.company.update)
-- `GET /api/org/companies/` — Listar compañías accesibles por membresía (requiere permiso: org.company.read)
-- `POST /api/org/companies/` — Crear compañía bajo el holding y clonar accesos del creador (requiere permiso: org.company.create)
-- `GET /api/org/branches/` — Listar sucursales (requiere permiso: org.branch.read)
-- `POST /api/org/branches/` — Crear sucursal (requiere permiso: org.branch.create)
-- `PATCH /api/org/branches/{branch_id}/` — Actualizar sucursal (requiere permiso: org.branch.update)
+- `GET /api/backend/org/company/profile/` — Ver perfil de la empresa (requiere permiso: org.company.read)
+- `PUT /api/backend/org/company/profile/` — Actualizar perfil de la empresa (requiere permiso: org.company.update)
+- `GET /api/backend/org/companies/` — Listar compañías accesibles por membresía (requiere permiso: org.company.read)
+- `POST /api/backend/org/companies/` — Crear compañía bajo el holding y clonar accesos del creador (requiere permiso: org.company.create)
+- `GET /api/backend/org/branches/` — Listar sucursales (requiere permiso: org.branch.read)
+- `POST /api/backend/org/branches/` — Crear sucursal (requiere permiso: org.branch.create)
+- `PATCH /api/backend/org/branches/{branch_id}/` — Actualizar sucursal (requiere permiso: org.branch.update)
 
 ### HR (Recursos Humanos)
 

@@ -83,7 +83,7 @@ async function onGenerate() {
   message.value = '';
 
   try {
-    const { data } = await authApi.post('/auth/2fa/enable/', {});
+    const { data } = await authApi.post('/backend/auth/2fa/enable/', {});
     secret.value = String(data?.secret ?? '');
     otpauthUri.value = String(data?.otpauth_uri ?? '');
     qrDataUrl.value = otpauthUri.value
@@ -101,7 +101,7 @@ async function onConfirm() {
   message.value = '';
 
   try {
-    await authApi.post('/auth/2fa/confirm/', { code: code.value.trim() });
+    await authApi.post('/backend/auth/2fa/confirm/', { code: code.value.trim() });
     message.value = '2FA habilitado correctamente.';
   } catch (e: unknown) {
     message.value = errorMessage(e) || 'Codigo invalido.';
@@ -115,7 +115,7 @@ async function onDisable() {
   message.value = '';
 
   try {
-    await authApi.post('/auth/2fa/disable/', { code: disableCode.value.trim() });
+    await authApi.post('/backend/auth/2fa/disable/', { code: disableCode.value.trim() });
     secret.value = '';
     otpauthUri.value = '';
     qrDataUrl.value = '';

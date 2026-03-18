@@ -12,6 +12,8 @@ Cada kernel/módulo core mantiene ownership explícito y prohibiciones operativa
 
 | Bloque | Posee | No debe poseer |
 |---|---|---|
+| Auth Kernel (`modulos.auth_kernel`) | login, refresh, logout, me/acl, password, 2FA | bootstrap organizacional, ownership de company/branch/grants |
+| Accounts (`apps.accounts`) | `User`, sesiones refresh, retos 2FA, migraciones, señales | orquestación de bootstrap, creación de estructura org, siembra RBAC |
 | IAM / Tenant / Policy | identidad, membresías, contexto, RBAC, grants, SoD | stock, correlativos fiscales, journal final |
 | Integration / Event Backbone | outbox, inbox, envelope, retry, replay, dedupe | lógica de dominio primaria |
 | Accounting | `EconomicEvent`, `PostingRuleSet`, `JournalDraft`, `JournalEntry`, close | hechos operativos primarios |
@@ -28,8 +30,9 @@ Cada kernel/módulo core mantiene ownership explícito y prohibiciones operativa
 - Inventory integra con Fuel/Billing sin permitir mutación directa por fuera del kernel.
 - Payments/Cash puede producir eventos operativos, pero el cierre financiero formal sigue en Accounting.
 - CEC abre excepciones y gates; no “arregla” manualmente datos fuente.
+- Bootstrap inicial se divide por ownership: IAM (status/init-admin) y ORG (organization).
 
 ## Efecto sobre el código
 
-- El backend activo es `login_module/src`; cualquier referencia operativa a `backend/` es legacy.
+- El backend activo es `backend/src`; cualquier referencia operativa a `backend/` es legacy.
 - Los cambios de hardening deben explicitar qué frontera refuerzan y qué frontera no cruzan.

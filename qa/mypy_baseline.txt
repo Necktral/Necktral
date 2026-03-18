@@ -1,41 +1,41 @@
-login_module/src/apps/accounting/certification_phase12.py|arg-type|Argument "key" to "sort" of "list" has incompatible type "Callable[[dict[str, object]], object]"; expected "Callable[[dict[str, object]], SupportsDunderLT[Any] | SupportsDunderGT[Any]]"
-login_module/src/apps/accounting/certification_phase12.py|return-value|Incompatible return value type (got "object", expected "SupportsDunderLT[Any] | SupportsDunderGT[Any]")
-login_module/src/apps/accounting/certification_phase12.py|union-attr|Item "None" of "ChartOfAccount | None" has no attribute "code"
-login_module/src/apps/accounting/certification_phase12.py|var-annotated|Need type annotation for "fx_state"
-login_module/src/apps/accounting/certification_phase7.py|union-attr|Item "None" of "ChartOfAccount | None" has no attribute "code"
-login_module/src/apps/accounting/certification_phase7.py|var-annotated|Need type annotation for "reval_payload"
-login_module/src/apps/accounting/management/commands/manage_operational_posting_pilot.py|attr-defined|Module "django.utils.timezone" does not explicitly export attribute "datetime"
-login_module/src/apps/accounting/management/commands/verify_phase7_go_live.py|union-attr|Item "None" of "Any | None" has no attribute "get"
-login_module/src/apps/accounting/management/commands/verify_phase8_precutover.py|index|Unsupported target for indexed assignment ("Collection[str]")
-login_module/src/apps/accounting/models.py|call-overload|No overload variant of "get" of "dict" matches argument types "str", "set[Never]"
-login_module/src/apps/accounting/phase7.py|arg-type|Argument 1 to "_q_money" has incompatible type "object"; expected "Decimal"
-login_module/src/apps/accounting/phase7.py|attr-defined|"object" has no attribute "append"
-login_module/src/apps/accounting/phase7.py|attr-defined|Module "django.utils.timezone" does not explicitly export attribute "datetime"
-login_module/src/apps/accounting/phase7.py|operator|Unsupported operand types for + ("object" and "Decimal")
-login_module/src/apps/accounting/phase7.py|var-annotated|Need type annotation for "DECIMAL_MONEY_FIELD"
-login_module/src/apps/accounting/phase7.py|var-annotated|Need type annotation for "DECIMAL_RATE_FIELD"
-login_module/src/apps/accounting/phase7b.py|arg-type|Argument "acting_company" to "_enforce_intercompany_write_grant" has incompatible type "OrgUnit | None"; expected "OrgUnit"
-login_module/src/apps/accounting/phase7b.py|assignment|Incompatible types in assignment (expression has type "ChartOfAccount", variable has type "dict[str, Any]")
-login_module/src/apps/accounting/phase7b.py|assignment|Incompatible types in assignment (expression has type "dict[str, Any]", target has type "ChartOfAccount")
-login_module/src/apps/accounting/phase7b.py|attr-defined|"dict[str, Any]" has no attribute "code"
-login_module/src/apps/accounting/phase7b.py|union-attr|Item "None" of "JournalEntry | None" has no attribute "debit_total"
-login_module/src/apps/accounting/phase7b.py|union-attr|Item "None" of "OrgUnit | None" has no attribute "id"
-login_module/src/apps/accounting/phase7b.py|var-annotated|Need type annotation for "DECIMAL_MONEY_FIELD"
-login_module/src/apps/accounting/services.py|attr-defined|Module "django.utils.timezone" does not explicitly export attribute "datetime"
-login_module/src/apps/accounting/services.py|call-overload|No overload variant of "get" of "dict" matches argument types "str", "int"
-login_module/src/apps/accounting/services.py|dict-item|Unpacked dict entry 1 has incompatible type "object"; expected "SupportsKeysAndGetItem[Any, Any]"
-login_module/src/apps/accounting/views.py|arg-type|Argument 1 to "_serialize_intercompany" has incompatible type "IntercompanyTransaction | None"; expected "IntercompanyTransaction"
-login_module/src/apps/accounts/views.py|attr-defined|Module "django.utils.timezone" does not explicitly export attribute "timedelta"
-login_module/src/apps/cec/models.py|call-overload|No overload variant of "get" of "dict" matches argument types "str", "set[Never]"
-login_module/src/apps/cec/services.py|typeddict-item|Value of "exception_id" has incompatible type "str"; expected "UUID"
-login_module/src/tests/test_phase10_procurement_4b.py|valid-type|Variable "test_phase10_procurement_4b.User" is not valid as a type
-login_module/src/tests/test_phase11_intercompany_advanced.py|attr-defined|User? has no attribute "username"
-login_module/src/tests/test_phase11_intercompany_advanced.py|valid-type|Variable "test_phase11_intercompany_advanced.User" is not valid as a type
-login_module/src/tests/test_phase3_cec_execute_api.py|valid-type|Variable "test_phase3_cec_execute_api.User" is not valid as a type
-login_module/src/tests/test_phase5_accounting_api.py|valid-type|Variable "test_phase5_accounting_api.User" is not valid as a type
-login_module/src/tests/test_phase6_adapter_b_readiness.py|valid-type|Variable "test_phase6_adapter_b_readiness.User" is not valid as a type
-login_module/src/tests/test_phase7b_intercompany_consolidation.py|attr-defined|User? has no attribute "username"
-login_module/src/tests/test_phase7b_intercompany_consolidation.py|valid-type|Variable "test_phase7b_intercompany_consolidation.User" is not valid as a type
+backend/src/apps/accounting/certification_phase12.py|arg-type|Argument "key" to "sort" of "list" has incompatible type "Callable[[dict[str, object]], object]"; expected "Callable[[dict[str, object]], SupportsDunderLT[Any] | SupportsDunderGT[Any]]"
+backend/src/apps/accounting/certification_phase12.py|return-value|Incompatible return value type (got "object", expected "SupportsDunderLT[Any] | SupportsDunderGT[Any]")
+backend/src/apps/accounting/certification_phase12.py|union-attr|Item "None" of "ChartOfAccount | None" has no attribute "code"
+backend/src/apps/accounting/certification_phase12.py|var-annotated|Need type annotation for "fx_state"
+backend/src/apps/accounting/certification_phase7.py|union-attr|Item "None" of "ChartOfAccount | None" has no attribute "code"
+backend/src/apps/accounting/certification_phase7.py|var-annotated|Need type annotation for "reval_payload"
+backend/src/apps/accounting/management/commands/manage_operational_posting_pilot.py|attr-defined|Module "django.utils.timezone" does not explicitly export attribute "datetime"
+backend/src/apps/accounting/management/commands/verify_phase7_go_live.py|union-attr|Item "None" of "Any | None" has no attribute "get"
+backend/src/apps/accounting/management/commands/verify_phase8_precutover.py|index|Unsupported target for indexed assignment ("Collection[str]")
+backend/src/apps/accounting/models.py|call-overload|No overload variant of "get" of "dict" matches argument types "str", "set[Never]"
+backend/src/apps/accounting/phase7.py|arg-type|Argument 1 to "_q_money" has incompatible type "object"; expected "Decimal"
+backend/src/apps/accounting/phase7.py|attr-defined|"object" has no attribute "append"
+backend/src/apps/accounting/phase7.py|attr-defined|Module "django.utils.timezone" does not explicitly export attribute "datetime"
+backend/src/apps/accounting/phase7.py|operator|Unsupported operand types for + ("object" and "Decimal")
+backend/src/apps/accounting/phase7.py|var-annotated|Need type annotation for "DECIMAL_MONEY_FIELD"
+backend/src/apps/accounting/phase7.py|var-annotated|Need type annotation for "DECIMAL_RATE_FIELD"
+backend/src/apps/accounting/phase7b.py|arg-type|Argument "acting_company" to "_enforce_intercompany_write_grant" has incompatible type "OrgUnit | None"; expected "OrgUnit"
+backend/src/apps/accounting/phase7b.py|assignment|Incompatible types in assignment (expression has type "ChartOfAccount", variable has type "dict[str, Any]")
+backend/src/apps/accounting/phase7b.py|assignment|Incompatible types in assignment (expression has type "dict[str, Any]", target has type "ChartOfAccount")
+backend/src/apps/accounting/phase7b.py|attr-defined|"dict[str, Any]" has no attribute "code"
+backend/src/apps/accounting/phase7b.py|union-attr|Item "None" of "JournalEntry | None" has no attribute "debit_total"
+backend/src/apps/accounting/phase7b.py|union-attr|Item "None" of "OrgUnit | None" has no attribute "id"
+backend/src/apps/accounting/phase7b.py|var-annotated|Need type annotation for "DECIMAL_MONEY_FIELD"
+backend/src/apps/accounting/services.py|attr-defined|Module "django.utils.timezone" does not explicitly export attribute "datetime"
+backend/src/apps/accounting/services.py|call-overload|No overload variant of "get" of "dict" matches argument types "str", "int"
+backend/src/apps/accounting/services.py|dict-item|Unpacked dict entry 1 has incompatible type "object"; expected "SupportsKeysAndGetItem[Any, Any]"
+backend/src/apps/accounting/views.py|arg-type|Argument 1 to "_serialize_intercompany" has incompatible type "IntercompanyTransaction | None"; expected "IntercompanyTransaction"
+backend/src/apps/accounts/views.py|attr-defined|Module "django.utils.timezone" does not explicitly export attribute "timedelta"
+backend/src/apps/cec/models.py|call-overload|No overload variant of "get" of "dict" matches argument types "str", "set[Never]"
+backend/src/apps/cec/services.py|typeddict-item|Value of "exception_id" has incompatible type "str"; expected "UUID"
+backend/src/tests/test_phase10_procurement_4b.py|valid-type|Variable "test_phase10_procurement_4b.User" is not valid as a type
+backend/src/tests/test_phase11_intercompany_advanced.py|attr-defined|User? has no attribute "username"
+backend/src/tests/test_phase11_intercompany_advanced.py|valid-type|Variable "test_phase11_intercompany_advanced.User" is not valid as a type
+backend/src/tests/test_phase3_cec_execute_api.py|valid-type|Variable "test_phase3_cec_execute_api.User" is not valid as a type
+backend/src/tests/test_phase5_accounting_api.py|valid-type|Variable "test_phase5_accounting_api.User" is not valid as a type
+backend/src/tests/test_phase6_adapter_b_readiness.py|valid-type|Variable "test_phase6_adapter_b_readiness.User" is not valid as a type
+backend/src/tests/test_phase7b_intercompany_consolidation.py|attr-defined|User? has no attribute "username"
+backend/src/tests/test_phase7b_intercompany_consolidation.py|valid-type|Variable "test_phase7b_intercompany_consolidation.User" is not valid as a type
 modulos/estacion_servicios/services.py|attr-defined|"_FuelRequestShim" has no attribute "branch"
 modulos/estacion_servicios/services.py|attr-defined|"_FuelRequestShim" has no attribute "company"
 modulos/estacion_servicios/services.py|attr-defined|"_FuelRequestShim" has no attribute "data"

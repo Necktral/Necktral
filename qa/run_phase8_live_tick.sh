@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_DIR="${ROOT_DIR}/login_module/src"
+APP_DIR="${ROOT_DIR}/backend/src"
 TS="${TS:-$(date +%Y%m%d_%H%M%S)}"
 
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/docs/operacion/evidencia/phase8_go_live_20260309_1040}"

@@ -1,0 +1,35 @@
+module_id: "org_bootstrap"
+module_type: "core"
+contract_version: "1.0"
+
+ownership:
+  owns:
+    - "holding_company_branch_bootstrap"
+    - "initial_membership_roleassignment_admingrant_bootstrap"
+  invariants:
+    - "single initial bootstrap per installation"
+
+forbidden_writes:
+  - "jwt_session_management"
+  - "auth_challenge_management"
+
+upstream_dependencies:
+  - module_id: "iam_bootstrap"
+    contract_version: "1.0"
+    mode: "query"
+
+published_events:
+  - event_type: "IAM_BOOTSTRAP_ORG_CREATED"
+    schema_version: "1"
+
+consumed_events: []
+
+rbac_surface:
+  permissions:
+    - "org.bootstrap.write"
+
+audit_catalog:
+  event_types:
+    - "IAM_BOOTSTRAP_ORG_CREATED"
+  reason_codes:
+    - "OK"

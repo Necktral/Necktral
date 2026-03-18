@@ -1,10 +1,10 @@
 .PHONY: qa-backend-gunicorn qa-backend-runserver \
-	qa-load-user qa-load-reset-axes qa-load-smoke qa-load-stress qa-gate3 \
+	qa-load-user qa-load-reset-axes qa-load-smoke qa-load-smoke-cookie qa-load-smoke-header qa-load-stress qa-gate3 \
 	qa-operational-hygiene qa-operational-gate qa-operational-pilot-stage1 qa-operational-pilot-stage2 qa-operational-pilot-stage3 qa-operational-pilot-rollback qa-operational-all \
 	qa-operational-go-live \
 	qa-ci-up qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci \
 	qa-coverage-domains \
-	qa-repo-hygiene qa-repo-hygiene-inventory \
+	qa-repo-hygiene qa-repo-hygiene-inventory qa-architecture-boundaries qa-simulation-contract-guard \
 	qa-repo-comment-audit \
 	qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-backend-mypy-baseline-refresh qa-backend-tests qa-static-scan qa-frontend-ci qa-audit-integrity \
 	docker-clean docker-clean-all \
@@ -12,18 +12,21 @@
 
 BASE_URL ?= http://localhost:8000/api
 K6_IMAGE ?= grafana/k6
+BACKEND_DIR ?= backend
+BACKEND_SRC ?= $(BACKEND_DIR)/src
+CONTAINER_BACKEND_DIR ?= /app/$(BACKEND_DIR)
 
 QA_REPORTS_DIR ?= qa/reports
 QA_KEEP_FRONTEND ?= 1
 QA_DOMAIN_THRESHOLDS ?= sync_engine=98
 QA_MYPY_STRICT_TARGETS ?= \
-	login_module/src/apps/accounting \
-	login_module/src/tests/test_phase3_cec_execute_api.py \
-	login_module/src/tests/test_phase5_accounting_api.py \
-	login_module/src/tests/test_phase6_adapter_b_readiness.py \
-	login_module/src/tests/test_phase7b_intercompany_consolidation.py \
-	login_module/src/tests/test_phase10_procurement_4b.py \
-	login_module/src/tests/test_phase11_intercompany_advanced.py
+	$(BACKEND_SRC)/apps/accounting \
+	$(BACKEND_SRC)/tests/test_phase3_cec_execute_api.py \
+	$(BACKEND_SRC)/tests/test_phase5_accounting_api.py \
+	$(BACKEND_SRC)/tests/test_phase6_adapter_b_readiness.py \
+	$(BACKEND_SRC)/tests/test_phase7b_intercompany_consolidation.py \
+	$(BACKEND_SRC)/tests/test_phase10_procurement_4b.py \
+	$(BACKEND_SRC)/tests/test_phase11_intercompany_advanced.py
 
 # Si QA_FRESH_DB=1, destruye volúmenes (DB limpia) antes de levantar.
 # Útil para CI determinista o cuando hay datos locales viejos que rompen Gate 3.
@@ -36,6 +39,7 @@ PASSWORD ?=
 # k6 defaults
 VUS ?= 5
 DURATION ?= 30s
+AUTH_FLOW_MODE ?= auto
 
 # Gate 3 defaults (overrideables)
 STRESS_WARMUP ?= 15s
@@ -54,6 +58,7 @@ OPER_INVENTORY_VUS ?= 6
 OPER_POSTING_VUS ?= 1
 OPER_DURATION ?= 2m
 LOADTEST_ENV_FILE ?= .env.loadtest
+PRECHECK_SIM_PROFILE ?= integral
 TARGET_HTTP_REQS ?= 150000
 RUN_QA_GATES ?= 1
 RUN_SECURITY_SCAN ?= 1
@@ -105,25 +110,25 @@ qa-static-scan:
 	docker compose exec -T backend bash -lc "chmod +x /app/qa/static_scan_backend.sh && /app/qa/static_scan_backend.sh /app"
 
 qa-backend-bandit:
-	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && bandit -q -r /app/login_module/src/apps /app/modulos -x /app/login_module/src/apps/*/migrations,/app/modulos/*/migrations -ll -ii -f txt | tee /app/$(QA_REPORTS_DIR)/bandit.txt"
+	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && bandit -q -r $(CONTAINER_BACKEND_DIR)/src/apps /app/modulos -x $(CONTAINER_BACKEND_DIR)/src/apps/*/migrations,/app/modulos/*/migrations -ll -ii -f txt | tee /app/$(QA_REPORTS_DIR)/bandit.txt"
 
 qa-backend-ruff:
-	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && ruff check /app/login_module/src | tee /app/$(QA_REPORTS_DIR)/ruff.txt"
+	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && ruff check $(CONTAINER_BACKEND_DIR)/src | tee /app/$(QA_REPORTS_DIR)/ruff.txt"
 
 qa-backend-mypy:
-	docker compose exec -T backend bash -lc 'set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && cd /app && mypy --config-file mypy.ini $(QA_MYPY_STRICT_TARGETS) | tee /app/$(QA_REPORTS_DIR)/mypy_strict_critical.txt ; strict_status=$${PIPESTATUS[0]} ; mypy --config-file mypy.ini login_module/src | tee /app/$(QA_REPORTS_DIR)/mypy.txt ; mypy_status=$${PIPESTATUS[0]} ; python /app/qa/mypy_baseline_guard.py check --report /app/$(QA_REPORTS_DIR)/mypy.txt --baseline /app/qa/mypy_baseline.txt --delta-report /app/$(QA_REPORTS_DIR)/mypy_delta.json --delta-text /app/$(QA_REPORTS_DIR)/mypy_delta.txt ; guard_status=$$? ; if [ $$strict_status -ne 0 ]; then echo "[qa] mypy strict critical failed." ; exit $$strict_status ; fi ; if [ $$guard_status -ne 0 ]; then exit $$guard_status ; fi ; if [ $$mypy_status -ne 0 ]; then echo "[qa] mypy baseline active: existing debt tolerated, no nuevos errores." ; fi ; exit 0'
+	docker compose exec -T backend bash -lc 'set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && cd /app && mypy --config-file mypy.ini $(QA_MYPY_STRICT_TARGETS) | tee /app/$(QA_REPORTS_DIR)/mypy_strict_critical.txt ; strict_status=$${PIPESTATUS[0]} ; mypy --config-file mypy.ini $(BACKEND_SRC) | tee /app/$(QA_REPORTS_DIR)/mypy.txt ; mypy_status=$${PIPESTATUS[0]} ; python /app/qa/mypy_baseline_guard.py check --report /app/$(QA_REPORTS_DIR)/mypy.txt --baseline /app/qa/mypy_baseline.txt --delta-report /app/$(QA_REPORTS_DIR)/mypy_delta.json --delta-text /app/$(QA_REPORTS_DIR)/mypy_delta.txt ; guard_status=$$? ; if [ $$strict_status -ne 0 ]; then echo "[qa] mypy strict critical failed." ; exit $$strict_status ; fi ; if [ $$guard_status -ne 0 ]; then exit $$guard_status ; fi ; if [ $$mypy_status -ne 0 ]; then echo "[qa] mypy baseline active: existing debt tolerated, no nuevos errores." ; fi ; exit 0'
 
 qa-backend-mypy-baseline-refresh:
-	docker compose exec -T backend bash -lc "set -o pipefail && cd /app && mypy --config-file mypy.ini login_module/src | tee /app/qa/reports/mypy.txt ; python /app/qa/mypy_baseline_guard.py refresh --report /app/qa/reports/mypy.txt --baseline /app/qa/mypy_baseline.txt"
+	docker compose exec -T backend bash -lc "set -o pipefail && cd /app && mypy --config-file mypy.ini $(BACKEND_SRC) | tee /app/qa/reports/mypy.txt ; python /app/qa/mypy_baseline_guard.py refresh --report /app/qa/reports/mypy.txt --baseline /app/qa/mypy_baseline.txt"
 
 qa-backend-tests:
-	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/login_module && coverage run --rcfile /app/login_module/.coveragerc -m pytest --ds=config.settings.test --junitxml=/app/$(QA_REPORTS_DIR)/pytest.xml && coverage xml --rcfile /app/login_module/.coveragerc -o /app/$(QA_REPORTS_DIR)/coverage.xml && coverage report --rcfile /app/login_module/.coveragerc | tee /app/$(QA_REPORTS_DIR)/coverage.txt"
+	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && cd $(CONTAINER_BACKEND_DIR) && coverage run --rcfile $(CONTAINER_BACKEND_DIR)/.coveragerc -m pytest --ds=config.settings.test --junitxml=/app/$(QA_REPORTS_DIR)/pytest.xml && coverage xml --rcfile $(CONTAINER_BACKEND_DIR)/.coveragerc -o /app/$(QA_REPORTS_DIR)/coverage.xml && coverage report --rcfile $(CONTAINER_BACKEND_DIR)/.coveragerc | tee /app/$(QA_REPORTS_DIR)/coverage.txt"
 
 qa-coverage-domains:
 	docker compose exec -T backend bash -lc "python /app/qa/coverage_by_domain.py --coverage-xml /app/$(QA_REPORTS_DIR)/coverage.xml --json-output /app/$(QA_REPORTS_DIR)/coverage_by_domain.json --md-output /app/$(QA_REPORTS_DIR)/coverage_by_domain.md $(foreach threshold,$(QA_DOMAIN_THRESHOLDS),--min-domain $(threshold))"
 
 qa-audit-integrity:
-	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/login_module && python manage.py audit_verify_chain --seed-minimal --format json --output /app/$(QA_REPORTS_DIR)/audit_integrity.json"
+	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd $(CONTAINER_BACKEND_DIR) && python manage.py audit_verify_chain --seed-minimal --format json --output /app/$(QA_REPORTS_DIR)/audit_integrity.json"
 
 qa-frontend-ci:
 	docker compose --profile qa run --rm frontend_ci
@@ -131,11 +136,17 @@ qa-frontend-ci:
 qa-repo-hygiene:
 	python3 ./qa/repo_hygiene_guard.py
 
+qa-architecture-boundaries:
+	python3 ./qa/architecture_boundaries_guard.py
+
+qa-simulation-contract-guard:
+	python3 ./qa/simulation_contract_guard.py
+
 qa-repo-hygiene-inventory:
 	python3 ./qa/repo_hygiene_inventory.py
 
 # Gate 1: calidad estática + typecheck
-qa-ci-gate1: qa-repo-hygiene qa-ci-up qa-static-scan qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-frontend-ci
+qa-ci-gate1: qa-repo-hygiene qa-architecture-boundaries qa-simulation-contract-guard qa-ci-up qa-static-scan qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-frontend-ci
 
 # Gate 2: pruebas deterministas (pytest + cobertura)
 qa-ci-gate2: qa-ci-up qa-backend-tests qa-coverage-domains
@@ -182,7 +193,14 @@ qa-load-smoke:
 		-e PASSWORD=$(PASSWORD) \
 		-e VUS=$(VUS) \
 		-e DURATION=$(DURATION) \
+		-e AUTH_FLOW_MODE=$(AUTH_FLOW_MODE) \
 		$(K6_IMAGE) run - < qa/k6/auth_smoke.js
+
+qa-load-smoke-cookie:
+	$(MAKE) qa-load-smoke AUTH_FLOW_MODE=cookie
+
+qa-load-smoke-header:
+	$(MAKE) qa-load-smoke AUTH_FLOW_MODE=header
 
 # Stress test (stages). Ajusta con variables env si hace falta:
 # VUS_WARMUP, VUS_TARGET, WARMUP, SUSTAIN, COOLDOWN, SLEEP
@@ -191,6 +209,7 @@ qa-load-stress:
 		-e BASE_URL=$(BASE_URL) \
 		-e USERNAME=$(USERNAME) \
 		-e PASSWORD=$(PASSWORD) \
+		-e AUTH_FLOW_MODE=$(AUTH_FLOW_MODE) \
 		-e WARMUP=$(STRESS_WARMUP) \
 		-e SUSTAIN=$(STRESS_SUSTAIN) \
 		-e COOLDOWN=$(STRESS_COOLDOWN) \
@@ -290,7 +309,7 @@ loadtest:
 	./simulacion/run_advanced_integral.sh
 
 loadtest-precheck-auth:
-	LOADTEST_ENV_FILE="$(LOADTEST_ENV_FILE)" ./simulacion/precheck_loadtest_auth.sh
+	LOADTEST_ENV_FILE="$(LOADTEST_ENV_FILE)" SIM_PROFILE="$(PRECHECK_SIM_PROFILE)" ./simulacion/precheck_loadtest_auth.sh
 
 loadtest-150k:
 	$(MAKE) loadtest TARGET_HTTP_REQS=150000

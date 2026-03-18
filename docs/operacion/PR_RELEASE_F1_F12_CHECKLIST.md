@@ -11,7 +11,7 @@ PR target: `release/f6-f12-staging-pass-20260310 -> master`
 - [ ] CI backend en verde.
 - [ ] CI seguridad en verde.
 - [ ] `manage.py check` PASS.
-- [ ] `pytest -q login_module/src` PASS.
+- [ ] `pytest -q backend/src` PASS.
 - [ ] `npm run lint/typecheck/test/build` PASS.
 - [ ] Bug bounty local vigente en PASS.
 - [ ] Resumen ejecutivo actualizado en `docs/contexto_nucleos.md`.

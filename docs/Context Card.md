@@ -150,10 +150,10 @@ El middleware antiguo existe como precedente duplicado de responsabilidad
 
 ### Archivos probables a tocar
 
-* `login_module/src/apps/iam/authentication.py`
-* `login_module/src/apps/iam/context_middleware.py`
-* `login_module/src/config/settings*.py`
-* tests nuevos en `login_module/src/tests/`
+* `backend/src/apps/iam/authentication.py`
+* `backend/src/apps/iam/context_middleware.py`
+* `backend/src/config/settings*.py`
+* tests nuevos en `backend/src/tests/`
 
 ### Definition of Done
 
@@ -205,8 +205,8 @@ El writer ya implementa payload canónico, SHA256, HMAC y cadena por partición 
 
 ### Archivos probables a tocar
 
-* `login_module/src/apps/audit/contracts.py`
-* `login_module/src/apps/audit/writer.py`
+* `backend/src/apps/audit/contracts.py`
+* `backend/src/apps/audit/writer.py`
 * servicios/views de cada app que hagan writes
 * tests audit
 
@@ -262,9 +262,9 @@ La arquitectura exige envelope canónico, versionado y consistencia eventual ent
 
 ### Archivos probables a tocar
 
-* `login_module/src/apps/integration/models.py`
-* `login_module/src/apps/integration/services.py`
-* `login_module/src/apps/integration/management/commands/*`
+* `backend/src/apps/integration/models.py`
+* `backend/src/apps/integration/services.py`
+* `backend/src/apps/integration/management/commands/*`
 * tests de integration
 
 ### Definition of Done
@@ -322,8 +322,8 @@ Accounting ya soporta:
 
 ### Archivos probables a tocar
 
-* `login_module/src/apps/accounting/services.py`
-* `login_module/src/apps/accounting/models.py`
+* `backend/src/apps/accounting/services.py`
+* `backend/src/apps/accounting/models.py`
 * docs/operacion o docs/ADR
 * tests accounting
 
@@ -368,9 +368,9 @@ La arquitectura le asigna a CEC validación, reconciliación, evidencia hashada,
 
 ### Archivos probables a tocar
 
-* `login_module/src/apps/cec/models.py`
-* `login_module/src/apps/cec/services.py`
-* `login_module/src/apps/accounting/services.py`
+* `backend/src/apps/cec/models.py`
+* `backend/src/apps/cec/services.py`
+* `backend/src/apps/accounting/services.py`
 * tests CEC/accounting integration
 
 ### Definition of Done
@@ -536,8 +536,8 @@ La arquitectura lo ubica como módulo core de primer nivel, pero Accounting hoy 
 
 ### Archivos probables a tocar
 
-* `login_module/src/apps/payments/*`
-* `login_module/src/apps/accounting/services.py`
+* `backend/src/apps/payments/*`
+* `backend/src/apps/accounting/services.py`
 * tests payments/accounting
 
 ### Definition of Done

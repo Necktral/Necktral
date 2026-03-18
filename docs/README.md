@@ -24,6 +24,7 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - [FUTURAS_MEJORAS.md](FUTURAS_MEJORAS.md) — Roadmap de mejoras futuras (técnicas y de producto).
 - [ADR_KERNEL_HARDENING_PLAN_v1.0.md](ADR_KERNEL_HARDENING_PLAN_v1.0.md) — Orden oficial del programa backend-first de hardening.
 - [ADR_KERNEL_OWNERSHIP_BOUNDARIES_v1.0.md](ADR_KERNEL_OWNERSHIP_BOUNDARIES_v1.0.md) — Ownership y prohibiciones por kernel/módulo core.
+- [ADR_AUTH_KERNEL_EXTRACTION_v2.0.md](ADR_AUTH_KERNEL_EXTRACTION_v2.0.md) — Separación de auth kernel y split de bootstrap IAM/ORG con wrappers legacy.
 - [ADR_REPORTES_BEFORE_DASHBOARD_v1.0.md](ADR_REPORTES_BEFORE_DASHBOARD_v1.0.md) — Regla de secuenciación reportes antes que dashboard.
 - [ADR_AUDIT_TAXONOMY_MIN_v1.0.md](ADR_AUDIT_TAXONOMY_MIN_v1.0.md) — Taxonomía mínima de auditoría contractual por kernel.
 - [ADR_ACCOUNTING_RULESET_V1_FREEZE.md](ADR_ACCOUNTING_RULESET_V1_FREEZE.md) — Freeze contractual de `PostingRuleSet v1`.
@@ -31,6 +32,10 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - [ADR_PAYMENTS_ACCOUNTING_BOUNDARY_V1.md](ADR_PAYMENTS_ACCOUNTING_BOUNDARY_V1.md) — Frontera semántica actual entre Payments y Accounting.
 - [repo_higiene/README.md](repo_higiene/README.md) — Índice de artefactos de reorganización y limpieza controlada.
 - [repo_higiene/resumen_reorganizacion_v1.1.md](repo_higiene/resumen_reorganizacion_v1.1.md) — Resumen de inventario técnico, decisiones KEEP/LEGACY/DELETE y checklist por lotes.
+- [module_manifests/auth_kernel.v1.yaml](module_manifests/auth_kernel.v1.yaml) — Manifiesto contractual del Auth Kernel.
+- [module_manifests/accounts_storage.v1.yaml](module_manifests/accounts_storage.v1.yaml) — Manifiesto contractual de storage de identidad.
+- [module_manifests/iam_bootstrap.v1.yaml](module_manifests/iam_bootstrap.v1.yaml) — Manifiesto contractual de bootstrap IAM.
+- [module_manifests/org_bootstrap.v1.yaml](module_manifests/org_bootstrap.v1.yaml) — Manifiesto contractual de bootstrap ORG.
 
 ## Documentación operacional
 
@@ -67,6 +72,6 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - Todo en español.
 - Mantener los documentos cortos, accionables y versionados (título + versión + fecha).
 - Cuando un documento defina reglas/invariantes, enlazar a los módulos relevantes del código (p.ej. auditoría contractual, RBAC, sync engine).
-- Para backend, la ruta canónica de código es `login_module/`; `backend/` se considera legacy local no canónico.
+- Para backend, la ruta canónica de código es `backend/`; `backend/` se considera legacy local no canónico.
 - La evidencia operativa masiva vive fuera del versionado normal de GitHub y se consume por rutas/convención en `docs/operacion/evidencia/**`.
 - En Git se mantienen solo runbooks, índices y referencias de evidencia (no dumps masivos).

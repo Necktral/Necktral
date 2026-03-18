@@ -1,0 +1,55 @@
+module_id: "auth_kernel"
+module_type: "kernel"
+contract_version: "1.0"
+
+ownership:
+  owns:
+    - "session_lifecycle"
+    - "jwt_refresh_rotation"
+    - "password_change_flow"
+    - "two_factor_challenge_and_verification"
+  invariants:
+    - "logout never blacklists refresh token from another user"
+    - "2FA challenge is single-use and replay-safe"
+
+forbidden_writes:
+  - "org_structure"
+  - "rbac_seed_or_org_bootstrap"
+
+upstream_dependencies:
+  - module_id: "accounts_storage"
+    contract_version: "1.0"
+    mode: "query"
+  - module_id: "iam_policy"
+    contract_version: "1.0"
+    mode: "query"
+
+published_events:
+  - event_type: "AUTH_LOGIN_SUCCESS"
+    schema_version: "1"
+  - event_type: "AUTH_TOKEN_REFRESH"
+    schema_version: "1"
+  - event_type: "AUTH_LOGOUT"
+    schema_version: "1"
+
+consumed_events: []
+
+rbac_surface:
+  permissions:
+    - "auth.self.read"
+    - "auth.self.write"
+
+audit_catalog:
+  event_types:
+    - "AUTH_LOGIN_SUCCESS"
+    - "AUTH_LOGIN_FAILURE"
+    - "AUTH_TOKEN_REFRESH"
+    - "AUTH_LOGOUT"
+    - "AUTH_PASSWORD_CHANGED"
+    - "AUTH_2FA_*"
+  reason_codes:
+    - "OK"
+    - "TOKEN_INVALID"
+    - "TOKEN_MISMATCH"
+    - "INVALID_OLD_PASSWORD"
+    - "TOTP_INVALID"

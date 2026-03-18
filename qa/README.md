@@ -114,10 +114,10 @@ Luego corre k6 con:
 
 Ejecuta un smoke test que hace:
 
-- `POST /api/auth/login/`
-- `GET /api/auth/me/`
-- `GET /api/auth/me/acl/`
-- opcional: `GET /api/org/companies/` con `X-Company-Id` recomendado
+- `POST /api/backend/auth/login/`
+- `GET /api/backend/auth/me/`
+- `GET /api/backend/auth/me/acl/`
+- opcional: `GET /api/backend/org/companies/` con `X-Company-Id` recomendado
 
 Comando (Docker):
 
@@ -160,7 +160,7 @@ Script: `qa/k6/auth_stress.js`
 Este stress usa 2 escenarios (sin bajar calidad):
 
 - `me_acl`: simula tráfico normal (reutiliza token) y aplica thresholds estrictos a `/me` y `/acl`.
-- `login_churn`: simula churn de login con arrival-rate controlado y aplica threshold estricto a `/auth/login/`.
+- `login_churn`: simula churn de login con arrival-rate controlado y aplica threshold estricto a `/backend/auth/login/`.
 
 Recomendación: para que los thresholds sean exigentes pero justos bajo carga, corre el backend con Gunicorn durante el stress (el `runserver` de Django es single-process y distorsiona latencias).
 
@@ -236,15 +236,15 @@ El gate exige aprobaciones de owner funcional/técnico y signoff final (`FINAL_A
 Registro manual recomendado:
 
 ```bash
-python login_module/src/manage.py record_operational_go_live_review --evidence-dir <RUTA_EVIDENCIA> --reviewer <OWNER_FUNCIONAL> --role FUNCTIONAL --status APPROVED --summary "<resumen>"
-python login_module/src/manage.py record_operational_go_live_review --evidence-dir <RUTA_EVIDENCIA> --reviewer <OWNER_TECNICO> --role TECHNICAL --status APPROVED --summary "<resumen>"
-python login_module/src/manage.py record_operational_go_live_review --evidence-dir <RUTA_EVIDENCIA> --reviewer <OWNER_TECNICO> --role TECHNICAL --status FINAL_APPROVED --summary "<resumen>"
+python backend/src/manage.py record_operational_go_live_review --evidence-dir <RUTA_EVIDENCIA> --reviewer <OWNER_FUNCIONAL> --role FUNCTIONAL --status APPROVED --summary "<resumen>"
+python backend/src/manage.py record_operational_go_live_review --evidence-dir <RUTA_EVIDENCIA> --reviewer <OWNER_TECNICO> --role TECHNICAL --status APPROVED --summary "<resumen>"
+python backend/src/manage.py record_operational_go_live_review --evidence-dir <RUTA_EVIDENCIA> --reviewer <OWNER_TECNICO> --role TECHNICAL --status FINAL_APPROVED --summary "<resumen>"
 ```
 
 Excepción auditable por fuerza mayor (día excusado):
 
 ```bash
-python login_module/src/manage.py record_operational_go_live_exception \
+python backend/src/manage.py record_operational_go_live_exception \
   --evidence-dir <RUTA_EVIDENCIA> \
   --date <YYYY-MM-DD> \
   --exception-type FORCE_MAJEURE \
@@ -551,7 +551,7 @@ EVENTUAL_NOTE="Cierre eventual aprobado por mantenimiento crítico del sistema."
 Registro de revisión del contador (on-demand) y sign-off final:
 
 ```bash
-cd login_module/src
+cd backend/src
 python3 manage.py record_phase8_accountant_review \
   --evidence-dir ../../docs/operacion/evidencia/phase8_go_live_20260309_1040 \
   --date 2026-03-09 \

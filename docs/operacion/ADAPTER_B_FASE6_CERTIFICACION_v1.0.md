@@ -113,7 +113,7 @@ python manage.py run_adapter_b_cycle \
 Ejemplo cron (cada 5 minutos):
 
 ```cron
-*/5 * * * * cd /srv/erp_crm/login_module && /srv/venv/bin/python manage.py run_adapter_b_cycle --company-id <COMPANY_ID> --branch-id <BRANCH_ID> --print-limit 100 --dispatch-limit 200 --max-inbox-failed 0 --max-outbox-failed 0 --max-failed-jobs 0 --max-retry-overdue 0 --max-stale-pending 0 --max-open-contingency 0 >> /var/log/erp/adapter_b_cycle.log 2>&1
+*/5 * * * * cd /srv/erp_crm/backend && /srv/venv/bin/python manage.py run_adapter_b_cycle --company-id <COMPANY_ID> --branch-id <BRANCH_ID> --print-limit 100 --dispatch-limit 200 --max-inbox-failed 0 --max-outbox-failed 0 --max-failed-jobs 0 --max-retry-overdue 0 --max-stale-pending 0 --max-open-contingency 0 >> /var/log/erp/adapter_b_cycle.log 2>&1
 ```
 
 ## 5) Ownership y SLA

@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-MANAGE_PY="${ROOT_DIR}/login_module/src/manage.py"
+MANAGE_PY="${ROOT_DIR}/backend/src/manage.py"
 
 MODE="${1:-status}"
 case "${MODE}" in
