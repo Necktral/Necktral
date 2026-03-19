@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Reports (Continuidad P0–P6):** ruta canónica `GET|POST /api/backend/reports/*` con alias legacy `/api/reports/*` y headers `Deprecation/Sunset/Link`.
+- **Reports (Execution Plane):** endpoints `POST /api/backend/reports/runs/{run_id}/cancel/` y `POST /api/backend/reports/runs/{run_id}/retry/`.
+- **Reports (Operación):** comando `reports_invalidate_cache` y runbook `docs/operacion/REPORTS_RUNBOOK_v1.0.md`.
+- **Reports (Documentación):** baseline técnico `docs/operacion/REPORTS_P0_BASELINE_20260319.md`.
 - **Operación (Release):** nota de publicación integral `docs/operacion/PUBLICACION_RELEASE_F6_F12_20260318.md` con evidencia de checks, riesgo residual y rollback.
 - **Fase 4 (Performance):** suite de carga operacional `qa/k6/operational_posting_load.js` para flujos Billing/Inventory/Accounting.
 - **Fase 4 (Gate):** runner `qa/run_operational_performance_gate.sh` con evidencia `snapshot_before/after`, `k6_summary`, `gate_report` y hash.
@@ -51,6 +55,9 @@
 
 ### Changed
 
+- **Reports (Contrato):** enforcement explícito de `REPORT_INVALID_SCOPE`, `REPORT_DATA_CLASSIFICATION_CONFLICT` y `REPORT_REPRODUCIBILITY_VIOLATION`.
+- **Reports (Policy):** matriz de export por sensibilidad (`low|medium`, `high`, `restricted`) con aprobación dual obligatoria para `restricted`.
+- **QA Gate2:** integración de `reports_check_contracts` y `reports_verify_reproducibility` como verificación contractual del módulo `reports`.
 - **Contrato canónico Outbox (F0):** `publish_outbox_event` normaliza payload de eventos operacionales-contables para incluir siempre `source_*` y referencias contables.
 - **Suite estándar pytest (F1):** `login_module/pytest.ini` integra pruebas de `modulos/facturacion/tests` y `modulos/inventarios/tests`.
 - **Rollout piloto F5:** `manage_operational_posting_pilot` incorpora ciclo de rollback con drenaje de outbox y reintento de compensaciones Fuel.

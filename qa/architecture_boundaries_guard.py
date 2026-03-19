@@ -35,9 +35,11 @@ def main() -> int:
     _require_contains(config_urls, 'path("api/backend/auth/"', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'path("api/backend/iam/"', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'path("api/backend/org/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/reports/"', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'path("api/auth/"', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'path("api/iam/"', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'path("api/org/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/reports/"', source="config/urls.py", errors=errors)
 
     settings_base = _read_text("backend/src/config/settings/base.py")
     _require_contains(
@@ -51,6 +53,7 @@ def main() -> int:
     _require_contains(deprecation_middleware, '"/api/auth/"', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, '"/api/iam/"', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, '"/api/org/"', source="legacy_api_deprecation.py", errors=errors)
+    _require_contains(deprecation_middleware, '"/api/reports/"', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, 'response["Deprecation"]', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, 'response["Sunset"]', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, 'response["Link"]', source="legacy_api_deprecation.py", errors=errors)

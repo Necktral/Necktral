@@ -50,10 +50,12 @@ urlpatterns = [
     path("api/backend/auth/", include("modulos.auth_kernel.urls")),
     path("api/backend/iam/", include("apps.iam.urls")),
     path("api/backend/org/", include("apps.org.urls")),
+    path("api/backend/reports/", include("apps.reports.urls")),
     # Legacy API aliases (deprecated)
     path("api/auth/", include("modulos.auth_kernel.urls")),
     path("api/iam/", include("apps.iam.urls")),
     path("api/org/", include("apps.org.urls")),
+    path("api/reports/", include("apps.reports.urls")),
     # RBAC
     path("api/rbac/", include("apps.rbac.urls")),
     path("api/sync/", include("apps.sync_engine.urls")),
@@ -72,8 +74,6 @@ urlpatterns = [
     path("api/cec/", include("apps.cec.urls")),
     # Integration Backbone
     path("api/integration/", include("apps.integration.urls")),
-    # Reportes
-    path("api/reports/", include("apps.reports.urls")),
     # Estación de Servicios
     path("api/fuel/", include("modulos.estacion_servicios.urls")),
 ]

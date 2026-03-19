@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -34,11 +35,11 @@ def _mk_org_tree(label: str) -> tuple[OrgUnit, OrgUnit, OrgUnit]:
     return holding, company, branch
 
 
-def _mk_user(*, label: str, password: str = "Pass12345!") -> User:
+def _mk_user(*, label: str, password: str = "Pass12345!") -> Any:
     return User.objects.create_user(username=f"user_{label}", email=f"{label}@test.com", password=password)
 
 
-def _mk_token(user: User) -> str:
+def _mk_token(user: Any) -> str:
     return str(RefreshToken.for_user(user).access_token)
 
 
@@ -61,10 +62,12 @@ def _drf_request(
         headers["HTTP_X_DATA_COMPANY_ID"] = str(data_company_id)
     if data_branch_id is not None:
         headers["HTTP_X_DATA_BRANCH_ID"] = str(data_branch_id)
-    return Request(factory.get("/api/backend/iam/context/", **headers))
+    django_request = factory.get("/api/backend/iam/context/")
+    django_request.META.update(headers)
+    return Request(django_request)
 
 
-def _grant_local_permission(*, user: User, company: OrgUnit, branch: OrgUnit, permission_code: str) -> None:
+def _grant_local_permission(*, user: Any, company: OrgUnit, branch: OrgUnit, permission_code: str) -> None:
     role = Role.objects.create(name=f"role-{uuid.uuid4().hex[:8]}", is_active=True)
     perm, _ = Permission.objects.get_or_create(
         code=permission_code,
@@ -84,7 +87,7 @@ def _grant_intercompany_read(*, from_company: OrgUnit, to_company: OrgUnit, perm
     LinkGrant.objects.create(link=link, permission=perm, access_mode=LinkGrant.AccessMode.READ)
 
 
-def _login_client(*, user: User, password: str, company: OrgUnit, branch: OrgUnit) -> APIClient:
+def _login_client(*, user: Any, password: str, company: OrgUnit, branch: OrgUnit) -> APIClient:
     client = APIClient()
     resp = client.post("/api/backend/auth/login/", {"username": user.username, "password": password}, format="json")
     assert resp.status_code == 200
@@ -98,7 +101,7 @@ def _login_client(*, user: User, password: str, company: OrgUnit, branch: OrgUni
     return client
 
 
-def _login_access_token(*, user: User, password: str) -> str:
+def _login_access_token(*, user: Any, password: str) -> str:
     client = APIClient()
     resp = client.post("/api/backend/auth/login/", {"username": user.username, "password": password}, format="json")
     assert resp.status_code == 200

@@ -5,10 +5,10 @@
 	qa-ci-up qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci \
 	qa-coverage-domains \
 	qa-repo-hygiene qa-repo-hygiene-inventory qa-architecture-boundaries qa-simulation-contract-guard \
-	qa-repo-comment-audit \
-	qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-backend-mypy-baseline-refresh qa-backend-tests qa-static-scan qa-frontend-ci qa-audit-integrity \
-	docker-clean docker-clean-all \
-	loadtest-precheck-auth loadtest loadtest-150k
+		qa-repo-comment-audit \
+		qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-backend-mypy-baseline-refresh qa-backend-tests qa-static-scan qa-frontend-ci qa-audit-integrity qa-reports-contract-check \
+		docker-clean docker-clean-all \
+		loadtest-precheck-auth loadtest loadtest-150k
 
 BASE_URL ?= http://localhost:8000/api
 K6_IMAGE ?= grafana/k6
@@ -130,6 +130,9 @@ qa-coverage-domains:
 qa-audit-integrity:
 	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd $(CONTAINER_BACKEND_DIR) && python manage.py audit_verify_chain --seed-minimal --format json --output /app/$(QA_REPORTS_DIR)/audit_integrity.json"
 
+qa-reports-contract-check:
+	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd $(CONTAINER_BACKEND_DIR) && python manage.py reports_check_contracts | tee /app/$(QA_REPORTS_DIR)/reports_contract_check.txt && python manage.py reports_verify_reproducibility | tee /app/$(QA_REPORTS_DIR)/reports_repro_check.txt"
+
 qa-frontend-ci:
 	docker compose --profile qa run --rm frontend_ci
 
@@ -149,7 +152,7 @@ qa-repo-hygiene-inventory:
 qa-ci-gate1: qa-repo-hygiene qa-architecture-boundaries qa-simulation-contract-guard qa-ci-up qa-static-scan qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-frontend-ci
 
 # Gate 2: pruebas deterministas (pytest + cobertura)
-qa-ci-gate2: qa-ci-up qa-backend-tests qa-coverage-domains
+qa-ci-gate2: qa-ci-up qa-backend-tests qa-coverage-domains qa-reports-contract-check
 
 # Gate 3: integridad de auditoría (reporte)
 qa-ci-gate3: qa-ci-up qa-audit-integrity
