@@ -5,8 +5,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.common.permissions import rbac_permission
-from apps.iam.models import OrgUnit
+from apps.modulos.common.permissions import rbac_permission
+from apps.modulos.iam.models import OrgUnit
 
 from .models import BillingDocument
 from .serializers import (

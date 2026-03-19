@@ -202,20 +202,20 @@ INSTALLED_APPS = [
     "axes",
     "csp",
     # Apps del proyecto
-    "apps.common",
-    "apps.audit",
-    "apps.rbac",
-    "apps.accounts.apps.AccountsConfig",
-    "apps.iam.apps.IamConfig",
-    "apps.org.apps.OrgConfig",  # <-- NUEVO
-    "apps.hr.apps.HrConfig",  # <-- NUEVO
-    "apps.accounting.apps.AccountingConfig",
-    "apps.payments.apps.PaymentsConfig",
-    "apps.cec.apps.CecConfig",
-    "apps.integration.apps.IntegrationConfig",
-    "apps.reports.apps.ReportsConfig",
-    "apps.sync_engine",
-    "apps.sync.apps.SyncConfig",
+    "apps.modulos.common",
+    "apps.modulos.audit",
+    "apps.modulos.rbac",
+    "apps.modulos.accounts.apps.AccountsConfig",
+    "apps.modulos.iam.apps.IamConfig",
+    "apps.modulos.org.apps.OrgConfig",  # <-- NUEVO
+    "apps.modulos.hr.apps.HrConfig",  # <-- NUEVO
+    "apps.modulos.accounting.apps.AccountingConfig",
+    "apps.modulos.payments.apps.PaymentsConfig",
+    "apps.modulos.cec.apps.CecConfig",
+    "apps.modulos.integration.apps.IntegrationConfig",
+    "apps.modulos.reports.apps.ReportsConfig",
+    "apps.modulos.sync_engine",
+    "apps.modulos.sync.apps.SyncConfig",
     # Módulos de dominio (raíz/modulos)
     # (Se agregan abajo con el patrón INSTALLED_APPS += [...])
 ]
@@ -246,7 +246,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Axes al final (recomendación oficial)
     "axes.middleware.AxesMiddleware",
-    "apps.audit.middleware.AuditAccessDeniedMiddleware",
+    "apps.modulos.audit.middleware.AuditAccessDeniedMiddleware",
     "config.middleware.legacy_api_deprecation.LegacyApiDeprecationMiddleware",
     "config.middleware.api_error_envelope.ApiErrorEnvelopeMiddleware",
 ]
@@ -310,7 +310,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
     {
-        "NAME": "apps.accounts.password_validators.PasswordComplexityValidator",
+        "NAME": "apps.modulos.accounts.password_validators.PasswordComplexityValidator",
         "OPTIONS": {"min_length": 10, "min_classes": 3},
     },
 ]
@@ -338,7 +338,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # DRF
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "config.drf_exception_handler.custom_exception_handler",
-    "DEFAULT_AUTHENTICATION_CLASSES": ("apps.iam.authentication.JWTAuthWithOrgContext",),
+    "DEFAULT_AUTHENTICATION_CLASSES": ("apps.modulos.iam.authentication.JWTAuthWithOrgContext",),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),

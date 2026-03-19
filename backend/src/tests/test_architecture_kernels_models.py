@@ -4,10 +4,10 @@ import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 
-from apps.accounting.models import EconomicEvent, FiscalPeriod, JournalDraft, JournalEntry, PostingRuleSet
-from apps.iam.models import OrgUnit
-from apps.integration.models import InboxEvent
-from apps.payments.models import CashSession
+from apps.modulos.accounting.models import EconomicEvent, FiscalPeriod, JournalDraft, JournalEntry, PostingRuleSet
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.integration.models import InboxEvent
+from apps.modulos.payments.models import CashSession
 
 
 def _mk_scope():

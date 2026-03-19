@@ -4,7 +4,7 @@ import json
 
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.iam.models import OrgUnit
+from apps.modulos.iam.models import OrgUnit
 from modulos.estacion_servicios.services import run_fuel_compensation_cycle
 
 

@@ -3,9 +3,9 @@ from django.contrib.auth import password_validation
 from django.db.models import Q
 from rest_framework import serializers
 
-from apps.iam.models import UserMembership
-from apps.rbac.models import Role
-from apps.rbac.selectors import get_effective_permissions
+from apps.modulos.iam.models import UserMembership
+from apps.modulos.rbac.models import Role
+from apps.modulos.rbac.selectors import get_effective_permissions
 
 User = get_user_model()
 

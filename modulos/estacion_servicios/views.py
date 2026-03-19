@@ -8,9 +8,9 @@ from rest_framework import status
 
 from django.utils.dateparse import parse_date
 
-from apps.common.permissions import rbac_permission
+from apps.modulos.common.permissions import rbac_permission
 
-from apps.org.models import BranchProfile, UserFuelUoMPreference
+from apps.modulos.org.models import BranchProfile, UserFuelUoMPreference
 
 from modulos.estacion_servicios.models import FuelDispense, FuelSale, FuelShift
 from modulos.estacion_servicios.serializers import (

@@ -205,7 +205,7 @@ from __future__ import annotations
 import json
 import os
 
-from apps.cec.models import CECException, CloseRun
+from apps.modulos.cec.models import CECException, CloseRun
 from django.utils import timezone
 
 blocked_path = str(os.environ["BLOCKED_EVIDENCE_FILE"])

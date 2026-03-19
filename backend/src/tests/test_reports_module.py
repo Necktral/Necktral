@@ -8,15 +8,13 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from rest_framework.test import APIClient
 
-from apps.audit.models import AuditEvent
-from apps.iam.models import OrgUnit, UserMembership
-from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
-from apps.reports.models import ReportExport, ReportReadAudit, ReportRun
+from apps.modulos.audit.models import AuditEvent
+from apps.modulos.iam.models import OrgUnit, UserMembership
+from apps.modulos.rbac.models import Permission, Role, RoleAssignment, RolePermission
+from apps.modulos.reports.models import ReportExport, ReportReadAudit, ReportRun
 
 User = get_user_model()
 REPORTS_BASE = "/api/backend/reports"
-
-
 def _mk_org_tree(label: str) -> tuple[OrgUnit, OrgUnit, OrgUnit]:
     holding = OrgUnit.objects.create(unit_type=OrgUnit.UnitType.HOLDING, name=f"H-{label}", code=f"H-{label}")
     company = OrgUnit.objects.create(
@@ -90,10 +88,7 @@ def test_reports_end_to_end_definitions_runs_exports_read_audit_and_sources():
         assert resp.status_code == 201
 
     legacy_health = client.get("/api/reports/health/")
-    assert legacy_health.status_code == 200
-    assert legacy_health["Deprecation"] == "true"
-    assert legacy_health["Sunset"]
-    assert legacy_health["Link"] == '</api/backend/reports/>; rel="successor-version"'
+    assert legacy_health.status_code == 404
 
     # Run AUDIT (high sensitivity)
     run_audit = client.post(

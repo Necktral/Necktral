@@ -4,9 +4,9 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
-from apps.iam.models import OrgUnit
-from apps.sync_engine.errors import SyncRejectError
-import apps.sync_engine.handlers_inventory as handlers
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.sync_engine.errors import SyncRejectError
+import apps.modulos.sync_engine.handlers_inventory as handlers
 from modulos.inventarios.models import InventoryItem, MovementType, StockMovement, Warehouse
 
 

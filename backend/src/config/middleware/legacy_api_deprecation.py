@@ -8,14 +8,12 @@ class LegacyApiDeprecationMiddleware:
         "/api/auth/",
         "/api/iam/",
         "/api/org/",
-        "/api/reports/",
     )
     SUNSET_AT = "Sun, 17 May 2026 00:00:00 GMT"
     SUCCESSOR_BY_PREFIX = {
         "/api/auth/": "/api/backend/auth/",
         "/api/iam/": "/api/backend/iam/",
         "/api/org/": "/api/backend/org/",
-        "/api/reports/": "/api/backend/reports/",
     }
 
     def __init__(self, get_response):

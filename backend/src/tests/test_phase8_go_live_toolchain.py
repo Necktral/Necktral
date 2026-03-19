@@ -8,7 +8,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils import timezone
 
-from apps.iam.models import OrgUnit
+from apps.modulos.iam.models import OrgUnit
 
 
 def _mk_scope() -> tuple[OrgUnit, OrgUnit]:

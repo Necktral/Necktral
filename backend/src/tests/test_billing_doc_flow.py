@@ -3,10 +3,10 @@ from __future__ import annotations
 import pytest
 from rest_framework.test import APIClient
 
-from apps.iam.models import OrgUnit, UserMembership
-from apps.rbac.models import Role, Permission, RoleAssignment, RolePermission
-from apps.accounts.models import User
-from apps.audit.models import AuditEvent
+from apps.modulos.iam.models import OrgUnit, UserMembership
+from apps.modulos.rbac.models import Role, Permission, RoleAssignment, RolePermission
+from apps.modulos.accounts.models import User
+from apps.modulos.audit.models import AuditEvent
 
 
 def _mk_scope():

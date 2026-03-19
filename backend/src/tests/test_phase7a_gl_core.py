@@ -11,7 +11,7 @@ from django.core.management import call_command
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.accounting.models import (
+from apps.modulos.accounting.models import (
     ChartOfAccount,
     CompanyAccountingConfig,
     FiscalPeriod,
@@ -21,12 +21,12 @@ from apps.accounting.models import (
     RevaluationEntryLink,
     RevaluationRun,
 )
-from apps.accounting.phase7 import run_fx_revaluation
-from apps.accounting.services import AccountingConflictError, close_fiscal_period, post_journal_drafts
-from apps.cec.models import CloseRun
-from apps.iam.models import OrgUnit, UserMembership
-from apps.integration.services import publish_outbox_event
-from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
+from apps.modulos.accounting.phase7 import run_fx_revaluation
+from apps.modulos.accounting.services import AccountingConflictError, close_fiscal_period, post_journal_drafts
+from apps.modulos.cec.models import CloseRun
+from apps.modulos.iam.models import OrgUnit, UserMembership
+from apps.modulos.integration.services import publish_outbox_event
+from apps.modulos.rbac.models import Permission, Role, RoleAssignment, RolePermission
 
 User = get_user_model()
 
@@ -234,7 +234,7 @@ def test_phase7_fx_revaluation_executes_and_is_idempotent():
     now = timezone.localdate()
     period, _ = FiscalPeriod.objects.get_or_create(company=company, year=now.year, month=now.month)
     econ = None
-    from apps.accounting.models import EconomicEvent, JournalDraft, PostingRuleSet
+    from apps.modulos.accounting.models import EconomicEvent, JournalDraft, PostingRuleSet
 
     econ = EconomicEvent.objects.create(
         source_module="ACCOUNTING",

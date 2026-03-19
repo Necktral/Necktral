@@ -6,12 +6,12 @@ from types import SimpleNamespace
 import pytest
 from django.contrib.auth import get_user_model
 
-from apps.accounting.services import OPERATIONAL_ACCOUNTING_EVENTS, SUPPORTED_ECONOMIC_EVENTS, link_operational_event_to_accounting
-from apps.audit.models import AuditEvent
-from apps.iam.models import OrgUnit
-from apps.integration.models import OutboxEvent
-from apps.integration.services import CANONICAL_OUTBOX_ENVELOPE_FIELDS
-from apps.payments.services import close_cash_session, create_payment_intent, open_cash_session, post_cash_movement
+from apps.modulos.accounting.services import OPERATIONAL_ACCOUNTING_EVENTS, SUPPORTED_ECONOMIC_EVENTS, link_operational_event_to_accounting
+from apps.modulos.audit.models import AuditEvent
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.integration.models import OutboxEvent
+from apps.modulos.integration.services import CANONICAL_OUTBOX_ENVELOPE_FIELDS
+from apps.modulos.payments.services import close_cash_session, create_payment_intent, open_cash_session, post_cash_movement
 
 User = get_user_model()
 

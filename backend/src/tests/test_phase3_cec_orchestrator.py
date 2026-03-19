@@ -8,10 +8,10 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from apps.cec.models import CECException, CloseRun
-from apps.cec.services import execute_close_run
-from apps.iam.models import OrgUnit
-from apps.payments.models import CashSession
+from apps.modulos.cec.models import CECException, CloseRun
+from apps.modulos.cec.services import execute_close_run
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.payments.models import CashSession
 
 User = get_user_model()
 

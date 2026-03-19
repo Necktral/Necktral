@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.common.permissions import rbac_permission
+from apps.modulos.common.permissions import rbac_permission
 from .models import Role, Permission
 
 # --- Listado de roles y permisos (read-only, protegidos) ---

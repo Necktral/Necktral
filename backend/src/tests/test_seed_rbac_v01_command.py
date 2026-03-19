@@ -1,8 +1,8 @@
 import pytest
 from django.core.management import call_command
 
-from apps.audit.models import AuditEvent
-from apps.rbac.models import Permission, Role, RolePermission
+from apps.modulos.audit.models import AuditEvent
+from apps.modulos.rbac.models import Permission, Role, RolePermission
 
 
 @pytest.mark.django_db

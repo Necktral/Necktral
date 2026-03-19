@@ -15,17 +15,17 @@ from django.db import connection
 from django.db.migrations.recorder import MigrationRecorder
 from django.utils import timezone
 
-from apps.accounting.models import EconomicEvent, JournalDraft, JournalEntry, PostingRuleSet
-from apps.accounting.services import (
+from apps.modulos.accounting.models import EconomicEvent, JournalDraft, JournalEntry, PostingRuleSet
+from apps.modulos.accounting.services import (
     post_journal_drafts,
     project_shadow_ledger_for_run,
     seed_posting_rules_v1_for_company,
 )
-from apps.cec.models import CECException, CloseRun
-from apps.iam.models import OrgUnit
-from apps.integration.models import InboxEvent, OutboxEvent
-from apps.integration.services import publish_outbox_event
-from apps.rbac.models import Permission
+from apps.modulos.cec.models import CECException, CloseRun
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.integration.models import InboxEvent, OutboxEvent
+from apps.modulos.integration.services import publish_outbox_event
+from apps.modulos.rbac.models import Permission
 
 from .models import PurchaseDocument, PurchaseDocStatus, PurchaseDocType
 from .services import create_purchase_draft, post_purchase_document

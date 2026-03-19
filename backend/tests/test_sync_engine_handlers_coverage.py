@@ -7,11 +7,11 @@ import pytest
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from apps.accounts.models import User
-from apps.iam.models import OrgUnit
-from apps.sync_engine.errors import SyncRejectError
-from apps.sync_engine.models import Device, DeviceEnrollmentChallenge
-from apps.sync_engine import handlers_inventory as inv_handlers
+from apps.modulos.accounts.models import User
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.sync_engine.errors import SyncRejectError
+from apps.modulos.sync_engine.models import Device, DeviceEnrollmentChallenge
+from apps.modulos.sync_engine import handlers_inventory as inv_handlers
 from modulos.inventarios import services as inv_services
 from modulos.inventarios.models import InventoryItem, Warehouse
 

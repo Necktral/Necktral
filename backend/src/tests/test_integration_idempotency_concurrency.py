@@ -7,9 +7,9 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.db import close_old_connections, connections
 
-from apps.iam.models import OrgUnit
-from apps.integration.models import InboxEvent, OutboxEvent
-from apps.integration.services import create_or_get_inbox_event
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.integration.models import InboxEvent, OutboxEvent
+from apps.modulos.integration.services import create_or_get_inbox_event
 from modulos.estacion_servicios.models import FuelShift, FuelShiftStatus
 from modulos.estacion_servicios.services import open_shift
 

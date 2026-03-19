@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.iam.models import OrgUnit
+from apps.modulos.iam.models import OrgUnit
 from modulos.facturacion.fiscal_adapters import FiscalMode, get_fiscal_adapter, resolve_fiscal_runtime_config
 
 

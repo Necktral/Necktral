@@ -2,7 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
-from apps.iam.models import OrgUnit, UserMembership
+from apps.modulos.iam.models import OrgUnit, UserMembership
 
 User = get_user_model()
 

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from django.core.management import call_command
 
-from apps.iam.models import OrgUnit
+from apps.modulos.iam.models import OrgUnit
 
 
 def _mk_scope():

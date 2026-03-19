@@ -8,8 +8,8 @@ from typing import Any
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-from apps.accounting.services import post_journal_drafts, project_pending_shadow_ledger_triggers
-from apps.integration.services import dispatch_outbox_events
+from apps.modulos.accounting.services import post_journal_drafts, project_pending_shadow_ledger_triggers
+from apps.modulos.integration.services import dispatch_outbox_events
 from modulos.compras.certification_phase10 import build_phase10_evidence, collect_phase10_operational_health
 
 

@@ -4,7 +4,8 @@
 
 ### Added
 
-- **Reports (Continuidad P0–P6):** ruta canónica `GET|POST /api/backend/reports/*` con alias legacy `/api/reports/*` y headers `Deprecation/Sunset/Link`.
+- **Reports (Reestructura canónica):** módulo productivo consolidado en `backend/src/apps/modulos/reports` con namespace interno `apps.modulos.reports` (sin shim legacy).
+- **Reports (API pública):** rutas activas exclusivamente bajo `GET|POST /api/backend/reports/*`; alias `/api/reports/*` retirado.
 - **Reports (Execution Plane):** endpoints `POST /api/backend/reports/runs/{run_id}/cancel/` y `POST /api/backend/reports/runs/{run_id}/retry/`.
 - **Reports (Operación):** comando `reports_invalidate_cache` y runbook `docs/operacion/REPORTS_RUNBOOK_v1.0.md`.
 - **Reports (Documentación):** baseline técnico `docs/operacion/REPORTS_P0_BASELINE_20260319.md`.

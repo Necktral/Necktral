@@ -1,4 +1,4 @@
-# Runbook Operativo — `apps.reports` v1.0
+# Runbook Operativo — `apps.modulos.reports` v1.2
 
 ## Endpoints canónicos
 - `GET /api/backend/reports/health/`
@@ -12,12 +12,9 @@
 - `GET /api/backend/reports/read-audit/`
 - `GET /api/backend/reports/sources/`
 
-## Compat legacy
-- Alias temporal: `/api/reports/*`.
-- Headers obligatorios en legacy:
-  - `Deprecation: true`
-  - `Sunset: Sun, 17 May 2026 00:00:00 GMT`
-  - `Link: </api/backend/reports/>; rel="successor-version"`
+## Compatibilidad actual
+- Alias API legacy removido: `/api/reports/*` no se expone.
+- Namespace canónico interno: `apps.modulos.reports` (hard cut, sin shim `apps.reports`).
 
 ## Operación diaria
 - Procesar cola de corridas:

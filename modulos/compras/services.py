@@ -7,9 +7,9 @@ import logging
 from django.db import transaction
 from django.utils import timezone
 
-from apps.common.domain_errors import IntegrationError
-from apps.iam.models import OrgUnit
-from apps.integration.services import publish_outbox_event
+from apps.modulos.common.domain_errors import IntegrationError
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.integration.services import publish_outbox_event
 
 from .models import PurchaseDocument, PurchaseDocStatus, PurchaseDocType, PurchaseSequence
 
@@ -80,7 +80,7 @@ def _set_doc_accounting(
 
 def _link_accounting_for_doc(*, doc: PurchaseDocument, outbox_event, actor=None) -> ProcurementAccountingResult:
     try:
-        from apps.accounting.services import (
+        from apps.modulos.accounting.services import (
             apply_accounting_link_to_outbox_event,
             link_operational_event_to_accounting,
         )

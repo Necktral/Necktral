@@ -10,12 +10,12 @@ from django.utils import timezone
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from apps.iam.models import OrgUnit
-from apps.sync_engine.errors import SyncRejectError
-from apps.sync_engine.models import Device, DeviceEnrollmentChallenge
-from apps.sync_engine.registry import register
-from apps.sync_engine.services import SyncPolicy, process_command
-from apps.sync_engine.signing import (
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.sync_engine.errors import SyncRejectError
+from apps.modulos.sync_engine.models import Device, DeviceEnrollmentChallenge
+from apps.modulos.sync_engine.registry import register
+from apps.modulos.sync_engine.services import SyncPolicy, process_command
+from apps.modulos.sync_engine.signing import (
     b64decode_strict,
     build_command_signing_message,
     canon_json,

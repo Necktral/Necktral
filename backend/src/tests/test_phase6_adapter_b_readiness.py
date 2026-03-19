@@ -12,9 +12,9 @@ from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.iam.models import OrgUnit, UserMembership
-from apps.integration.models import OutboxEvent
-from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
+from apps.modulos.iam.models import OrgUnit, UserMembership
+from apps.modulos.integration.models import OutboxEvent
+from apps.modulos.rbac.models import Permission, Role, RoleAssignment, RolePermission
 from modulos.facturacion.fiscal_adapters import get_fiscal_adapter
 from modulos.facturacion.models import BillingDocument, DocStatus, DocType, FiscalMode, FiscalPrintJob, FiscalStatus
 from modulos.facturacion.services import process_fiscal_print_jobs

@@ -3,9 +3,9 @@ from django.contrib.auth import get_user_model
 from django.test import RequestFactory
 from django.test.utils import override_settings
 
-from apps.audit.integrity import verify_queryset
-from apps.audit.models import AuditEvent
-from apps.audit.writer import write_event
+from apps.modulos.audit.integrity import verify_queryset
+from apps.modulos.audit.models import AuditEvent
+from apps.modulos.audit.writer import write_event
 
 User = get_user_model()
 

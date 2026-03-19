@@ -11,9 +11,9 @@ from django.core.management import call_command
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.iam.models import OrgUnit, UserMembership
-from apps.integration.models import OutboxEvent
-from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
+from apps.modulos.iam.models import OrgUnit, UserMembership
+from apps.modulos.integration.models import OutboxEvent
+from apps.modulos.rbac.models import Permission, Role, RoleAssignment, RolePermission
 from modulos.facturacion.models import BillingDocument, DocStatus
 from modulos.inventarios.models import StockMovement
 from modulos.estacion_servicios.models import FuelSale, FuelSaleStatus

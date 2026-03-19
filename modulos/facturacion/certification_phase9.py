@@ -9,7 +9,7 @@ from typing import Any
 
 from django.conf import settings
 
-from apps.iam.models import OrgUnit
+from apps.modulos.iam.models import OrgUnit
 
 from .certification import collect_phase6_env_manifest, collect_phase6_operational_health, certify_adapter_b_run
 from .fiscal_adapters import FiscalMode, get_fiscal_adapter, resolve_adapter_b_http_config, resolve_fiscal_runtime_config

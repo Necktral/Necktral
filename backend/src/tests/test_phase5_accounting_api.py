@@ -10,12 +10,12 @@ from django.core.management import call_command
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.accounting.models import FiscalPeriod, JournalDraft, JournalEntry
-from apps.cec.models import CloseRun
-from apps.iam.models import OrgUnit, UserMembership
-from apps.integration.models import OutboxEvent
-from apps.integration.services import publish_outbox_event
-from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
+from apps.modulos.accounting.models import FiscalPeriod, JournalDraft, JournalEntry
+from apps.modulos.cec.models import CloseRun
+from apps.modulos.iam.models import OrgUnit, UserMembership
+from apps.modulos.integration.models import OutboxEvent
+from apps.modulos.integration.services import publish_outbox_event
+from apps.modulos.rbac.models import Permission, Role, RoleAssignment, RolePermission
 
 User = get_user_model()
 

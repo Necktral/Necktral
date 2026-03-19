@@ -1,8 +1,8 @@
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from apps.iam.models import OrgUnit
-from apps.hr.models import Employee, JobPosition, EmploymentAssignment
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.hr.models import Employee, JobPosition, EmploymentAssignment
 
 User = get_user_model()
 
@@ -19,7 +19,7 @@ def test_provision_user_success():
     admin = User.objects.create_superuser("admin", "admin@test.com", "pass")
 
     # Membership
-    from apps.iam.models import UserMembership
+    from apps.modulos.iam.models import UserMembership
 
     UserMembership.objects.create(user=admin, org_unit=company, is_active=True)
 
@@ -30,7 +30,7 @@ def test_provision_user_success():
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}", HTTP_X_COMPANY_ID=str(company.id))
 
     # Grant permission
-    from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
+    from apps.modulos.rbac.models import Permission, Role, RoleAssignment, RolePermission
 
     perm_update, _ = Permission.objects.get_or_create(code="hr.employee.update")
     perm_create_user, _ = Permission.objects.get_or_create(code="iam.users.create")
@@ -64,7 +64,7 @@ def test_provision_user_no_assignment_fails():
     admin = User.objects.create_superuser("admin2", "admin2@test.com", "pass")
 
     # Membership
-    from apps.iam.models import UserMembership
+    from apps.modulos.iam.models import UserMembership
 
     UserMembership.objects.create(user=admin, org_unit=company, is_active=True)
 
@@ -75,7 +75,7 @@ def test_provision_user_no_assignment_fails():
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}", HTTP_X_COMPANY_ID=str(company.id))
 
     # Ensure perm
-    from apps.rbac.models import Permission, Role, RolePermission, RoleAssignment
+    from apps.modulos.rbac.models import Permission, Role, RolePermission, RoleAssignment
 
     perm_update, _ = Permission.objects.get_or_create(code="hr.employee.update")
     perm_create_user, _ = Permission.objects.get_or_create(code="iam.users.create")

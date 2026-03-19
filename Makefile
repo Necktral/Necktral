@@ -20,7 +20,7 @@ QA_REPORTS_DIR ?= qa/reports
 QA_KEEP_FRONTEND ?= 1
 QA_DOMAIN_THRESHOLDS ?= sync_engine=98
 QA_MYPY_STRICT_TARGETS ?= \
-	$(BACKEND_SRC)/apps/accounting \
+	$(BACKEND_SRC)/apps/modulos/accounting \
 	$(BACKEND_SRC)/tests/test_phase3_cec_execute_api.py \
 	$(BACKEND_SRC)/tests/test_phase5_accounting_api.py \
 	$(BACKEND_SRC)/tests/test_phase6_adapter_b_readiness.py \
@@ -110,13 +110,13 @@ qa-static-scan:
 	docker compose exec -T backend bash -lc "chmod +x /app/qa/static_scan_backend.sh && /app/qa/static_scan_backend.sh /app"
 
 qa-backend-bandit:
-	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && bandit -q -r $(CONTAINER_BACKEND_DIR)/src/apps /app/modulos -x $(CONTAINER_BACKEND_DIR)/src/apps/*/migrations,/app/modulos/*/migrations -ll -ii -f txt | tee /app/$(QA_REPORTS_DIR)/bandit.txt"
+	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && bandit -q -r $(CONTAINER_BACKEND_DIR)/src/apps /app/modulos -x $(CONTAINER_BACKEND_DIR)/src/apps/modulos/*/migrations,/app/modulos/*/migrations -ll -ii -f txt | tee /app/$(QA_REPORTS_DIR)/bandit.txt"
 
 qa-backend-ruff:
 	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && ruff check $(CONTAINER_BACKEND_DIR)/src | tee /app/$(QA_REPORTS_DIR)/ruff.txt"
 
 qa-backend-mypy:
-	docker compose exec -T backend bash -lc 'set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && cd /app && mypy --config-file mypy.ini $(QA_MYPY_STRICT_TARGETS) | tee /app/$(QA_REPORTS_DIR)/mypy_strict_critical.txt ; strict_status=$${PIPESTATUS[0]} ; mypy --config-file mypy.ini $(BACKEND_SRC) | tee /app/$(QA_REPORTS_DIR)/mypy.txt ; mypy_status=$${PIPESTATUS[0]} ; python /app/qa/mypy_baseline_guard.py check --report /app/$(QA_REPORTS_DIR)/mypy.txt --baseline /app/qa/mypy_baseline.txt --delta-report /app/$(QA_REPORTS_DIR)/mypy_delta.json --delta-text /app/$(QA_REPORTS_DIR)/mypy_delta.txt ; guard_status=$$? ; if [ $$strict_status -ne 0 ]; then echo "[qa] mypy strict critical failed." ; exit $$strict_status ; fi ; if [ $$guard_status -ne 0 ]; then exit $$guard_status ; fi ; if [ $$mypy_status -ne 0 ]; then echo "[qa] mypy baseline active: existing debt tolerated, no nuevos errores." ; fi ; exit 0'
+	docker compose exec -T backend bash -lc 'set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && cd /app && mypy --no-incremental --config-file mypy.ini $(QA_MYPY_STRICT_TARGETS) | tee /app/$(QA_REPORTS_DIR)/mypy_strict_critical.txt ; strict_status=$${PIPESTATUS[0]} ; mypy --no-incremental --config-file mypy.ini $(BACKEND_SRC) | tee /app/$(QA_REPORTS_DIR)/mypy.txt ; mypy_status=$${PIPESTATUS[0]} ; python /app/qa/mypy_baseline_guard.py check --report /app/$(QA_REPORTS_DIR)/mypy.txt --baseline /app/qa/mypy_baseline.txt --delta-report /app/$(QA_REPORTS_DIR)/mypy_delta.json --delta-text /app/$(QA_REPORTS_DIR)/mypy_delta.txt ; guard_status=$$? ; if [ $$strict_status -ne 0 ]; then echo "[qa] mypy strict critical failed." ; exit $$strict_status ; fi ; if [ $$guard_status -ne 0 ]; then exit $$guard_status ; fi ; if [ $$mypy_status -ne 0 ]; then echo "[qa] mypy baseline active: existing debt tolerada, no nuevos errores." ; fi ; exit 0'
 
 qa-backend-mypy-baseline-refresh:
 	docker compose exec -T backend bash -lc "set -o pipefail && cd /app && mypy --config-file mypy.ini $(BACKEND_SRC) | tee /app/qa/reports/mypy.txt ; python /app/qa/mypy_baseline_guard.py refresh --report /app/qa/reports/mypy.txt --baseline /app/qa/mypy_baseline.txt"

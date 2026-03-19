@@ -21,8 +21,8 @@ from django.utils.dateparse import parse_datetime, parse_date
 
 from rest_framework.exceptions import ValidationError
 
-from apps.audit.writer import write_event
-from apps.integration.services import publish_outbox_event
+from apps.modulos.audit.writer import write_event
+from apps.modulos.integration.services import publish_outbox_event
 
 from modulos.estacion_servicios.models import (
     FuelDispense,

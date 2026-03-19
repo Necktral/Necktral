@@ -10,10 +10,10 @@ from rest_framework.request import Request
 from rest_framework.test import APIClient, APIRequestFactory
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.common.permissions import rbac_permission
-from apps.iam.authentication import JWTAuthWithOrgContext
-from apps.iam.models import CompanyLink, LinkGrant, OrgUnit, UserMembership
-from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
+from apps.modulos.common.permissions import rbac_permission
+from apps.modulos.iam.authentication import JWTAuthWithOrgContext
+from apps.modulos.iam.models import CompanyLink, LinkGrant, OrgUnit, UserMembership
+from apps.modulos.rbac.models import Permission, Role, RoleAssignment, RolePermission
 
 User = get_user_model()
 

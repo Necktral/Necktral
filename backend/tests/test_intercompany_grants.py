@@ -2,9 +2,9 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
-from apps.audit.models import AuditEvent
-from apps.iam.models import OrgUnit, UserMembership, CompanyLink, LinkGrant
-from apps.rbac.models import Permission, Role, RolePermission, RoleAssignment
+from apps.modulos.audit.models import AuditEvent
+from apps.modulos.iam.models import OrgUnit, UserMembership, CompanyLink, LinkGrant
+from apps.modulos.rbac.models import Permission, Role, RolePermission, RoleAssignment
 
 User = get_user_model()
 

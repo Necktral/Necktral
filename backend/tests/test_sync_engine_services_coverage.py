@@ -9,12 +9,12 @@ from django.utils import timezone
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from apps.iam.models import OrgUnit
-from apps.sync_engine.errors import SyncRejectError
-from apps.sync_engine.models import AppliedCommand, Device
-from apps.sync_engine.registry import register
-from apps.sync_engine import services as sync_services
-from apps.sync_engine.services import (
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.sync_engine.errors import SyncRejectError
+from apps.modulos.sync_engine.models import AppliedCommand, Device
+from apps.modulos.sync_engine.registry import register
+from apps.modulos.sync_engine import services as sync_services
+from apps.modulos.sync_engine.services import (
     SyncPolicy,
     enforce_device_active,
     ensure_scope_matches,
@@ -22,7 +22,7 @@ from apps.sync_engine.services import (
     process_command,
     resolve_device,
 )
-from apps.sync_engine.signing import (
+from apps.modulos.sync_engine.signing import (
     build_command_signing_message,
     canon_json,
     occurred_at_canonical,
@@ -599,7 +599,7 @@ def test_process_batch_applies_and_updates_receipt():
 
 @pytest.mark.django_db
 def test_signing_helpers_invalid_public_key():
-    from apps.sync_engine.signing import public_key_from_b64, verify_ed25519_signature
+    from apps.modulos.sync_engine.signing import public_key_from_b64, verify_ed25519_signature
 
     with pytest.raises(ValueError):
         public_key_from_b64(_b64(b"short"))

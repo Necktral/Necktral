@@ -8,9 +8,9 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from apps.accounting.certification import collect_phase4_env_manifest
-from apps.iam.models import OrgUnit
-from apps.integration.models import InboxEvent
+from apps.modulos.accounting.certification import collect_phase4_env_manifest
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.integration.models import InboxEvent
 
 
 def _mk_company() -> OrgUnit:

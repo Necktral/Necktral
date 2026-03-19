@@ -11,13 +11,13 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from apps.accounts.cookies import clear_auth_cookies, set_auth_cookies
-from apps.audit.writer import write_event
-from apps.iam.bootstrap_services import bootstrap_init_admin, get_bootstrap_status
-from apps.iam.selectors import build_acl_snapshot
-from apps.iam.serializers import BootstrapInitAdminSerializer
-from apps.org.bootstrap_services import bootstrap_organization_for_user
-from apps.org.serializers import BootstrapOrganizationSerializer
+from apps.modulos.accounts.cookies import clear_auth_cookies, set_auth_cookies
+from apps.modulos.audit.writer import write_event
+from apps.modulos.iam.bootstrap_services import bootstrap_init_admin, get_bootstrap_status
+from apps.modulos.iam.selectors import build_acl_snapshot
+from apps.modulos.iam.serializers import BootstrapInitAdminSerializer
+from apps.modulos.org.bootstrap_services import bootstrap_organization_for_user
+from apps.modulos.org.serializers import BootstrapOrganizationSerializer
 from config.throttling import AuthLoginRateThrottle
 
 from .serializers import (

@@ -16,13 +16,13 @@ class DomainSpec:
 
 
 DOMAIN_SPECS: tuple[DomainSpec, ...] = (
-    DomainSpec("sync_engine", ("src/apps/sync_engine/",)),
-    DomainSpec("iam", ("src/apps/iam/",)),
-    DomainSpec("audit", ("src/apps/audit/",)),
-    DomainSpec("rbac", ("src/apps/rbac/",)),
-    DomainSpec("accounts", ("src/apps/accounts/",)),
-    DomainSpec("integration", ("src/apps/integration/",)),
-    DomainSpec("accounting", ("src/apps/accounting/",)),
+    DomainSpec("sync_engine", ("src/apps/modulos/sync_engine/", "src/apps/sync_engine/", "modulos/sync_engine/")),
+    DomainSpec("iam", ("src/apps/modulos/iam/", "src/apps/iam/", "modulos/iam/")),
+    DomainSpec("audit", ("src/apps/modulos/audit/", "src/apps/audit/", "modulos/audit/")),
+    DomainSpec("rbac", ("src/apps/modulos/rbac/", "src/apps/rbac/", "modulos/rbac/")),
+    DomainSpec("accounts", ("src/apps/modulos/accounts/", "src/apps/accounts/", "modulos/accounts/")),
+    DomainSpec("integration", ("src/apps/modulos/integration/", "src/apps/integration/", "modulos/integration/")),
+    DomainSpec("accounting", ("src/apps/modulos/accounting/", "src/apps/accounting/", "modulos/accounting/")),
     DomainSpec("billing", ("modulos/facturacion/",)),
     DomainSpec("inventory", ("modulos/inventarios/",)),
     DomainSpec("procurement", ("modulos/compras/",)),

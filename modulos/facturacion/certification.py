@@ -21,12 +21,12 @@ from django.db import connection
 from django.db.migrations.recorder import MigrationRecorder
 from django.utils import timezone
 
-from apps.cec.models import CECException, CloseRun
-from apps.cec.services import execute_close_run
-from apps.iam.models import OrgUnit
-from apps.integration.models import InboxEvent, OutboxEvent
-from apps.payments.models import CashMovement, CashSession
-from apps.rbac.models import Permission
+from apps.modulos.cec.models import CECException, CloseRun
+from apps.modulos.cec.services import execute_close_run
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.integration.models import InboxEvent, OutboxEvent
+from apps.modulos.payments.models import CashMovement, CashSession
+from apps.modulos.rbac.models import Permission
 
 from .models import BillingDocument, BranchFiscalConfig, DocStatus, DocType, FiscalMode, FiscalPrintJob, FiscalStatus
 from .services import create_draft, get_or_update_branch_fiscal_config, issue_doc, process_fiscal_print_jobs, queue_fiscal_print

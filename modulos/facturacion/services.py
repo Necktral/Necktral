@@ -10,11 +10,11 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.audit.writer import write_event
-from apps.common.api_exceptions import ConflictError
-from apps.common.domain_errors import IntegrationError
-from apps.iam.models import OrgUnit
-from apps.integration.services import publish_outbox_event
+from apps.modulos.audit.writer import write_event
+from apps.modulos.common.api_exceptions import ConflictError
+from apps.modulos.common.domain_errors import IntegrationError
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.integration.services import publish_outbox_event
 
 from .fiscal_adapters import get_fiscal_adapter, resolve_fiscal_runtime_config
 from .models import (
@@ -565,7 +565,7 @@ def issue_doc(
         )
         accounting_link = None
         try:
-            from apps.accounting.services import (
+            from apps.modulos.accounting.services import (
                 apply_accounting_link_to_outbox_event,
                 link_operational_event_to_accounting,
             )
@@ -1071,7 +1071,7 @@ def void_doc(
             causation_id=causation_id or "",
         )
         try:
-            from apps.accounting.services import (
+            from apps.modulos.accounting.services import (
                 apply_accounting_link_to_outbox_event,
                 link_operational_event_to_accounting,
             )

@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from rest_framework.test import APIClient
 
-from apps.accounting.models import (
+from apps.modulos.accounting.models import (
     ChartOfAccount,
     CompanyAccountingConfig,
     ConsolidationRun,
@@ -23,7 +23,7 @@ from apps.accounting.models import (
     JournalEntryLine,
     PostingRuleSet,
 )
-from apps.accounting.phase7b import (
+from apps.modulos.accounting.phase7b import (
     Phase7BValidationError,
     close_intercompany_transaction,
     confirm_intercompany_transaction,
@@ -31,10 +31,10 @@ from apps.accounting.phase7b import (
     reconcile_intercompany_transaction,
     run_consolidation,
 )
-from apps.cec.models import CECException
-from apps.iam.models import CompanyLink, LinkGrant, OrgUnit, UserMembership
-from apps.integration.models import OutboxEvent
-from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
+from apps.modulos.cec.models import CECException
+from apps.modulos.iam.models import CompanyLink, LinkGrant, OrgUnit, UserMembership
+from apps.modulos.integration.models import OutboxEvent
+from apps.modulos.rbac.models import Permission, Role, RoleAssignment, RolePermission
 
 User = get_user_model()
 

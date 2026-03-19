@@ -5,9 +5,9 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.hr.models import Employee, EmploymentAssignment, JobPosition
-from apps.iam.models import OrgUnit, UserMembership
-from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
+from apps.modulos.hr.models import Employee, EmploymentAssignment, JobPosition
+from apps.modulos.iam.models import OrgUnit, UserMembership
+from apps.modulos.rbac.models import Permission, Role, RoleAssignment, RolePermission
 
 User = get_user_model()
 

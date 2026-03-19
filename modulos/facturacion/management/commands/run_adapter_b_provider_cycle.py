@@ -8,7 +8,7 @@ from typing import Any
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-from apps.integration.services import dispatch_outbox_events
+from apps.modulos.integration.services import dispatch_outbox_events
 from modulos.facturacion.certification_phase9 import (
     build_phase9_evidence,
     collect_phase9_operational_health,

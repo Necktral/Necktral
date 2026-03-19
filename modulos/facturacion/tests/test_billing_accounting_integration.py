@@ -6,8 +6,8 @@ from types import SimpleNamespace
 import pytest
 from django.contrib.auth import get_user_model
 
-from apps.iam.models import OrgUnit
-from apps.integration.models import OutboxEvent
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.integration.models import OutboxEvent
 from modulos.facturacion.models import BillingDocument, DocStatus
 from modulos.facturacion.services import create_draft, issue_doc, void_doc
 

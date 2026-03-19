@@ -7,8 +7,8 @@ from types import SimpleNamespace
 import pytest
 from django.contrib.auth import get_user_model
 
-from apps.iam.models import OrgUnit
-from apps.integration.models import OutboxEvent
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.integration.models import OutboxEvent
 from modulos.inventarios.models import InventoryItem, StockMovement, Warehouse
 from modulos.inventarios.services import post_adjust, post_receive, post_transfer
 

@@ -9,7 +9,7 @@ from rest_framework.settings import api_settings
 from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.test import APIClient
 
-from apps.accounts.models import User
+from apps.modulos.accounts.models import User
 
 
 @pytest.mark.django_db

@@ -10,10 +10,10 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils import timezone
 
-from apps.cec.models import CECException, CloseRun
-from apps.iam.models import OrgUnit
-from apps.integration.models import OutboxEvent
-from apps.integration.services import publish_outbox_event
+from apps.modulos.cec.models import CECException, CloseRun
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.integration.models import OutboxEvent
+from apps.modulos.integration.services import publish_outbox_event
 
 User = get_user_model()
 

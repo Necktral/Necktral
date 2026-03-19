@@ -9,8 +9,8 @@ from django.core.management import call_command
 from django.db import IntegrityError
 from django.utils import timezone
 
-from apps.integration.models import InboxEvent, OutboxEvent
-from apps.integration.services import dispatch_outbox_events
+from apps.modulos.integration.models import InboxEvent, OutboxEvent
+from apps.modulos.integration.services import dispatch_outbox_events
 
 
 @pytest.mark.django_db

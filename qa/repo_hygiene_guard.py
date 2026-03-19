@@ -16,6 +16,8 @@ ALLOWED_EVIDENCE_TRACKED = {
 ALLOWED_TRANSITIONAL_TRACKED = {
     # Compat temporal durante la ventana de deprecación (symlink backend alias).
     "login_module",
+    # Directorio de outputs de simulación se conserva vacío en git.
+    "simulacion/reports/.gitkeep",
 }
 
 BLOCKED_PREFIXES = (
@@ -64,6 +66,9 @@ def main() -> int:
 
         if path.startswith("docs/operacion/evidencia/") and path not in ALLOWED_EVIDENCE_TRACKED:
             errors.append(f"Evidencia masiva trackeada fuera de allowlist: {path}")
+
+        if path.startswith("simulacion/reports/") and path not in ALLOWED_TRANSITIONAL_TRACKED:
+            errors.append(f"Output de simulación no permitido en git: {path}")
 
         if any(path.startswith(prefix) for prefix in BLOCKED_PREFIXES):
             errors.append(f"Ruta bloqueada en git: {path}")

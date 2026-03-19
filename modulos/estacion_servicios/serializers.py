@@ -26,7 +26,7 @@ from modulos.estacion_servicios.models import (
     FuelShift,
 )
 
-from apps.org.models import BranchProfile, UserFuelUoMPreference
+from apps.modulos.org.models import BranchProfile, UserFuelUoMPreference
 
 
 VOL_Q = Decimal("0.0001")

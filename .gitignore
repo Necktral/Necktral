@@ -40,6 +40,14 @@ yarn-error.log*
 system_wis/
 # Árbol legacy local no canónico (ver CONTRACT_PACK_v1.1 / repo_higiene)
 backend/
+!backend/
+backend/*
+!backend/src/
+backend/src/*
+!backend/src/apps/
+backend/src/apps/*
+!backend/src/apps/modulos/
+!backend/src/apps/modulos/**
 __pycache__/
 *.pyc
 *.pyo
@@ -70,6 +78,7 @@ docs/operacion/evidencia/**
 
 # Simulación: reportes locales pesados
 simulacion/reports/**
+!simulacion/reports/.gitkeep
 
 # No subir backups
 ERP_CRM_backup_*.tar.gz

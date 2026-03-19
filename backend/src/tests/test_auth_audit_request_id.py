@@ -2,7 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
-from apps.audit.models import AuditEvent
+from apps.modulos.audit.models import AuditEvent
 
 User = get_user_model()
 

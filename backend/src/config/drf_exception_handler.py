@@ -12,7 +12,7 @@ from rest_framework.exceptions import (
 from rest_framework.views import exception_handler as drf_exception_handler
 
 from config.error_envelope import build_error_envelope
-from apps.audit.writer import write_event
+from apps.modulos.audit.writer import write_event
 
 
 def _actor_user(request):

@@ -7,12 +7,12 @@ from rest_framework.test import APIClient
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from apps.accounts.models import User
-from apps.audit.models import AuditEvent
-from apps.iam.models import OrgUnit, UserMembership
-from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
-from apps.sync_engine.signing import build_command_signing_message, canon_json, occurred_at_canonical, sha256_hex
-import apps.sync_engine.handlers_inventory as _handlers_inventory  # noqa: F401
+from apps.modulos.accounts.models import User
+from apps.modulos.audit.models import AuditEvent
+from apps.modulos.iam.models import OrgUnit, UserMembership
+from apps.modulos.rbac.models import Permission, Role, RoleAssignment, RolePermission
+from apps.modulos.sync_engine.signing import build_command_signing_message, canon_json, occurred_at_canonical, sha256_hex
+import apps.modulos.sync_engine.handlers_inventory as _handlers_inventory  # noqa: F401
 
 
 def _b64(b: bytes) -> str:

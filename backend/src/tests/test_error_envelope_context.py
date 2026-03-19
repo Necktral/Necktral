@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from apps.iam.context import RequestContext
+from apps.modulos.iam.context import RequestContext
 from config.error_envelope import build_error_envelope
 
 

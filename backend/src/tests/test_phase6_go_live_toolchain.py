@@ -8,7 +8,7 @@ import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from apps.iam.models import OrgUnit
+from apps.modulos.iam.models import OrgUnit
 from modulos.facturacion.certification import build_phase6_evidence, collect_phase6_env_manifest
 
 

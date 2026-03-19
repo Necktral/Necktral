@@ -7,9 +7,9 @@ import pytest
 from django.core.management import call_command
 from django.utils import timezone
 
-from apps.accounting.models import IntercompanyDisputeReason
-from apps.iam.models import CompanyLink, LinkGrant, OrgUnit
-from apps.rbac.models import Permission
+from apps.modulos.accounting.models import IntercompanyDisputeReason
+from apps.modulos.iam.models import CompanyLink, LinkGrant, OrgUnit
+from apps.modulos.rbac.models import Permission
 
 
 def _mk_scope() -> tuple[OrgUnit, OrgUnit]:

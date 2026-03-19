@@ -7,9 +7,9 @@ from types import SimpleNamespace
 import pytest
 from django.contrib.auth import get_user_model
 
-from apps.iam.models import OrgUnit
-from apps.integration.models import OutboxEvent
-from apps.integration.services import CANONICAL_OUTBOX_ENVELOPE_FIELDS, create_or_get_inbox_event, publish_outbox_event
+from apps.modulos.iam.models import OrgUnit
+from apps.modulos.integration.models import OutboxEvent
+from apps.modulos.integration.services import CANONICAL_OUTBOX_ENVELOPE_FIELDS, create_or_get_inbox_event, publish_outbox_event
 from modulos.facturacion.services import create_draft, issue_doc, void_doc
 from modulos.inventarios.services import create_item, post_receive
 from modulos.inventarios.models import Warehouse

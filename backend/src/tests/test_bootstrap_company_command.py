@@ -3,9 +3,9 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import CommandError
 
-from apps.iam.models import AdminGrant, OrgUnit, UserMembership
-from apps.org.models import BranchProfile, CompanyProfile
-from apps.rbac.models import Role, RoleAssignment
+from apps.modulos.iam.models import AdminGrant, OrgUnit, UserMembership
+from apps.modulos.org.models import BranchProfile, CompanyProfile
+from apps.modulos.rbac.models import Role, RoleAssignment
 
 User = get_user_model()
 

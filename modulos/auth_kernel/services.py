@@ -10,7 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.accounts.models import RefreshTokenSession, TwoFactorChallenge
+from apps.modulos.accounts.models import RefreshTokenSession, TwoFactorChallenge
 
 
 def token_jti(token: RefreshToken) -> str:

@@ -6,7 +6,7 @@ from rest_framework.settings import api_settings
 from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.test import APIClient
 
-from apps.iam.models import OrgUnit, UserMembership
+from apps.modulos.iam.models import OrgUnit, UserMembership
 
 User = get_user_model()
 

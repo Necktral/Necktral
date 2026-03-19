@@ -1,7 +1,7 @@
 import pytest
 from rest_framework.test import APIClient
 
-from apps.audit.models import AuditEvent
+from apps.modulos.audit.models import AuditEvent
 
 
 @pytest.mark.django_db

@@ -6,8 +6,8 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
-from apps.audit.models import AuditEvent
-from apps.iam.models import OrgUnit, UserMembership
+from apps.modulos.audit.models import AuditEvent
+from apps.modulos.iam.models import OrgUnit, UserMembership
 
 User = get_user_model()
 
@@ -44,7 +44,7 @@ def _client_with_membership_only(*, company: OrgUnit, branch: OrgUnit) -> APICli
 
 
 def _client_with_perms(*, company: OrgUnit, branch: OrgUnit, perm_codes: list[str]) -> APIClient:
-    from apps.rbac.models import Permission, Role, RoleAssignment, RolePermission
+    from apps.modulos.rbac.models import Permission, Role, RoleAssignment, RolePermission
 
     username = f"u_{uuid.uuid4().hex[:10]}"
     user = User.objects.create_user(username=username, email="bill2@test.com", password="pass12345")

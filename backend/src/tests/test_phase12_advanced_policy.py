@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from apps.accounting import certification_phase12 as phase12
+from apps.modulos.accounting import certification_phase12 as phase12
 
 
 def _dispatch_result():
