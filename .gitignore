@@ -45,6 +45,8 @@ backend/*
 !backend/src/
 backend/src/*
 !backend/src/apps/
+!backend/src/tests/
+!backend/src/tests/**
 backend/src/apps/*
 !backend/src/apps/modulos/
 !backend/src/apps/modulos/**

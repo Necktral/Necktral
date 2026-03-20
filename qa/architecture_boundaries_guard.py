@@ -116,11 +116,33 @@ def main() -> int:
     _require_contains(deprecation_middleware, '"/api/auth/"', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, '"/api/iam/"', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, '"/api/org/"', source="legacy_api_deprecation.py", errors=errors)
+    _require_contains(deprecation_middleware, '"/api/accounting/"', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, '"/api/billing/"', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, '"/api/inventory/"', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, '"/api/procurement/"', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, '"/api/fuel/"', source="legacy_api_deprecation.py", errors=errors)
     _require_absent(deprecation_middleware, '"/api/reports/"', source="legacy_api_deprecation.py", errors=errors)
+
+    accounting_urls = _read_text("backend/src/apps/modulos/accounting/urls.py")
+    _require_contains(accounting_urls, 'path("reports/trial-balance/"', source="apps/modulos/accounting/urls.py", errors=errors)
+    _require_contains(
+        accounting_urls,
+        'path("dashboard/executive-summary/"',
+        source="apps/modulos/accounting/urls.py",
+        errors=errors,
+    )
+    _require_contains(
+        accounting_urls,
+        "from .api.views_reports import",
+        source="apps/modulos/accounting/urls.py",
+        errors=errors,
+    )
+    _require_contains(
+        accounting_urls,
+        "from .api.views_dashboard import",
+        source="apps/modulos/accounting/urls.py",
+        errors=errors,
+    )
 
     accounts_views = _read_text("backend/src/apps/modulos/accounts/views.py")
     _require_contains(

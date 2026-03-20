@@ -137,6 +137,16 @@ docker compose exec -T backend python manage.py audit_verify_chain
 - `/api/backend/procurement/`
 - `/api/backend/fuel/`
 
+### Accounting (rutas canónicas + compat temporal)
+
+- Canónico:
+  - `/api/backend/accounting/reports/*`
+  - `/api/backend/accounting/dashboard/*`
+- Legacy temporal:
+  - `/api/accounting/reports/*`
+  - `/api/accounting/dashboard/*`
+- Ventana legacy activa con headers `Deprecation/Sunset/Link` hasta **2026-05-18**.
+
 ### Documentación y esquema
 
 - `GET /api/schema/` — Esquema OpenAPI

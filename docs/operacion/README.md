@@ -34,6 +34,7 @@ Esta sección contiene documentación de **operación del negocio** (playbooks, 
 - [Plan maestro F1-F12 + cierre operativo](PLAN_MAESTRO_F1_F12_CIERRE_OPERATIVO_v1.0.md)
 - [Checklist PR release F1-F12](PR_RELEASE_F1_F12_CHECKLIST.md)
 - [Publicación release F6-F12 (2026-03-18)](PUBLICACION_RELEASE_F6_F12_20260318.md)
+- [Runbook transición contable a `/api/backend/accounting/*` (2026-03-19)](RUNBOOK_TRANSICION_ACCOUNTING_BACKEND_API_20260319.md)
 
 ## Reglas
 
@@ -72,3 +73,4 @@ Esta sección contiene documentación de **operación del negocio** (playbooks, 
 - 2026-03-10: Se agrega plan maestro de cierre F1-F12 (`PLAN_MAESTRO_F1_F12_CIERRE_OPERATIVO_v1.0.md`) y checklist de PR release.
 - 2026-03-11: Se agrega runbook operativo de Fase 4/5 Billing-Inventory (`GO_LIVE_BILLING_INVENTORY_F4_F5_v1.0.md`) con gate k6, rollout por etapas y rollback determinista.
 - 2026-03-18: Publicación integral de rama release F6-F12 con backend canónico `backend/`, perfiles de simulación dual y nota de release operativa.
+- 2026-03-19: Se agrega runbook de transición contable a rutas canónicas `/api/backend/accounting/*` con sunset explícito de alias `/api/accounting/*` para 2026-05-18.

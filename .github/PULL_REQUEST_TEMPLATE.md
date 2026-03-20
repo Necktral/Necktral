@@ -3,11 +3,16 @@
 - Tipo de cambio:
 - Fases impactadas:
 - Riesgo principal:
+- Labels obligatorias:
+  - `type/*`:
+  - `risk/*`:
+  - `area/*`:
 
 ## Checklist Release F1-F12
 
 - [ ] CI backend en verde.
 - [ ] CI seguridad en verde.
+- [ ] Labels mínimas (`type/*`, `risk/*`, `area/*`) aplicadas.
 - [ ] `manage.py check` PASS.
 - [ ] `pytest -q backend/src` PASS.
 - [ ] `npm run lint/typecheck/test/build` PASS.

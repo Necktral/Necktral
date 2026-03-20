@@ -1,0 +1,17 @@
+# Owners base
+* @necktral
+
+# Backend kernels internos
+/backend/src/apps/modulos/accounting/ @necktral
+/backend/src/apps/modulos/reports/ @necktral
+/backend/src/apps/modulos/iam/ @necktral
+/backend/src/apps/modulos/org/ @necktral
+
+# Verticales
+/kernels/ @necktral
+
+# QA y gobernanza
+/qa/ @necktral
+/.github/workflows/ @necktral
+/docs/engineering/ @necktral
+

@@ -41,7 +41,7 @@ from .services import (
 
 User = get_user_model()
 
-DEPRECATION_SUNSET_AT = "Sun, 17 May 2026 00:00:00 GMT"
+DEPRECATION_SUNSET_AT = "Mon, 18 May 2026 00:00:00 GMT"
 
 
 def _legacy_bootstrap_headers(*, successor: str) -> dict[str, str]:

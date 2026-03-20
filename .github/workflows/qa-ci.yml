@@ -2,7 +2,7 @@ name: QA CI (Gates 1–3)
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: ["master", "release/**"]
   pull_request:
 
 concurrency:

@@ -26,6 +26,7 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - [ADR_KERNEL_OWNERSHIP_BOUNDARIES_v1.0.md](ADR_KERNEL_OWNERSHIP_BOUNDARIES_v1.0.md) — Ownership y prohibiciones por kernel/módulo core.
 - [ADR_AUTH_KERNEL_EXTRACTION_v2.0.md](ADR_AUTH_KERNEL_EXTRACTION_v2.0.md) — Separación de auth kernel y split de bootstrap IAM/ORG con wrappers legacy.
 - [ADR_REPORTES_BEFORE_DASHBOARD_v1.0.md](ADR_REPORTES_BEFORE_DASHBOARD_v1.0.md) — Regla de secuenciación reportes antes que dashboard.
+- [engineering/branching_strategy.md](engineering/branching_strategy.md) — Estrategia de rama troncal `master`, releases y protección GitHub.
 - [ADR_AUDIT_TAXONOMY_MIN_v1.0.md](ADR_AUDIT_TAXONOMY_MIN_v1.0.md) — Taxonomía mínima de auditoría contractual por kernel.
 - [ADR_ACCOUNTING_RULESET_V1_FREEZE.md](ADR_ACCOUNTING_RULESET_V1_FREEZE.md) — Freeze contractual de `PostingRuleSet v1`.
 - [ADR_ACCOUNTING_EVENT_MATRIX_V1.md](ADR_ACCOUNTING_EVENT_MATRIX_V1.md) — Matriz oficial de eventos contables soportados.
@@ -59,6 +60,7 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - [operacion/CHECKLIST_KERNEL_HARDENING_PR_v1.0.md](operacion/CHECKLIST_KERNEL_HARDENING_PR_v1.0.md) — Checklist operativo para PRs de hardening por kernel.
 - [operacion/KERNEL_HARDENING_BASELINE_v1.1.md](operacion/KERNEL_HARDENING_BASELINE_v1.1.md) — Baseline de ejecución y mapeo matriz->código->tests.
 - [operacion/KERNEL_HARDENING_S1_ENDPOINT_MATRIX_v1.0.md](operacion/KERNEL_HARDENING_S1_ENDPOINT_MATRIX_v1.0.md) — Matriz de endpoints críticos para cobertura de scope/RBAC.
+- [operacion/RUNBOOK_TRANSICION_ACCOUNTING_BACKEND_API_20260319.md](operacion/RUNBOOK_TRANSICION_ACCOUNTING_BACKEND_API_20260319.md) — Migración operativa de consumidores contables a `/api/backend/accounting/*`.
 
 ## CI / QA
 

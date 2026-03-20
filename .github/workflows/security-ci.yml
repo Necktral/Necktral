@@ -2,7 +2,7 @@ name: Security CI (Blocking)
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: ["master", "release/**"]
   pull_request:
 
 concurrency:

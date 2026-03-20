@@ -2,7 +2,7 @@ name: CD Deploy (VPS)
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: ["master", "release/**"]
   workflow_dispatch:
 
 concurrency:

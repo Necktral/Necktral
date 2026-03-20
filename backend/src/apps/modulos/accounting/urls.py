@@ -2,8 +2,22 @@ from __future__ import annotations
 
 from django.urls import path
 
-from .views import (
+from .api.views_dashboard import (
+    BranchPerformanceDashboardView,
+    CashPositionDashboardView,
+    ExecutiveSummaryDashboardView,
+    MonthlyTrendsDashboardView,
+    ReconciliationHealthDashboardView,
+    RevenueVsExpenseDashboardView,
+)
+from .api.views_reports import (
     BalanceSheetReportView,
+    GeneralLedgerReportView,
+    OperationalReconciliationReportView,
+    PnLReportView,
+    TrialBalanceReportView,
+)
+from .views import (
     ChartOfAccountView,
     ConsolidationBalanceSheetReportView,
     ConsolidationPnLReportView,
@@ -14,7 +28,6 @@ from .views import (
     FiscalPeriodListView,
     FxRateUpsertView,
     FxRevaluationRunView,
-    GeneralLedgerReportView,
     HealthView,
     IntercompanyTransactionCloseView,
     IntercompanyTransactionConfirmView,
@@ -31,9 +44,6 @@ from .views import (
     JournalEntryListView,
     JournalEntryReverseBatchView,
     JournalEntryReverseView,
-    OperationalReconciliationReportView,
-    PnLReportView,
-    TrialBalanceReportView,
 )
 
 
@@ -53,6 +63,12 @@ urlpatterns = [
     path("reports/pnl/", PnLReportView.as_view()),
     path("reports/balance-sheet/", BalanceSheetReportView.as_view()),
     path("reports/operational-reconciliation/", OperationalReconciliationReportView.as_view()),
+    path("dashboard/executive-summary/", ExecutiveSummaryDashboardView.as_view()),
+    path("dashboard/revenue-vs-expense/", RevenueVsExpenseDashboardView.as_view()),
+    path("dashboard/cash-position/", CashPositionDashboardView.as_view()),
+    path("dashboard/reconciliation-health/", ReconciliationHealthDashboardView.as_view()),
+    path("dashboard/branch-performance/", BranchPerformanceDashboardView.as_view()),
+    path("dashboard/monthly-trends/", MonthlyTrendsDashboardView.as_view()),
     path("fx-rates/", FxRateUpsertView.as_view()),
     path("revaluation/run/", FxRevaluationRunView.as_view()),
     path("intercompany/transactions/", IntercompanyTransactionListCreateView.as_view()),
