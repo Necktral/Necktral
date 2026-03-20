@@ -2,7 +2,7 @@ name: AI Review (PR)
 
 on:
   pull_request:
-    branches: ["master"]
+    branches: ["master", "release/**"]
 
 concurrency:
   group: ai-review-${{ github.event.pull_request.number || github.ref }}

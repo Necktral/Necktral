@@ -3,7 +3,7 @@ name: Auth Load Simulation
 on:
   workflow_dispatch: {}
   push:
-    branches: ["master", "release/**", "feat/*"]
+    branches: ["master", "release/**"]
   schedule:
     - cron: "0 3 * * 0"
 
