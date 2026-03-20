@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from django.db.models import Q
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -28,14 +27,9 @@ from .models import (
 )
 from .phase7 import (
     Phase7ValidationError,
-    balance_sheet_report,
-    general_ledger_queryset,
     get_or_create_accounting_config,
     is_phase7_enabled_for_company,
-    pnl_report,
-    resolve_period_range,
     run_fx_revaluation,
-    trial_balance_queryset,
     upsert_chart_of_accounts,
 )
 from .phase7b import (
@@ -57,7 +51,6 @@ from .serializers import (
     FxRateUpsertIn,
     FxRevaluationRunIn,
     FiscalPeriodCloseIn,
-    GeneralLedgerRangeIn,
     IntercompanyCloseIn,
     IntercompanyConfirmIn,
     IntercompanyCreateIn,
@@ -69,15 +62,12 @@ from .serializers import (
     JournalDraftPostIn,
     JournalEntryReverseBatchIn,
     JournalEntryReverseIn,
-    ReportRangeIn,
-    OperationalReconciliationIn,
 )
 from .services import (
     AccountingConflictError,
     approve_journal_drafts,
     close_fiscal_period,
     post_journal_drafts,
-    reconcile_operational_vs_accounting,
     reverse_journal_entries_batch,
     reverse_journal_entry,
 )
@@ -91,17 +81,6 @@ class HealthView(APIView):
 
     def get(self, request):
         return Response({"ok": True, "module": "accounting"}, status=status.HTTP_200_OK)
-
-
-def _resolve_range_payload(validated: dict):
-    """Resuelve rango por período (`year/month`) o por fechas explícitas, con prioridad a período."""
-    period_range = resolve_period_range(
-        year=validated.get("year"),
-        month=validated.get("month"),
-    )
-    if period_range is not None:
-        return period_range[0], period_range[1]
-    return validated.get("date_from"), validated.get("date_to")
 
 
 def _serialize_intercompany(tx: IntercompanyTransaction) -> dict:
@@ -273,189 +252,6 @@ class ChartOfAccountView(APIView):
             "deactivated": int(result.deactivated),
             "total_active": int(result.total_active),
             "phase7_enabled": bool(get_or_create_accounting_config(company=company).phase7_enabled),
-        }
-        return Response(payload, status=status.HTTP_200_OK)
-
-
-class TrialBalanceReportView(APIView):
-    """Reporte de balance de comprobación con filtros por periodo y paginación estándar."""
-
-    permission_classes = [rbac_permission("accounting.report.read")]
-
-    def get(self, request):
-        s = ReportRangeIn(data=request.query_params)
-        s.is_valid(raise_exception=True)
-        v = s.validated_data
-        try:
-            date_from, date_to = _resolve_range_payload(v)
-        except Phase7ValidationError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-
-        qs = trial_balance_queryset(
-            company=request.company,
-            branch=getattr(request, "branch", None),
-            date_from=date_from,
-            date_to=date_to,
-        )
-        limit, offset = get_limit_offset(request)
-        total, rows = paginate_queryset(qs, limit=limit, offset=offset)
-        results = []
-        for row in rows:
-            debit = row["debit_total"]
-            credit = row["credit_total"]
-            results.append(
-                {
-                    "account_code": str(row["account__code"]),
-                    "account_name": str(row["account__name"]),
-                    "account_type": str(row["account__account_type"]),
-                    "debit_total": str(debit),
-                    "credit_total": str(credit),
-                    "net_balance": str(debit - credit),
-                }
-            )
-        return Response(
-            {
-                "count": int(total),
-                "limit": int(limit),
-                "offset": int(offset),
-                "filters": {
-                    "date_from": str(date_from) if date_from else "",
-                    "date_to": str(date_to) if date_to else "",
-                },
-                "results": results,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class GeneralLedgerReportView(APIView):
-    """Reporte de mayor general por cuenta contable en orden cronológico estable."""
-
-    permission_classes = [rbac_permission("accounting.report.read")]
-
-    def get(self, request):
-        s = GeneralLedgerRangeIn(data=request.query_params)
-        s.is_valid(raise_exception=True)
-        v = s.validated_data
-        try:
-            date_from, date_to = _resolve_range_payload(v)
-            qs = general_ledger_queryset(
-                company=request.company,
-                branch=getattr(request, "branch", None),
-                account_code=str(v["account_code"]),
-                date_from=date_from,
-                date_to=date_to,
-            )
-        except Phase7ValidationError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-
-        limit, offset = get_limit_offset(request)
-        total, rows = paginate_queryset(qs, limit=limit, offset=offset)
-        results = [
-            {
-                "journal_entry_id": int(row.journal_entry_id),
-                "entry_date": row.journal_entry.entry_date,
-                "description": row.journal_entry.description,
-                "line_no": int(row.line_no),
-                "account_code": row.account_code_snapshot,
-                "currency": row.currency,
-                "fx_rate": str(row.fx_rate),
-                "amount_tx": str(row.amount_tx),
-                "debit_base": str(row.debit_base),
-                "credit_base": str(row.credit_base),
-                "posted_at": row.journal_entry.posted_at,
-            }
-            for row in rows
-        ]
-        return Response(
-            {
-                "count": int(total),
-                "limit": int(limit),
-                "offset": int(offset),
-                "filters": {
-                    "account_code": str(v["account_code"]).strip().upper(),
-                    "date_from": str(date_from) if date_from else "",
-                    "date_to": str(date_to) if date_to else "",
-                },
-                "results": results,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class PnLReportView(APIView):
-    permission_classes = [rbac_permission("accounting.report.read")]
-
-    def get(self, request):
-        s = ReportRangeIn(data=request.query_params)
-        s.is_valid(raise_exception=True)
-        v = s.validated_data
-        try:
-            date_from, date_to = _resolve_range_payload(v)
-            report = pnl_report(
-                company=request.company,
-                branch=getattr(request, "branch", None),
-                date_from=date_from,
-                date_to=date_to,
-            )
-        except Phase7ValidationError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(
-            {
-                "filters": {
-                    "date_from": str(date_from) if date_from else "",
-                    "date_to": str(date_to) if date_to else "",
-                },
-                **report,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class BalanceSheetReportView(APIView):
-    permission_classes = [rbac_permission("accounting.report.read")]
-
-    def get(self, request):
-        s = ReportRangeIn(data=request.query_params)
-        s.is_valid(raise_exception=True)
-        v = s.validated_data
-        as_of = v.get("as_of")
-        if as_of is None:
-            period = resolve_period_range(year=v.get("year"), month=v.get("month"))
-            if period is not None:
-                as_of = period[1]
-            else:
-                as_of = v.get("date_to") or timezone.localdate()
-        try:
-            report = balance_sheet_report(
-                company=request.company,
-                branch=getattr(request, "branch", None),
-                as_of=as_of,
-            )
-        except Phase7ValidationError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(report, status=status.HTTP_200_OK)
-
-
-class OperationalReconciliationReportView(APIView):
-    permission_classes = [rbac_permission("accounting.report.read")]
-
-    def get(self, request):
-        s = OperationalReconciliationIn(data=request.query_params)
-        s.is_valid(raise_exception=True)
-        v = s.validated_data
-        payload = reconcile_operational_vs_accounting(
-            company=request.company,
-            branch=getattr(request, "branch", None),
-            date_from=v.get("date_from"),
-            date_to=v.get("date_to"),
-        )
-        payload["filters"] = {
-            "date_from": str(v.get("date_from") or ""),
-            "date_to": str(v.get("date_to") or ""),
-            "branch_id": getattr(getattr(request, "branch", None), "id", None),
         }
         return Response(payload, status=status.HTTP_200_OK)
 

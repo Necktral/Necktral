@@ -24,6 +24,7 @@ def test_seed_rbac_v01_command_creates_role_permissions_and_audit():
     assert Permission.objects.filter(code="accounting.fx_rate.read").exists()
     assert Permission.objects.filter(code="accounting.fx_rate.update").exists()
     assert Permission.objects.filter(code="accounting.report.read").exists()
+    assert Permission.objects.filter(code="accounting.dashboard.read").exists()
     assert Permission.objects.filter(code="accounting.revaluation.run").exists()
     assert Permission.objects.filter(code="accounting.intercompany.read").exists()
     assert Permission.objects.filter(code="accounting.intercompany.write").exists()
@@ -36,5 +37,10 @@ def test_seed_rbac_v01_command_creates_role_permissions_and_audit():
     assert Permission.objects.filter(code="billing.doc.contingency").exists()
     assert Permission.objects.filter(code="billing.doc.contingency.resolve").exists()
     assert Permission.objects.filter(code="fuel.uom_preferences.manage").exists()
+
+    dashboard_perm = Permission.objects.get(code="accounting.dashboard.read")
+    assert RolePermission.objects.filter(role__name="company_admin", permission=dashboard_perm).exists()
+    assert RolePermission.objects.filter(role__name="billing_manager", permission=dashboard_perm).exists()
+    assert RolePermission.objects.filter(role__name="auditor", permission=dashboard_perm).exists()
 
     assert AuditEvent.objects.filter(event_type="RBAC_SEEDED_V01").exists()

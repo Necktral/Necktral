@@ -46,6 +46,10 @@ def main() -> int:
 
     reports_view = _read("backend/src/apps/modulos/accounting/api/views_reports.py")
     dashboard_view = _read("backend/src/apps/modulos/accounting/api/views_dashboard.py")
+    accounting_views = _read("backend/src/apps/modulos/accounting/views.py")
+    dashboard_services = _read("backend/src/apps/modulos/accounting/dashboard/services.py")
+    dashboard_selectors = _read("backend/src/apps/modulos/accounting/dashboard/selectors.py")
+    dashboard_presenters = _read("backend/src/apps/modulos/accounting/dashboard/presenters.py")
     forbidden_http_imports = (
         "from ..models import",
         "from apps.modulos.accounting.models import",
@@ -56,6 +60,25 @@ def main() -> int:
     for token in forbidden_http_imports:
         if token in reports_view or token in dashboard_view:
             errors.append(f"Capa HTTP no debe importar dominio directo: {token}")
+
+    if "from ..dashboard.services import" not in dashboard_view:
+        errors.append("views_dashboard.py debe consumir servicios desde accounting.dashboard.services")
+    if "from ..dashboard.cache_keys import build_dashboard_cache_key" not in dashboard_view:
+        errors.append("views_dashboard.py debe usar cache_keys canónico del paquete dashboard")
+    if "from ..reports.services import (" in dashboard_view:
+        errors.append("views_dashboard.py no debe consumir dashboard desde reports.services")
+
+    if "class TrialBalanceReportView(APIView):" in accounting_views:
+        errors.append("accounting/views.py no debe exponer TrialBalanceReportView (usa api/views_reports.py)")
+    if "class ExecutiveSummaryDashboardView(APIView):" in accounting_views:
+        errors.append("accounting/views.py no debe exponer dashboard HTTP (usa api/views_dashboard.py)")
+
+    if "def build_executive_summary(" not in dashboard_services:
+        errors.append("dashboard/services.py debe exponer build_executive_summary")
+    if "def resolve_period_window(" not in dashboard_selectors:
+        errors.append("dashboard/selectors.py debe resolver ventanas de período")
+    if "def present_executive_summary(" not in dashboard_presenters:
+        errors.append("dashboard/presenters.py debe exponer present_executive_summary")
 
     if errors:
         print("accounting_http_contract_guard: FAIL")
@@ -69,4 +92,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

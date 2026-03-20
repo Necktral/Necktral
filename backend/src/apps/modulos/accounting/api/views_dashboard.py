@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import json
 from typing import Any, Callable
 
 from django.core.cache import cache
@@ -12,15 +10,16 @@ from rest_framework.views import APIView
 from apps.modulos.common.permissions import rbac_permission
 from config.error_envelope import build_error_envelope
 
-from ..reports import contracts
-from ..reports.services import (
-    dashboard_branch_performance,
-    dashboard_cash_position,
-    dashboard_executive_summary,
-    dashboard_monthly_trends,
-    dashboard_reconciliation_health,
-    dashboard_revenue_vs_expense,
+from ..dashboard.cache_keys import build_dashboard_cache_key
+from ..dashboard.services import (
+    build_branch_performance,
+    build_cash_position,
+    build_executive_summary,
+    build_monthly_trends,
+    build_reconciliation_health,
+    build_revenue_vs_expense,
 )
+from ..reports import contracts
 from .serializers_dashboard import DashboardRangeIn
 
 DASHBOARD_CACHE_TTL_SECONDS = 90
@@ -50,14 +49,12 @@ def _error_response(request, *, message: str, http_status: int, error_code: str 
 def _cache_key(*, request, metric: str, validated: dict[str, Any]) -> str:
     company = getattr(request, "company", None)
     branch = getattr(request, "branch", None)
-    payload = {
-        "metric": metric,
-        "company_id": int(company.id) if company is not None else None,
-        "branch_id": int(branch.id) if branch is not None else None,
-        "filters": {k: str(v) for k, v in sorted(validated.items()) if k != "refresh"},
-    }
-    digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()[:24]
-    return f"acc.dashboard:{metric}:{digest}"
+    return build_dashboard_cache_key(
+        metric=metric,
+        company_id=int(company.id) if company is not None else None,
+        branch_id=int(branch.id) if branch is not None else None,
+        validated=validated,
+    )
 
 
 def _build_payload(
@@ -121,7 +118,7 @@ class ExecutiveSummaryDashboardView(APIView):
                 request=request,
                 report_code="DASHBOARD_EXECUTIVE_SUMMARY",
                 validated=validated,
-                builder=lambda: dashboard_executive_summary(
+                builder=lambda: build_executive_summary(
                     company=request.company,
                     branch=getattr(request, "branch", None),
                     validated=validated,
@@ -145,7 +142,7 @@ class RevenueVsExpenseDashboardView(APIView):
                 request=request,
                 report_code="DASHBOARD_REVENUE_VS_EXPENSE",
                 validated=validated,
-                builder=lambda: dashboard_revenue_vs_expense(
+                builder=lambda: build_revenue_vs_expense(
                     company=request.company,
                     branch=getattr(request, "branch", None),
                     validated=validated,
@@ -169,7 +166,7 @@ class CashPositionDashboardView(APIView):
                 request=request,
                 report_code="DASHBOARD_CASH_POSITION",
                 validated=validated,
-                builder=lambda: dashboard_cash_position(
+                builder=lambda: build_cash_position(
                     company=request.company,
                     branch=getattr(request, "branch", None),
                     validated=validated,
@@ -193,7 +190,7 @@ class ReconciliationHealthDashboardView(APIView):
                 request=request,
                 report_code="DASHBOARD_RECONCILIATION_HEALTH",
                 validated=validated,
-                builder=lambda: dashboard_reconciliation_health(
+                builder=lambda: build_reconciliation_health(
                     company=request.company,
                     branch=getattr(request, "branch", None),
                     validated=validated,
@@ -217,7 +214,7 @@ class BranchPerformanceDashboardView(APIView):
                 request=request,
                 report_code="DASHBOARD_BRANCH_PERFORMANCE",
                 validated=validated,
-                builder=lambda: dashboard_branch_performance(
+                builder=lambda: build_branch_performance(
                     company=request.company,
                     branch=getattr(request, "branch", None),
                     validated=validated,
@@ -241,7 +238,7 @@ class MonthlyTrendsDashboardView(APIView):
                 request=request,
                 report_code="DASHBOARD_MONTHLY_TRENDS",
                 validated=validated,
-                builder=lambda: dashboard_monthly_trends(
+                builder=lambda: build_monthly_trends(
                     company=request.company,
                     branch=getattr(request, "branch", None),
                     validated=validated,
