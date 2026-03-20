@@ -27,6 +27,12 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - [ADR_AUTH_KERNEL_EXTRACTION_v2.0.md](ADR_AUTH_KERNEL_EXTRACTION_v2.0.md) — Separación de auth kernel y split de bootstrap IAM/ORG con wrappers legacy.
 - [ADR_REPORTES_BEFORE_DASHBOARD_v1.0.md](ADR_REPORTES_BEFORE_DASHBOARD_v1.0.md) — Regla de secuenciación reportes antes que dashboard.
 - [engineering/branching_strategy.md](engineering/branching_strategy.md) — Estrategia de rama troncal `master`, releases y protección GitHub.
+- [engineering/backend_module_reorg.md](engineering/backend_module_reorg.md) — Estado canónico de layout backend (`apps.modulos/*` + `kernels/*`).
+- [engineering/github_branch_protection_checklist.md](engineering/github_branch_protection_checklist.md) — Checklist operativa para branch protection en GitHub UI.
+- [arquitectura/reporting_dashboard_architecture.md](arquitectura/reporting_dashboard_architecture.md) — Separación técnica entre reporting formal y dashboard ejecutivo.
+- [adr/ADR-00X-reporting-vs-dashboard.md](adr/ADR-00X-reporting-vs-dashboard.md) — ADR de desacople reporting vs dashboard.
+- [adr/ADR-00Y-branching-model.md](adr/ADR-00Y-branching-model.md) — ADR de modelo de ramas y gobernanza.
+- [adr/ADR-00Z-backend-module-layout.md](adr/ADR-00Z-backend-module-layout.md) — ADR del layout canónico de backend.
 - [ADR_AUDIT_TAXONOMY_MIN_v1.0.md](ADR_AUDIT_TAXONOMY_MIN_v1.0.md) — Taxonomía mínima de auditoría contractual por kernel.
 - [ADR_ACCOUNTING_RULESET_V1_FREEZE.md](ADR_ACCOUNTING_RULESET_V1_FREEZE.md) — Freeze contractual de `PostingRuleSet v1`.
 - [ADR_ACCOUNTING_EVENT_MATRIX_V1.md](ADR_ACCOUNTING_EVENT_MATRIX_V1.md) — Matriz oficial de eventos contables soportados.
@@ -74,6 +80,6 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - Todo en español.
 - Mantener los documentos cortos, accionables y versionados (título + versión + fecha).
 - Cuando un documento defina reglas/invariantes, enlazar a los módulos relevantes del código (p.ej. auditoría contractual, RBAC, sync engine).
-- Para backend, la ruta canónica de código es `backend/`; `backend/` se considera legacy local no canónico.
+- Para backend, la ruta canónica de código es `backend/`; cualquier alias histórico (`login_module`) se considera legacy local no canónico.
 - La evidencia operativa masiva vive fuera del versionado normal de GitHub y se consume por rutas/convención en `docs/operacion/evidencia/**`.
 - En Git se mantienen solo runbooks, índices y referencias de evidencia (no dumps masivos).

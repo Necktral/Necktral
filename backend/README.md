@@ -5,7 +5,8 @@ Backend del ERP/CRM basado en Django + DRF, con RBAC, auditoría contractual y m
 ## Estructura relevante
 
 - Código: `backend/src/`
-- Apps: `backend/src/apps/` (audit, auth, hr, org, rbac, sync, etc.)
+- Kernels internos Django: `backend/src/apps/modulos/*`
+- Verticales de dominio: `kernels/*`
 - Settings: `backend/src/config/settings/` (dev/test/prod)
 - Tests: `backend/src/tests/` y `tests/` (en la raíz)
 
@@ -146,6 +147,9 @@ docker compose exec -T backend python manage.py audit_verify_chain
   - `/api/accounting/reports/*`
   - `/api/accounting/dashboard/*`
 - Ventana legacy activa con headers `Deprecation/Sunset/Link` hasta **2026-05-18**.
+- ACL dashboard financiero: `accounting.dashboard.read`.
+- Ruta frontend del tablero contable: `/contabilidad/tablero`.
+- Módulo frontend: `frontend/src/modules/accounting/dashboard/*`.
 
 ### Documentación y esquema
 
