@@ -19,7 +19,7 @@ from apps.modulos.cec.services import advance_close_run_state
 from apps.modulos.iam.models import OrgUnit
 from apps.modulos.integration.models import InboxEvent, OutboxEvent
 from apps.modulos.integration.services import create_or_get_inbox_event, publish_outbox_event
-from modulos.facturacion.models import BillingDocument
+from kernels.facturacion.models import BillingDocument
 
 from .models import (
     DraftValidationResult,
@@ -2743,7 +2743,7 @@ def build_operational_monitor_snapshot(
         "failed_count": 0,
     }
     try:
-        from modulos.estacion_servicios.models import FuelSale, FuelSaleStatus
+        from kernels.estacion_servicios.models import FuelSale, FuelSaleStatus
 
         fuel_qs = FuelSale.objects.filter(
             company=company,

@@ -180,7 +180,7 @@ class Command(BaseCommand):
         rollback_cycle = {}
         if action == "rollback":
             try:
-                from modulos.estacion_servicios.services import run_fuel_compensation_cycle
+                from kernels.estacion_servicios.services import run_fuel_compensation_cycle
             except Exception as exc:  # noqa: BLE001
                 raise CommandError(f"No fue posible importar run_fuel_compensation_cycle: {exc}") from exc
 

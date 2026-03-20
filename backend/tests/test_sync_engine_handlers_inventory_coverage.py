@@ -7,7 +7,7 @@ from django.utils import timezone
 from apps.modulos.iam.models import OrgUnit
 from apps.modulos.sync_engine.errors import SyncRejectError
 import apps.modulos.sync_engine.handlers_inventory as handlers
-from modulos.inventarios.models import InventoryItem, MovementType, StockMovement, Warehouse
+from kernels.inventarios.models import InventoryItem, MovementType, StockMovement, Warehouse
 
 
 def _mk_scope():

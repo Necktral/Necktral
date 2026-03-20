@@ -10,8 +10,8 @@ from django.db import close_old_connections, connections
 from apps.modulos.iam.models import OrgUnit
 from apps.modulos.integration.models import InboxEvent, OutboxEvent
 from apps.modulos.integration.services import create_or_get_inbox_event
-from modulos.estacion_servicios.models import FuelShift, FuelShiftStatus
-from modulos.estacion_servicios.services import open_shift
+from kernels.estacion_servicios.models import FuelShift, FuelShiftStatus
+from kernels.estacion_servicios.services import open_shift
 
 
 @pytest.mark.django_db(transaction=True)

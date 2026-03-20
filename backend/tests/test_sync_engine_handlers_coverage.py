@@ -12,8 +12,8 @@ from apps.modulos.iam.models import OrgUnit
 from apps.modulos.sync_engine.errors import SyncRejectError
 from apps.modulos.sync_engine.models import Device, DeviceEnrollmentChallenge
 from apps.modulos.sync_engine import handlers_inventory as inv_handlers
-from modulos.inventarios import services as inv_services
-from modulos.inventarios.models import InventoryItem, Warehouse
+from kernels.inventarios import services as inv_services
+from kernels.inventarios.models import InventoryItem, Warehouse
 
 
 def _mk_scope():

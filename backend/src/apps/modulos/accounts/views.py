@@ -1,10 +1,10 @@
 """Legacy compatibility re-exports.
 
-La implementación canónica de auth vive en `modulos.auth_kernel`.
+La implementación canónica de auth vive en `kernels.auth_kernel`.
 `apps.accounts` mantiene solo identidad persistente y compat técnica.
 """
 
-from modulos.auth_kernel.views import (
+from kernels.auth_kernel.views import (
     LegacyBootstrapInitView as BootstrapInitView,
     LegacyBootstrapOrgView as BootstrapOrgView,
     LegacyBootstrapStatusView as BootstrapStatusView,

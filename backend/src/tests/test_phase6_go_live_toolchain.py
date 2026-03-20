@@ -9,7 +9,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 
 from apps.modulos.iam.models import OrgUnit
-from modulos.facturacion.certification import build_phase6_evidence, collect_phase6_env_manifest
+from kernels.facturacion.certification import build_phase6_evidence, collect_phase6_env_manifest
 
 
 def _mk_scope() -> tuple[OrgUnit, OrgUnit]:

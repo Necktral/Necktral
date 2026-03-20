@@ -271,8 +271,8 @@ import json
 import os
 from datetime import datetime, timezone
 
-from modulos.facturacion.models import BillingDocument, DocStatus, FiscalMode, FiscalPrintJob, FiscalStatus
-from modulos.facturacion.services import retry_fiscal_print_job
+from kernels.facturacion.models import BillingDocument, DocStatus, FiscalMode, FiscalPrintJob, FiscalStatus
+from kernels.facturacion.services import retry_fiscal_print_job
 
 company_id = int(os.environ["COMPANY_ID"])
 branch_id = int(os.environ["BRANCH_ID"])

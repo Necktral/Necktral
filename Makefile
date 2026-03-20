@@ -110,7 +110,7 @@ qa-static-scan:
 	docker compose exec -T backend bash -lc "chmod +x /app/qa/static_scan_backend.sh && /app/qa/static_scan_backend.sh /app"
 
 qa-backend-bandit:
-	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && bandit -q -r $(CONTAINER_BACKEND_DIR)/src/apps /app/modulos -x $(CONTAINER_BACKEND_DIR)/src/apps/modulos/*/migrations,/app/modulos/*/migrations -ll -ii -f txt | tee /app/$(QA_REPORTS_DIR)/bandit.txt"
+	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && bandit -q -r $(CONTAINER_BACKEND_DIR)/src/apps /app/kernels -x $(CONTAINER_BACKEND_DIR)/src/apps/modulos/*/migrations,/app/kernels/*/migrations -ll -ii -f txt | tee /app/$(QA_REPORTS_DIR)/bandit.txt"
 
 qa-backend-ruff:
 	docker compose exec -T backend bash -lc "set -o pipefail && mkdir -p /app/$(QA_REPORTS_DIR) && ruff check $(CONTAINER_BACKEND_DIR)/src | tee /app/$(QA_REPORTS_DIR)/ruff.txt"

@@ -19,8 +19,8 @@ echo "[3/3] Verificando suites operacionales clave..."
     src/tests/test_fuel_compensation_phase2.py \
     src/tests/test_phase5_posting_controlled.py \
     src/tests/test_phase5_accounting_api.py \
-    ../modulos/facturacion/tests/test_billing_accounting_integration.py \
-    ../modulos/inventarios/tests/test_inventory_accounting_integration.py
+    ../kernels/facturacion/tests/test_billing_accounting_integration.py \
+    ../kernels/inventarios/tests/test_inventory_accounting_integration.py
 )
 
 echo "Hygiene checks OK."

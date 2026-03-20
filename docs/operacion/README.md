@@ -41,7 +41,7 @@ Esta sección contiene documentación de **operación del negocio** (playbooks, 
 - Documentos cortos, accionables y versionados (título + versión + fecha).
 - Plantillas deben ser “copiables”: incluir campos obligatorios y checklist.
 - La evidencia operativa pesada en `docs/operacion/evidencia/` no se versiona en GitHub; se mantiene como artefacto local/CI con hash y firma.
-- El backend canónico para operación/QA es `backend/`; `login_module` se conserva solo como alias legacy transicional.
+- El backend canónico para operación/QA es `backend/`; no se permite alias legacy `login_module` en código ni scripts activos.
 
 ## Changelog
 

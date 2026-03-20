@@ -13,9 +13,9 @@ from django.db.models.functions import Coalesce
 from apps.modulos.common.api_exceptions import ConflictError
 from apps.modulos.integration.services import publish_outbox_event
 from apps.modulos.payments.models import CashMovement, CashSession
-from modulos.compras.models import PurchaseDocument, PurchaseDocStatus, PurchaseDocType
-from modulos.facturacion.models import BillingDocument, BranchFiscalConfig, DocStatus, FiscalMode, FiscalStatus
-from modulos.inventarios.models import StockBalance
+from kernels.compras.models import PurchaseDocument, PurchaseDocStatus, PurchaseDocType
+from kernels.facturacion.models import BillingDocument, BranchFiscalConfig, DocStatus, FiscalMode, FiscalStatus
+from kernels.inventarios.models import StockBalance
 
 from .models import CECException, CloseRun
 

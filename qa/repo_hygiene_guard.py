@@ -14,8 +14,6 @@ ALLOWED_EVIDENCE_TRACKED = {
 }
 
 ALLOWED_TRANSITIONAL_TRACKED = {
-    # Compat temporal durante la ventana de deprecación (symlink backend alias).
-    "login_module",
     # Directorio de outputs de simulación se conserva vacío en git.
     "simulacion/reports/.gitkeep",
 }
@@ -60,7 +58,7 @@ def main() -> int:
             errors.append(f"Ruta legacy no permitida (usa backend/): {path}")
             continue
 
-        if path == "login_module" and path not in ALLOWED_TRANSITIONAL_TRACKED:
+        if path == "login_module":
             errors.append(f"Alias legacy no permitido: {path}")
             continue
 

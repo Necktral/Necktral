@@ -36,10 +36,10 @@ backend/src/tests/test_phase5_accounting_api.py|valid-type|Variable "test_phase5
 backend/src/tests/test_phase6_adapter_b_readiness.py|valid-type|Variable "test_phase6_adapter_b_readiness.User" is not valid as a type
 backend/src/tests/test_phase7b_intercompany_consolidation.py|attr-defined|User? has no attribute "username"
 backend/src/tests/test_phase7b_intercompany_consolidation.py|valid-type|Variable "test_phase7b_intercompany_consolidation.User" is not valid as a type
-modulos/estacion_servicios/services.py|attr-defined|"_FuelRequestShim" has no attribute "branch"
-modulos/estacion_servicios/services.py|attr-defined|"_FuelRequestShim" has no attribute "company"
-modulos/estacion_servicios/services.py|attr-defined|"_FuelRequestShim" has no attribute "data"
-modulos/facturacion/services.py|dict-item|Dict entry 0 has incompatible type "str": "str"; expected "str": "int"
-modulos/facturacion/services.py|dict-item|Dict entry 1 has incompatible type "str": "str"; expected "str": "int"
-modulos/facturacion/services.py|dict-item|Dict entry 2 has incompatible type "str": "int | None"; expected "str": "int"
-modulos/facturacion/services.py|dict-item|Dict entry 3 has incompatible type "str": "int | None"; expected "str": "int"
+kernels/estacion_servicios/services.py|attr-defined|"_FuelRequestShim" has no attribute "branch"
+kernels/estacion_servicios/services.py|attr-defined|"_FuelRequestShim" has no attribute "company"
+kernels/estacion_servicios/services.py|attr-defined|"_FuelRequestShim" has no attribute "data"
+kernels/facturacion/services.py|dict-item|Dict entry 0 has incompatible type "str": "str"; expected "str": "int"
+kernels/facturacion/services.py|dict-item|Dict entry 1 has incompatible type "str": "str"; expected "str": "int"
+kernels/facturacion/services.py|dict-item|Dict entry 2 has incompatible type "str": "int | None"; expected "str": "int"
+kernels/facturacion/services.py|dict-item|Dict entry 3 has incompatible type "str": "int | None"; expected "str": "int"

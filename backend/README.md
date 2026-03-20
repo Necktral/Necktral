@@ -90,16 +90,17 @@ El comando valida:
 
 ## FUEL (Estación de Servicios)
 
-- Base path: `/api/fuel/`
-- `GET /api/fuel/health/` — Healthcheck del módulo (público)
+- Base path canónico: `/api/backend/fuel/`
+- Alias legacy temporal: `/api/fuel/` (con headers `Deprecation/Sunset/Link`)
+- `GET /api/backend/fuel/health/` — Healthcheck del módulo (público)
 
 Endpoints (MVP):
 
-- `POST /api/fuel/shifts/open/` — Abrir turno (permiso: `fuel.shift.open`)
-- `POST /api/fuel/shifts/<shift_id>/close/` — Cerrar turno (permiso: `fuel.shift.close`)
-- `POST /api/fuel/dispenses/` — Registrar despacho (permiso: `fuel.dispense.create`)
-- `POST /api/fuel/sales/` — Crear venta (permiso: `fuel.sale.create`)
-- `POST /api/fuel/sales/<sale_id>/cancel/` — Cancelar venta (permiso: `fuel.sale.void`)
+- `POST /api/backend/fuel/shifts/open/` — Abrir turno (permiso: `fuel.shift.open`)
+- `POST /api/backend/fuel/shifts/<shift_id>/close/` — Cerrar turno (permiso: `fuel.shift.close`)
+- `POST /api/backend/fuel/dispenses/` — Registrar despacho (permiso: `fuel.dispense.create`)
+- `POST /api/backend/fuel/sales/` — Crear venta (permiso: `fuel.sale.create`)
+- `POST /api/backend/fuel/sales/<sale_id>/cancel/` — Cancelar venta (permiso: `fuel.sale.void`)
 
 Roles/permisos del módulo se agregan vía `python src/manage.py seed_rbac_v01` (roles `fuel_*`, permisos `fuel.*`).
 
@@ -114,6 +115,27 @@ docker compose exec -T backend python manage.py audit_verify_chain
   ```
 
 ## Endpoints principales
+
+### Prefijos canónicos
+
+- `/api/backend/auth/`
+- `/api/backend/iam/`
+- `/api/backend/org/`
+- `/api/backend/reports/`
+- `/api/backend/rbac/`
+- `/api/backend/sync/`
+- `/api/backend/sync-hmac/`
+- `/api/backend/audit/`
+- `/api/backend/metrics/`
+- `/api/backend/hr/`
+- `/api/backend/accounting/`
+- `/api/backend/payments/`
+- `/api/backend/cec/`
+- `/api/backend/integration/`
+- `/api/backend/billing/`
+- `/api/backend/inventory/`
+- `/api/backend/procurement/`
+- `/api/backend/fuel/`
 
 ### Documentación y esquema
 
@@ -131,17 +153,17 @@ docker compose exec -T backend python manage.py audit_verify_chain
 
 ### RBAC (Roles y permisos)
 
-- `/api/rbac/` — Roles, permisos, asignaciones
+- `/api/backend/rbac/` — Roles, permisos, asignaciones
 
 ### Sincronización de dispositivos
 
-- `GET /api/sync/devices/` — Listar dispositivos registrados (requiere permiso: sync.device.revoke)
+- `GET /api/backend/sync/devices/` — Listar dispositivos registrados (requiere permiso: sync.device.revoke)
   - [Ver documentación detallada](../ops/docs/api/sync_devices_list.md)
 
 ### Auditoría
 
-- `GET /api/audit/bitacora/` — Listar eventos de auditoría
-- `GET /api/audit/events/<uuid:event_id>/` — Detalle de evento de auditoría
+- `GET /api/backend/audit/bitacora/` — Listar eventos de auditoría
+- `GET /api/backend/audit/events/<uuid:event_id>/` — Detalle de evento de auditoría
 
 ### ORG (Organización)
 
@@ -155,27 +177,27 @@ docker compose exec -T backend python manage.py audit_verify_chain
 
 ### HR (Recursos Humanos)
 
-- `GET /api/hr/positions/` — Listar puestos
-- `POST /api/hr/positions/` — Crear puesto
-- `PATCH /api/hr/positions/<int:position_id>/` — Actualizar puesto
-- `PUT /api/hr/positions/<int:position_id>/roles/` — Mapear puesto a roles
-- `GET /api/hr/employees/` — Listar empleados
-- `POST /api/hr/employees/` — Crear empleado
-- `PATCH /api/hr/employees/<int:employee_id>/` — Actualizar empleado
-- `POST /api/hr/employees/<int:employee_id>/assignments/` — Asignar puesto/sucursal
-- `GET /api/hr/employees/<int:employee_id>/assignments/` — Listar asignaciones del empleado (requiere permiso: hr.assignment.read)
-- `POST /api/hr/employees/<int:employee_id>/assignments/` — Asignar puesto/sucursal
-- `POST /api/hr/employees/<int:employee_id>/assignments/<int:assignment_id>/end/` — Finalizar asignación
-- Nuevo endpoint: `POST /api/hr/employees/<id>/provision-user/`
+- `GET /api/backend/hr/positions/` — Listar puestos
+- `POST /api/backend/hr/positions/` — Crear puesto
+- `PATCH /api/backend/hr/positions/<int:position_id>/` — Actualizar puesto
+- `PUT /api/backend/hr/positions/<int:position_id>/roles/` — Mapear puesto a roles
+- `GET /api/backend/hr/employees/` — Listar empleados
+- `POST /api/backend/hr/employees/` — Crear empleado
+- `PATCH /api/backend/hr/employees/<int:employee_id>/` — Actualizar empleado
+- `POST /api/backend/hr/employees/<int:employee_id>/assignments/` — Asignar puesto/sucursal
+- `GET /api/backend/hr/employees/<int:employee_id>/assignments/` — Listar asignaciones del empleado (requiere permiso: hr.assignment.read)
+- `POST /api/backend/hr/employees/<int:employee_id>/assignments/` — Asignar puesto/sucursal
+- `POST /api/backend/hr/employees/<int:employee_id>/assignments/<int:assignment_id>/end/` — Finalizar asignación
+- Nuevo endpoint: `POST /api/backend/hr/employees/<id>/provision-user/`
   - Permite crear usuarios vinculados a empleados con contraseña provisional.
   - Valida asignaciones activas y fuerza cambio de contraseña en primer login.
   - Requiere permisos `iam.users.create` y `hr.employee.update`.
 
-- `POST /api/hr/employees/<id>/reset-temp-password/`
+- `POST /api/backend/hr/employees/<id>/reset-temp-password/`
   - Resetea contraseña provisional del usuario vinculado.
   - Auditoría: `HR_EMPLOYEE_TEMP_PASSWORD_RESET` (sin exponer la contraseña).
 
-- `POST /api/hr/employees/<id>/revoke-access/`
+- `POST /api/backend/hr/employees/<id>/revoke-access/`
   - Revoca roles por puesto (`origin=POSITION`) y memberships en scope.
   - Auditoría: `HR_EMPLOYEE_ACCESS_REVOKED`.
 

@@ -13,7 +13,7 @@ from apps.modulos.accounting.phase7b import Phase7BValidationError, run_consolid
 from apps.modulos.accounting.phase8 import build_phase8_evidence, collect_phase8_operational_health
 from apps.modulos.accounting.services import post_journal_drafts
 from apps.modulos.integration.services import dispatch_outbox_events
-from modulos.facturacion.services import process_fiscal_print_jobs
+from kernels.facturacion.services import process_fiscal_print_jobs
 
 
 class Command(BaseCommand):

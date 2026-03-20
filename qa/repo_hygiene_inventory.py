@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 TARGET_ROOTS = (
     "backend/src",
-    "modulos",
+    "kernels",
     "frontend/src",
     "qa",
     "docs",
@@ -56,10 +56,11 @@ OWNERS_BY_PREFIX = (
     ("backend/src/apps/sync_engine", "owner.sync"),
     ("backend/src/apps", "owner.backend"),
     ("backend/src/config", "owner.platform"),
-    ("modulos/facturacion", "owner.billing"),
-    ("modulos/inventarios", "owner.inventory"),
-    ("modulos/estacion_servicios", "owner.fuel"),
-    ("modulos/compras", "owner.procurement"),
+    ("kernels/facturacion", "owner.billing"),
+    ("kernels/inventarios", "owner.inventory"),
+    ("kernels/estacion_servicios", "owner.fuel"),
+    ("kernels/compras", "owner.procurement"),
+    ("login_module", "owner.platform"),
     ("frontend/src", "owner.frontend"),
     ("qa", "owner.qa"),
     ("docs", "owner.architecture"),
@@ -151,21 +152,21 @@ def classify(path: str) -> InventoryRow | None:
             owner=owner_for(normalized),
         )
 
-    if normalized.startswith("backend/"):
+    if normalized.startswith("login_module/"):
         return InventoryRow(
             ruta=normalized,
             tipo="legacy-local",
             estado="legacy",
             accion="LEGACY",
             riesgo="medio",
-            justificacion="árbol legado fuera del backend canónico",
+            justificacion="árbol legado fuera del backend canónico (debe retirarse)",
             owner=owner_for(normalized),
         )
 
     suffix = Path(normalized).suffix.lower()
     if suffix in TEXT_EXTENSIONS or Path(normalized).name in {"Dockerfile", "Makefile"}:
         tipo = "codigo-fuente" if normalized.startswith(
-            ("backend/src/", "modulos/", "frontend/src/", "qa/")
+            ("backend/src/", "kernels/", "frontend/src/", "qa/")
         ) else "documentacion"
         return InventoryRow(
             ruta=normalized,
@@ -271,7 +272,7 @@ def write_summary_md(rows: list[InventoryRow], duplicates_csv: Path, summary_md:
                 "Fecha: 2026-03-17",
                 "",
                 "## Cobertura",
-                "- Rutas auditadas: `backend/src`, `modulos`, `frontend/src`, `qa`, `docs`, `backend`.",
+                "- Rutas auditadas: `backend/src`, `kernels`, `frontend/src`, `qa`, `docs`, `backend`.",
                 "- Exclusiones: terceros/artefactos masivos (`node_modules`, `system_wis`, evidencias operativas, outputs de build).",
                 "",
                 "## Resumen cuantitativo",
@@ -292,7 +293,7 @@ def write_summary_md(rows: list[InventoryRow], duplicates_csv: Path, summary_md:
                 "",
                 "## Checklist por lotes",
                 "- Lote A (Documentación contractual): crear/normalizar `CONTRACT_PACK_v1.1` y referencias cruzadas.",
-                "- Lote B (Canónico backend): declarar `backend/` como raíz oficial y `backend/` como legacy local.",
+                "- Lote B (Canónico backend): declarar `backend/` como raíz oficial y retirar `login_module/` si reaparece.",
                 "- Lote C (Limpieza conservadora): eliminar residuos `DELETE` confirmados del árbol legacy y caches generados.",
                 "- Lote D (Guardas): activar chequeo de higiene en QA para evitar reintroducción de residuos/duplicados.",
                 "",

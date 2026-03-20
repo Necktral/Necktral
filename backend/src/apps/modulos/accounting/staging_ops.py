@@ -11,8 +11,8 @@ from django.conf import settings
 from django.db.models import Q
 
 from apps.modulos.iam.models import OrgUnit
-from modulos.facturacion.certification import collect_phase6_env_manifest, collect_phase6_operational_health
-from modulos.facturacion.models import BranchFiscalConfig, FiscalMode
+from kernels.facturacion.certification import collect_phase6_env_manifest, collect_phase6_operational_health
+from kernels.facturacion.models import BranchFiscalConfig, FiscalMode
 
 from .certification_phase7 import collect_phase7_env_manifest, collect_phase7_operational_health
 from .certification_phase7b import collect_phase7b_operational_health

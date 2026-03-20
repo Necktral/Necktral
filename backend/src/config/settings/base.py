@@ -22,7 +22,7 @@ import environ
 BASE_DIR = Path(__file__).resolve().parents[2]  # -> backend/src
 ENV_FILE = BASE_DIR.parent.parent / ".env"  # -> ERP_CRM/.env
 
-# Permite importar paquetes ubicados en la raíz del repo (por ejemplo: modulos.*)
+# Permite importar paquetes ubicados en la raíz del repo (por ejemplo: kernels.*)
 REPO_ROOT = BASE_DIR.parent.parent  # -> ERP_CRM/
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -216,16 +216,16 @@ INSTALLED_APPS = [
     "apps.modulos.reports.apps.ReportsConfig",
     "apps.modulos.sync_engine",
     "apps.modulos.sync.apps.SyncConfig",
-    # Módulos de dominio (raíz/modulos)
+    # Módulos de dominio vertical (raíz/kernels)
     # (Se agregan abajo con el patrón INSTALLED_APPS += [...])
 ]
 
 INSTALLED_APPS += [
-    "modulos.auth_kernel",
-    "modulos.estacion_servicios",
-    "modulos.inventarios",
-    "modulos.facturacion",
-    "modulos.compras",
+    "kernels.auth_kernel",
+    "kernels.estacion_servicios",
+    "kernels.inventarios",
+    "kernels.facturacion",
+    "kernels.compras",
 ]
 
 MIDDLEWARE = [

@@ -16,16 +16,16 @@ class DomainSpec:
 
 
 DOMAIN_SPECS: tuple[DomainSpec, ...] = (
-    DomainSpec("sync_engine", ("src/apps/modulos/sync_engine/", "src/apps/sync_engine/", "modulos/sync_engine/")),
-    DomainSpec("iam", ("src/apps/modulos/iam/", "src/apps/iam/", "modulos/iam/")),
-    DomainSpec("audit", ("src/apps/modulos/audit/", "src/apps/audit/", "modulos/audit/")),
-    DomainSpec("rbac", ("src/apps/modulos/rbac/", "src/apps/rbac/", "modulos/rbac/")),
-    DomainSpec("accounts", ("src/apps/modulos/accounts/", "src/apps/accounts/", "modulos/accounts/")),
-    DomainSpec("integration", ("src/apps/modulos/integration/", "src/apps/integration/", "modulos/integration/")),
-    DomainSpec("accounting", ("src/apps/modulos/accounting/", "src/apps/accounting/", "modulos/accounting/")),
-    DomainSpec("billing", ("modulos/facturacion/",)),
-    DomainSpec("inventory", ("modulos/inventarios/",)),
-    DomainSpec("procurement", ("modulos/compras/",)),
+    DomainSpec("sync_engine", ("src/apps/modulos/sync_engine/", "src/apps/sync_engine/", "kernels/sync_engine/")),
+    DomainSpec("iam", ("src/apps/modulos/iam/", "src/apps/iam/", "kernels/iam/")),
+    DomainSpec("audit", ("src/apps/modulos/audit/", "src/apps/audit/", "kernels/audit/")),
+    DomainSpec("rbac", ("src/apps/modulos/rbac/", "src/apps/rbac/", "kernels/rbac/")),
+    DomainSpec("accounts", ("src/apps/modulos/accounts/", "src/apps/accounts/", "kernels/accounts/")),
+    DomainSpec("integration", ("src/apps/modulos/integration/", "src/apps/integration/", "kernels/integration/")),
+    DomainSpec("accounting", ("src/apps/modulos/accounting/", "src/apps/accounting/", "kernels/accounting/")),
+    DomainSpec("billing", ("kernels/facturacion/",)),
+    DomainSpec("inventory", ("kernels/inventarios/",)),
+    DomainSpec("procurement", ("kernels/compras/",)),
 )
 
 
@@ -39,7 +39,7 @@ def _normalize_file_path(path_value: str) -> str:
     idx_src = normalized.find(marker_src)
     if idx_src >= 0:
         normalized = normalized[idx_src + 1 :]
-    marker_mod = "/modulos/"
+    marker_mod = "/kernels/"
     idx_mod = normalized.find(marker_mod)
     if idx_mod >= 0:
         normalized = normalized[idx_mod + 1 :]

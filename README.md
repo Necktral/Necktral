@@ -6,7 +6,7 @@ Sistema ERP/CRM modular con backend Django + DRF y frontend Quasar. Incluye RBAC
 
 - `backend/`: backend Django/DRF (código en `backend/src/`)
 - `frontend/`: consola web (Vue 3 + Quasar)
-- `modulos/`: módulos de dominio/kernels en la raíz del repo (ej: `modulos.auth_kernel`, `modulos.estacion_servicios`)
+- `kernels/`: módulos de dominio/kernels en la raíz del repo (ej: `kernels.auth_kernel`, `kernels.estacion_servicios`)
 - `compose.yaml`: entorno Docker (backend + Postgres)
 - `system_wis/`: entorno virtual Python (dev)
 
@@ -254,14 +254,15 @@ Artefactos generados:
 
 ### FUEL (Estación de Servicios)
 
-Base path: `/api/fuel/`
+Base path canónico: `/api/backend/fuel/`  
+Alias legacy temporal: `/api/fuel/` (con headers `Deprecation/Sunset/Link`)
 
-- `GET /api/fuel/health/` — Healthcheck del módulo (público)
-- `POST /api/fuel/shifts/open/` — Abrir turno (permiso: `fuel.shift.open`)
-- `POST /api/fuel/shifts/{shift_id}/close/` — Cerrar turno (permiso: `fuel.shift.close`)
-- `POST /api/fuel/dispenses/` — Registrar despacho (permiso: `fuel.dispense.create`)
-- `POST /api/fuel/sales/` — Crear venta (permiso: `fuel.sale.create`)
-- `POST /api/fuel/sales/{sale_id}/cancel/` — Cancelar venta (permiso: `fuel.sale.void`)
+- `GET /api/backend/fuel/health/` — Healthcheck del módulo (público)
+- `POST /api/backend/fuel/shifts/open/` — Abrir turno (permiso: `fuel.shift.open`)
+- `POST /api/backend/fuel/shifts/{shift_id}/close/` — Cerrar turno (permiso: `fuel.shift.close`)
+- `POST /api/backend/fuel/dispenses/` — Registrar despacho (permiso: `fuel.dispense.create`)
+- `POST /api/backend/fuel/sales/` — Crear venta (permiso: `fuel.sale.create`)
+- `POST /api/backend/fuel/sales/{sale_id}/cancel/` — Cancelar venta (permiso: `fuel.sale.void`)
 
 ## Historial de cambios
 
@@ -306,28 +307,28 @@ cat pm_snapshot.md
 
 - Todos los listados soportan `limit/offset` y responden `count/limit/offset/results`.
 
-- `GET /api/hr/positions/` — Listar puestos
-- `POST /api/hr/positions/` — Crear puesto
-- `PATCH /api/hr/positions/<int:position_id>/` — Actualizar puesto
-- `PUT /api/hr/positions/<int:position_id>/roles/` — Mapear puesto a roles
-- `GET /api/hr/employees/` — Listar empleados
-- `POST /api/hr/employees/` — Crear empleado
-- `PATCH /api/hr/employees/<int:employee_id>/` — Actualizar empleado
-- `POST /api/hr/employees/<int:employee_id>/assignments/` — Asignar puesto/sucursal
-- `GET /api/hr/employees/<int:employee_id>/assignments/` — Listar asignaciones del empleado (requiere permiso: hr.assignment.read)
-- `POST /api/hr/employees/<int:employee_id>/assignments/` — Asignar puesto/sucursal
-- `POST /api/hr/employees/<int:employee_id>/assignments/<int:assignment_id>/end/` — Finalizar asignación
-- `POST /api/hr/employees/<id>/provision-user/`
+- `GET /api/backend/hr/positions/` — Listar puestos
+- `POST /api/backend/hr/positions/` — Crear puesto
+- `PATCH /api/backend/hr/positions/<int:position_id>/` — Actualizar puesto
+- `PUT /api/backend/hr/positions/<int:position_id>/roles/` — Mapear puesto a roles
+- `GET /api/backend/hr/employees/` — Listar empleados
+- `POST /api/backend/hr/employees/` — Crear empleado
+- `PATCH /api/backend/hr/employees/<int:employee_id>/` — Actualizar empleado
+- `POST /api/backend/hr/employees/<int:employee_id>/assignments/` — Asignar puesto/sucursal
+- `GET /api/backend/hr/employees/<int:employee_id>/assignments/` — Listar asignaciones del empleado (requiere permiso: hr.assignment.read)
+- `POST /api/backend/hr/employees/<int:employee_id>/assignments/` — Asignar puesto/sucursal
+- `POST /api/backend/hr/employees/<int:employee_id>/assignments/<int:assignment_id>/end/` — Finalizar asignación
+- `POST /api/backend/hr/employees/<id>/provision-user/`
   - Crea un usuario vinculado al empleado con contraseña provisional.
   - Valida asignación activa y fuerza cambio de contraseña en primer login.
   - Requiere permisos `iam.users.create` y `hr.employee.update`.
-- `POST /api/hr/employees/<id>/reset-temp-password/`
+- `POST /api/backend/hr/employees/<id>/reset-temp-password/`
   - Resetea la contraseña provisional del usuario ya vinculado al empleado.
   - Payload opcional: `{ "temp_password": "..." }` (si se omite, se autogenera).
   - Responde `409` si no hay `linked_user` o si el empleado no tiene asignación activa.
   - Auditoría: `HR_EMPLOYEE_TEMP_PASSWORD_RESET` (sin exponer la contraseña).
 
-- `POST /api/hr/employees/<id>/revoke-access/`
+- `POST /api/backend/hr/employees/<id>/revoke-access/`
   - Revoca accesos del usuario vinculado al empleado en el scope de la company y sus sucursales.
   - Desactiva `RoleAssignment` con `origin=POSITION` y cierra memberships (`left_at`) en scope.
   - Payload: `{ "disable_user": true|false }` (opcional; si es `true`, desactiva el usuario solo si no quedan memberships activas).

@@ -30,7 +30,7 @@ def _require_absent(content: str, needle: str, *, source: str, errors: list[str]
 
 def _check_legacy_imports(errors: list[str]) -> None:
     pattern = re.compile(r"\b(?:from|import)\s+apps\.(?!modulos\.)")
-    roots = (ROOT / "backend/src", ROOT / "qa")
+    roots = (ROOT / "backend/src", ROOT / "backend/tests", ROOT / "qa")
     for base in roots:
         for path in base.rglob("*.py"):
             text = path.read_text(encoding="utf-8")
@@ -39,18 +39,45 @@ def _check_legacy_imports(errors: list[str]) -> None:
                 errors.append(f"[forbidden] legacy import namespace: {rel}")
 
 
+def _check_vertical_modulos_imports(errors: list[str]) -> None:
+    """Bloquea reintroducción del namespace histórico modulos.* para verticales."""
+    pattern = re.compile(r"\b(?:from|import)\s+modulos\.")
+    roots = (ROOT / "backend/src", ROOT / "backend/tests", ROOT / "qa", ROOT / "kernels")
+    for base in roots:
+        for path in base.rglob("*.py"):
+            text = path.read_text(encoding="utf-8")
+            if pattern.search(text):
+                rel = path.relative_to(ROOT).as_posix()
+                errors.append(f"[forbidden] vertical legacy namespace modulos.*: {rel}")
+
+
 def main() -> int:
     errors: list[str] = []
 
     config_urls = _read_text("backend/src/config/urls.py")
-    _require_contains(config_urls, 'include("modulos.auth_kernel.urls")', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'include("kernels.auth_kernel.urls")', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'include("apps.modulos.iam.urls")', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'include("apps.modulos.org.urls")', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'include("apps.modulos.reports.urls")', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/rbac/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/sync/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/sync-hmac/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/audit/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/metrics/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/hr/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/accounting/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/payments/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/cec/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/integration/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/billing/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/inventory/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/procurement/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/fuel/"', source="config/urls.py", errors=errors)
     _require_absent(config_urls, 'include("apps.iam.urls")', source="config/urls.py", errors=errors)
     _require_absent(config_urls, 'include("apps.org.urls")', source="config/urls.py", errors=errors)
     _require_absent(config_urls, 'include("apps.reports.urls")', source="config/urls.py", errors=errors)
-    _require_absent(config_urls, 'include("modulos.reports.urls")', source="config/urls.py", errors=errors)
+    _require_absent(config_urls, 'include("kernels.reports.urls")', source="config/urls.py", errors=errors)
+    _require_absent(config_urls, 'include("modulos.', source="config/urls.py", errors=errors)
     _require_absent(config_urls, 'path("api/reports/"', source="config/urls.py", errors=errors)
 
     settings_base = _read_text("backend/src/config/settings/base.py")
@@ -89,12 +116,16 @@ def main() -> int:
     _require_contains(deprecation_middleware, '"/api/auth/"', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, '"/api/iam/"', source="legacy_api_deprecation.py", errors=errors)
     _require_contains(deprecation_middleware, '"/api/org/"', source="legacy_api_deprecation.py", errors=errors)
+    _require_contains(deprecation_middleware, '"/api/billing/"', source="legacy_api_deprecation.py", errors=errors)
+    _require_contains(deprecation_middleware, '"/api/inventory/"', source="legacy_api_deprecation.py", errors=errors)
+    _require_contains(deprecation_middleware, '"/api/procurement/"', source="legacy_api_deprecation.py", errors=errors)
+    _require_contains(deprecation_middleware, '"/api/fuel/"', source="legacy_api_deprecation.py", errors=errors)
     _require_absent(deprecation_middleware, '"/api/reports/"', source="legacy_api_deprecation.py", errors=errors)
 
     accounts_views = _read_text("backend/src/apps/modulos/accounts/views.py")
     _require_contains(
         accounts_views,
-        "modulos.auth_kernel.views",
+        "kernels.auth_kernel.views",
         source="apps/modulos/accounts/views.py",
         errors=errors,
     )
@@ -112,6 +143,7 @@ def main() -> int:
     )
 
     _check_legacy_imports(errors)
+    _check_vertical_modulos_imports(errors)
 
     if errors:
         print("architecture_boundaries_guard: FAIL")

@@ -47,42 +47,42 @@ urlpatterns = [
     # CSP reports (report-only)
     path("api/csp/report/", csp_report, name="csp-report"),
     # Backend v2 canonical (public)
-    path("api/backend/auth/", include("modulos.auth_kernel.urls")),
+    path("api/backend/auth/", include("kernels.auth_kernel.urls")),
     path("api/backend/iam/", include("apps.modulos.iam.urls")),
     path("api/backend/org/", include("apps.modulos.org.urls")),
     path("api/backend/reports/", include("apps.modulos.reports.urls")),
-    # Legacy API aliases (deprecated)
-    path("api/auth/", include("modulos.auth_kernel.urls")),
+    path("api/backend/rbac/", include("apps.modulos.rbac.urls")),
+    path("api/backend/sync/", include("apps.modulos.sync_engine.urls")),
+    path("api/backend/sync-hmac/", include("apps.modulos.sync.urls")),
+    path("api/backend/audit/", include("apps.modulos.audit.urls")),
+    path("api/backend/metrics/", include("apps.modulos.common.urls")),
+    path("api/backend/hr/", include("apps.modulos.hr.urls")),
+    path("api/backend/accounting/", include("apps.modulos.accounting.urls")),
+    path("api/backend/payments/", include("apps.modulos.payments.urls")),
+    path("api/backend/cec/", include("apps.modulos.cec.urls")),
+    path("api/backend/integration/", include("apps.modulos.integration.urls")),
+    path("api/backend/fuel/", include("kernels.estacion_servicios.urls")),
+    path("api/backend/inventory/", include("kernels.inventarios.urls")),
+    path("api/backend/billing/", include("kernels.facturacion.urls")),
+    path("api/backend/procurement/", include("kernels.compras.urls")),
+    # Legacy API aliases (temporales por compatibilidad)
+    path("api/auth/", include("kernels.auth_kernel.urls")),
     path("api/iam/", include("apps.modulos.iam.urls")),
     path("api/org/", include("apps.modulos.org.urls")),
-    # RBAC
     path("api/rbac/", include("apps.modulos.rbac.urls")),
     path("api/sync/", include("apps.modulos.sync_engine.urls")),
     path("api/sync-hmac/", include("apps.modulos.sync.urls")),
-    # Auditoría
     path("api/audit/", include("apps.modulos.audit.urls")),
-    # Observabilidad
     path("api/metrics/", include("apps.modulos.common.urls")),
-    # HR
     path("api/hr/", include("apps.modulos.hr.urls")),
-    # Accounting
     path("api/accounting/", include("apps.modulos.accounting.urls")),
-    # Payments/Cash
     path("api/payments/", include("apps.modulos.payments.urls")),
-    # CEC
     path("api/cec/", include("apps.modulos.cec.urls")),
-    # Integration Backbone
     path("api/integration/", include("apps.modulos.integration.urls")),
-    # Estación de Servicios
-    path("api/fuel/", include("modulos.estacion_servicios.urls")),
-]
-
-urlpatterns += [
-    path("api/inventory/", include("modulos.inventarios.urls")),
-    path("api/billing/", include("modulos.facturacion.urls")),
-    path("api/procurement/", include("modulos.compras.urls")),
-]
-
-urlpatterns += [
-    path("api/billing/", include("modulos.facturacion.urls_legacy")),
+    path("api/fuel/", include("kernels.estacion_servicios.urls")),
+    path("api/inventory/", include("kernels.inventarios.urls")),
+    path("api/billing/", include("kernels.facturacion.urls")),
+    path("api/procurement/", include("kernels.compras.urls")),
+    # Alias histórico de billing (v0) mantenido solo en legacy.
+    path("api/billing/", include("kernels.facturacion.urls_legacy")),
 ]
