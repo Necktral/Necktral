@@ -1,6 +1,7 @@
 export const BUSINESS_LABELS = {
   humanResources: 'Recursos Humanos',
   organization: 'Organizacion',
+  accounting: 'Contabilidad',
   accessControl: 'Control de Acceso',
   rolesAndPermissions: 'Roles y Permisos',
   identityAndAccess: 'Identidad y Acceso',
@@ -10,6 +11,7 @@ export const BUSINESS_LABELS = {
 
 export const UI_ROUTE_PATHS = {
   dashboard: '/dashboard',
+  accountingDashboard: '/contabilidad/tablero',
   selectContext: '/select-context',
   organizationCompanies: '/organizacion/empresas',
   organizationCompanyProfile: '/organizacion/perfil-empresa',

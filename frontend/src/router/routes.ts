@@ -71,6 +71,16 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true, requiresContext: true },
       },
       {
+        path: childPath(UI_ROUTE_PATHS.accountingDashboard),
+        name: 'contabilidad-tablero',
+        component: () => import('src/modules/accounting/dashboard/pages/AccountingDashboardPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+          requiredPermissions: ['accounting.dashboard.read'],
+        },
+      },
+      {
         path: '403',
         component: () => import('pages/ForbiddenPage.vue'),
         meta: { requiresAuth: true, requiresContext: false },

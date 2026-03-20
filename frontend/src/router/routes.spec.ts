@@ -27,6 +27,7 @@ describe('router routes', () => {
       UI_ROUTE_PATHS.organizationCompanies,
       UI_ROUTE_PATHS.organizationCompanyProfile,
       UI_ROUTE_PATHS.organizationBranches,
+      UI_ROUTE_PATHS.accountingDashboard,
       UI_ROUTE_PATHS.fuelDashboard,
       UI_ROUTE_PATHS.fuelHealth,
       UI_ROUTE_PATHS.synchronizationEnrollment,
@@ -93,5 +94,11 @@ describe('router routes', () => {
       expect(target.query).toEqual({ modo: 'compacto' });
       expect(target.hash).toBe('#bloque');
     }
+  });
+
+  it('protege tablero contable con permiso accounting.dashboard.read', () => {
+    const route = findChild(UI_ROUTE_PATHS.accountingDashboard);
+    expect(route).toBeDefined();
+    expect(route?.meta?.requiredPermissions).toEqual(['accounting.dashboard.read']);
   });
 });

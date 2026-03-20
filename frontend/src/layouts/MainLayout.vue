@@ -114,6 +114,14 @@
 
         <q-separator spaced />
 
+        <q-item-label header>{{ labels.accounting }}</q-item-label>
+        <q-item clickable :to="routes.accountingDashboard" :disable="!canAccountingDashboardRead">
+          <q-item-section avatar><q-icon name="insights" /></q-item-section>
+          <q-item-section>Tablero financiero</q-item-section>
+        </q-item>
+
+        <q-separator spaced />
+
         <q-item-label header>{{ labels.organization }}</q-item-label>
         <q-item clickable :to="routes.organizationCompanies">
           <q-item-section avatar><q-icon name="domain" /></q-item-section>
@@ -247,6 +255,12 @@ const canAuditRead = computed(() => {
   const companyId = ctx.activeCompanyId;
   if (!companyId) return false;
   return acl.hasPermission(companyId, 'audit.read');
+});
+
+const canAccountingDashboardRead = computed(() => {
+  const companyId = ctx.activeCompanyId;
+  if (!companyId) return false;
+  return acl.hasPermission(companyId, 'accounting.dashboard.read');
 });
 
 const canFuelRead = computed(() => {
