@@ -36,6 +36,30 @@ class ReportRunCreateIn(serializers.Serializer):
             p2 = attrs.get("parameters") or {}
             if p1 and p2 and p1 != p2:
                 raise serializers.ValidationError({"params": ["conflicts with parameters"]})
+        params = dict(attrs.get("params") or attrs.get("parameters") or {})
+        analytics_keys = {"filters", "group_by", "metrics", "sort", "cursor", "comparison", "drill_path"}
+        if analytics_keys.intersection(params.keys()):
+            filters = params.get("filters")
+            group_by = params.get("group_by")
+            metrics = params.get("metrics")
+            sort = params.get("sort")
+            drill_path = params.get("drill_path")
+            if filters is not None and not isinstance(filters, dict):
+                raise serializers.ValidationError({"params": ["filters must be object"]})
+            if group_by is not None and not isinstance(group_by, list):
+                raise serializers.ValidationError({"params": ["group_by must be list"]})
+            if metrics is not None and not isinstance(metrics, list):
+                raise serializers.ValidationError({"params": ["metrics must be list"]})
+            if sort is not None and not isinstance(sort, list):
+                raise serializers.ValidationError({"params": ["sort must be list"]})
+            if drill_path is not None and not isinstance(drill_path, list):
+                raise serializers.ValidationError({"params": ["drill_path must be list"]})
+            if isinstance(group_by, list) and len(group_by) > 12:
+                raise serializers.ValidationError({"params": ["group_by max length is 12"]})
+            if isinstance(metrics, list) and len(metrics) > 24:
+                raise serializers.ValidationError({"params": ["metrics max length is 24"]})
+            if isinstance(drill_path, list) and len(drill_path) > 12:
+                raise serializers.ValidationError({"params": ["drill_path max length is 12"]})
         return attrs
 
 

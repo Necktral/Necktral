@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Callable
+
+from django.apps import apps
+from django.db.models import Q
+from django.utils import timezone
 
 from config.metrics import snapshot
 
@@ -301,3 +305,404 @@ def trace_entity_timeline_report(*, company_id: int, branch_id: int | None, para
         rows=rows,
         meta={"kind": "TRACE_ENTITY_TIMELINE", "source_manifest": {"modules": ["INTEGRATION", "AUDIT"]}},
     )
+
+
+@dataclass(frozen=True)
+class DomainReportBlueprint:
+    domain_key: str
+    domain_code: str
+    family: str
+    truth_level: str
+    source_types: tuple[str, ...]
+    sensitivity_level: str
+    contains_pii: bool
+    reason_required: bool
+    module_hints: tuple[str, ...]
+    model_labels: tuple[str, ...]
+
+
+DOMAIN_REPORT_BLUEPRINTS: tuple[DomainReportBlueprint, ...] = (
+    DomainReportBlueprint(
+        domain_key="accounts",
+        domain_code="ACCOUNTS",
+        family="SEC",
+        truth_level="audit_control",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="high",
+        contains_pii=True,
+        reason_required=True,
+        module_hints=("AUTH", "ACCOUNTS"),
+        model_labels=("accounts.User", "accounts.TwoFactorConfig", "accounts.TwoFactorChallenge"),
+    ),
+    DomainReportBlueprint(
+        domain_key="iam",
+        domain_code="IAM",
+        family="SEC",
+        truth_level="audit_control",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="high",
+        contains_pii=True,
+        reason_required=True,
+        module_hints=("IAM",),
+        model_labels=("iam.OrgUnit", "iam.UserMembership", "iam.InterCompanyGrant"),
+    ),
+    DomainReportBlueprint(
+        domain_key="org",
+        domain_code="ORG",
+        family="OPS",
+        truth_level="operational",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="medium",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("ORG",),
+        model_labels=("org.CompanyProfile", "iam.OrgUnit"),
+    ),
+    DomainReportBlueprint(
+        domain_key="hr",
+        domain_code="HR",
+        family="OPS",
+        truth_level="operational",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="medium",
+        contains_pii=True,
+        reason_required=False,
+        module_hints=("HR",),
+        model_labels=("hr.Position", "hr.Employee", "hr.EmploymentAssignment"),
+    ),
+    DomainReportBlueprint(
+        domain_key="rbac",
+        domain_code="RBAC",
+        family="SEC",
+        truth_level="audit_control",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="high",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("RBAC",),
+        model_labels=("rbac.Role", "rbac.Permission", "rbac.RoleAssignment"),
+    ),
+    DomainReportBlueprint(
+        domain_key="audit",
+        domain_code="AUDIT",
+        family="AUDIT",
+        truth_level="audit_control",
+        source_types=("AUDIT_EVENTS",),
+        sensitivity_level="high",
+        contains_pii=True,
+        reason_required=True,
+        module_hints=("AUDIT",),
+        model_labels=("audit.AuditEvent",),
+    ),
+    DomainReportBlueprint(
+        domain_key="integration",
+        domain_code="INTEGRATION",
+        family="OBS",
+        truth_level="observability",
+        source_types=("DOMAIN_EVENTS", "AUDIT_EVENTS"),
+        sensitivity_level="medium",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("INTEGRATION",),
+        model_labels=("integration.OutboxEvent", "integration.InboxEvent"),
+    ),
+    DomainReportBlueprint(
+        domain_key="sync_engine",
+        domain_code="SYNC_ENGINE",
+        family="OBS",
+        truth_level="observability",
+        source_types=("SYNC_EVENTS", "METRICS"),
+        sensitivity_level="medium",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("SYNC_ENGINE", "SYNC"),
+        model_labels=("sync_engine.SyncDevice", "sync_engine.SyncConflict"),
+    ),
+    DomainReportBlueprint(
+        domain_key="sync",
+        domain_code="SYNC",
+        family="OBS",
+        truth_level="observability",
+        source_types=("SYNC_EVENTS", "METRICS"),
+        sensitivity_level="medium",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("SYNC",),
+        model_labels=("sync.SyncBatch", "sync.SyncInboxDedup"),
+    ),
+    DomainReportBlueprint(
+        domain_key="accounting",
+        domain_code="ACCOUNTING",
+        family="FIN",
+        truth_level="certified_financial",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="high",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("ACCOUNTING",),
+        model_labels=("accounting.JournalEntry", "accounting.JournalEntryLine", "accounting.FiscalPeriod"),
+    ),
+    DomainReportBlueprint(
+        domain_key="payments",
+        domain_code="PAYMENTS",
+        family="CONTROL",
+        truth_level="operational",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="medium",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("PAYMENTS",),
+        model_labels=("payments.PaymentIntent", "payments.CashSession", "payments.CashMovement"),
+    ),
+    DomainReportBlueprint(
+        domain_key="cec",
+        domain_code="CEC",
+        family="CONTROL",
+        truth_level="audit_control",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="medium",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("CEC",),
+        model_labels=("cec.CecCloseRun", "cec.CecException", "cec.CecEvidence"),
+    ),
+    DomainReportBlueprint(
+        domain_key="reports",
+        domain_code="REPORTS",
+        family="CONTROL",
+        truth_level="audit_control",
+        source_types=("READ_MODELS", "METRICS"),
+        sensitivity_level="medium",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("REPORTS",),
+        model_labels=("reports.ReportRun", "reports.ReportExport", "reports.ReportReadAudit"),
+    ),
+    DomainReportBlueprint(
+        domain_key="auth_kernel",
+        domain_code="AUTH_KERNEL",
+        family="SEC",
+        truth_level="audit_control",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="high",
+        contains_pii=True,
+        reason_required=False,
+        module_hints=("AUTH",),
+        model_labels=("accounts.TwoFactorChallenge", "accounts.TwoFactorConfig"),
+    ),
+    DomainReportBlueprint(
+        domain_key="facturacion",
+        domain_code="FACTURACION",
+        family="OPS",
+        truth_level="operational",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="medium",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("BILLING", "FACTURACION"),
+        model_labels=("facturacion.BillingDocument", "facturacion.BillingSequence", "facturacion.FiscalPrintJob"),
+    ),
+    DomainReportBlueprint(
+        domain_key="inventarios",
+        domain_code="INVENTARIOS",
+        family="OPS",
+        truth_level="operational",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="medium",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("INVENTORY", "INVENTARIOS"),
+        model_labels=("inventarios.InventoryMovement", "inventarios.InventoryBalance", "inventarios.InventoryItem"),
+    ),
+    DomainReportBlueprint(
+        domain_key="compras",
+        domain_code="COMPRAS",
+        family="OPS",
+        truth_level="operational",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="medium",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("PROCUREMENT", "COMPRAS"),
+        model_labels=("compras.PurchaseDocument",),
+    ),
+    DomainReportBlueprint(
+        domain_key="estacion_servicios",
+        domain_code="ESTACION_SERVICIOS",
+        family="OPS",
+        truth_level="operational",
+        source_types=("READ_MODELS", "AUDIT_EVENTS"),
+        sensitivity_level="medium",
+        contains_pii=False,
+        reason_required=False,
+        module_hints=("FUEL", "ESTACION_SERVICIOS"),
+        model_labels=("estacion_servicios.FuelShift", "estacion_servicios.FuelDispense", "estacion_servicios.FuelSale"),
+    ),
+)
+
+
+def _safe_model_count(*, model_label: str, company_id: int, branch_id: int | None) -> int:
+    try:
+        model = apps.get_model(model_label)
+    except Exception:
+        return 0
+    try:
+        qs = model.objects.all()
+        field_names = {field.name for field in model._meta.fields}
+        if "company" in field_names:
+            qs = qs.filter(company_id=company_id)
+        elif "company_id" in field_names:
+            qs = qs.filter(company_id=company_id)
+        elif "partition_key" in field_names:
+            qs = qs.filter(partition_key=f"COMPANY:{company_id}")
+        if branch_id is not None:
+            if "branch" in field_names:
+                qs = qs.filter(branch_id=branch_id)
+            elif "branch_id" in field_names:
+                qs = qs.filter(branch_id=branch_id)
+        return int(qs.order_by().count())
+    except Exception:
+        return 0
+
+
+def _domain_entity_count(*, blueprint: DomainReportBlueprint, company_id: int, branch_id: int | None) -> int:
+    return sum(_safe_model_count(model_label=label, company_id=company_id, branch_id=branch_id) for label in blueprint.model_labels)
+
+
+def _domain_error_count(*, blueprint: DomainReportBlueprint, company_id: int, window_days: int) -> int:
+    try:
+        from apps.modulos.audit.models import AuditEvent
+    except Exception:
+        return 0
+    qs = AuditEvent.objects.filter(
+        partition_key=f"COMPANY:{company_id}",
+        timestamp_server__gte=timezone.now() - timedelta(days=max(int(window_days), 1)),
+    )
+    if blueprint.module_hints:
+        cond = Q()
+        for hint in blueprint.module_hints:
+            cond |= Q(module__icontains=str(hint))
+        qs = qs.filter(cond)
+    return int(qs.exclude(reason_code__in=["OK", "REPORTS_OK"]).order_by().count())
+
+
+def _overview_runner_factory(blueprint: DomainReportBlueprint):
+    def _runner(*, company_id: int, branch_id: int | None, parameters: dict[str, Any]) -> ReportResult:
+        window_days = min(max(_to_int(parameters.get("window_days"), default=7), 1), 90)
+        entity_count = int(_domain_entity_count(blueprint=blueprint, company_id=company_id, branch_id=branch_id))
+        error_count = int(_domain_error_count(blueprint=blueprint, company_id=company_id, window_days=window_days))
+        health_score = max(0, 100 - min(error_count * 5, 90))
+        rows = [
+            {
+                "domain": blueprint.domain_key,
+                "company_id": int(company_id),
+                "branch_id": int(branch_id) if branch_id is not None else None,
+                "entity_count": entity_count,
+                "error_count": error_count,
+                "health_score": health_score,
+                "window_days": window_days,
+                "as_of": timezone.now().isoformat(),
+            }
+        ]
+        return ReportResult(
+            schema_version=1,
+            rows=rows,
+            meta={
+                "kind": f"DOMAIN_{blueprint.domain_code}_OVERVIEW",
+                "source_manifest": {"modules": list(blueprint.module_hints), "source_types": list(blueprint.source_types)},
+            },
+            warnings=[],
+        )
+
+    return _runner
+
+
+def _alerts_runner_factory(blueprint: DomainReportBlueprint):
+    def _runner(*, company_id: int, branch_id: int | None, parameters: dict[str, Any]) -> ReportResult:
+        window_days = min(max(_to_int(parameters.get("window_days"), default=7), 1), 90)
+        entity_count = int(_domain_entity_count(blueprint=blueprint, company_id=company_id, branch_id=branch_id))
+        error_count = int(_domain_error_count(blueprint=blueprint, company_id=company_id, window_days=window_days))
+        critical_count = max(1, int(error_count * 0.35)) if error_count > 0 else 0
+        warning_count = max(error_count - critical_count, 0)
+        rows = []
+        if warning_count > 0:
+            rows.append(
+                {
+                    "domain": blueprint.domain_key,
+                    "severity": "warning",
+                    "alert_count": warning_count,
+                    "critical_count": 0,
+                    "entity_count": entity_count,
+                    "window_days": window_days,
+                }
+            )
+        if critical_count > 0:
+            rows.append(
+                {
+                    "domain": blueprint.domain_key,
+                    "severity": "critical",
+                    "alert_count": critical_count,
+                    "critical_count": critical_count,
+                    "entity_count": entity_count,
+                    "window_days": window_days,
+                }
+            )
+        if not rows:
+            rows.append(
+                {
+                    "domain": blueprint.domain_key,
+                    "severity": "ok",
+                    "alert_count": 0,
+                    "critical_count": 0,
+                    "entity_count": entity_count,
+                    "window_days": window_days,
+                }
+            )
+        return ReportResult(
+            schema_version=1,
+            rows=rows,
+            meta={
+                "kind": f"DOMAIN_{blueprint.domain_code}_ALERTS",
+                "source_manifest": {"modules": list(blueprint.module_hints), "source_types": list(blueprint.source_types)},
+            },
+            warnings=[],
+        )
+
+    return _runner
+
+
+def _register_domain_reports() -> None:
+    for blueprint in DOMAIN_REPORT_BLUEPRINTS:
+        overview_code = f"DOMAIN_{blueprint.domain_code}_OVERVIEW_V1"
+        alerts_code = f"DOMAIN_{blueprint.domain_code}_ALERTS_V1"
+        register(
+            overview_code,
+            family=blueprint.family,
+            truth_level=blueprint.truth_level,
+            source_types=list(blueprint.source_types),
+            reproducibility_mode="LIVE",
+            sensitivity_level=blueprint.sensitivity_level,
+            contains_pii=blueprint.contains_pii,
+            reason_required=blueprint.reason_required,
+            export_formats=["json", "jsonl", "csv"],
+            dataset_code=f"{blueprint.domain_key}.overview",
+            dataset_version="v1",
+            formula_version="v1",
+        )(_overview_runner_factory(blueprint))
+        register(
+            alerts_code,
+            family=blueprint.family,
+            truth_level=blueprint.truth_level,
+            source_types=list(blueprint.source_types),
+            reproducibility_mode="LIVE",
+            sensitivity_level=blueprint.sensitivity_level,
+            contains_pii=blueprint.contains_pii,
+            reason_required=blueprint.reason_required,
+            export_formats=["json", "jsonl", "csv"],
+            dataset_code=f"{blueprint.domain_key}.alerts",
+            dataset_version="v1",
+            formula_version="v1",
+        )(_alerts_runner_factory(blueprint))
+
+
+_register_domain_reports()

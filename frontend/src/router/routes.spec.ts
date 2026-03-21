@@ -27,6 +27,7 @@ describe('router routes', () => {
       UI_ROUTE_PATHS.organizationCompanies,
       UI_ROUTE_PATHS.organizationCompanyProfile,
       UI_ROUTE_PATHS.organizationBranches,
+      UI_ROUTE_PATHS.analyticsV3,
       UI_ROUTE_PATHS.accountingDashboard,
       UI_ROUTE_PATHS.fuelDashboard,
       UI_ROUTE_PATHS.fuelHealth,
@@ -100,5 +101,11 @@ describe('router routes', () => {
     const route = findChild(UI_ROUTE_PATHS.accountingDashboard);
     expect(route).toBeDefined();
     expect(route?.meta?.requiredPermissions).toEqual(['accounting.dashboard.read']);
+  });
+
+  it('protege analítica avanzada con permiso dashboard.workspace.read', () => {
+    const route = findChild(UI_ROUTE_PATHS.analyticsV3);
+    expect(route).toBeDefined();
+    expect(route?.meta?.requiredPermissions).toEqual(['dashboard.workspace.read']);
   });
 });

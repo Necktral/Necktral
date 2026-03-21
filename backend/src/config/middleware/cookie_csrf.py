@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.http import JsonResponse
+from config.error_envelope import build_error_envelope
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 EXEMPT_MUTATING_PATH_PREFIXES = (
@@ -44,6 +45,16 @@ class CookieJwtCsrfMiddleware:
         if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
             request.error_code_override = "AUTH_CSRF_FAILED"
             request.audit_reason_code_override = "CSRF_FAILED"
-            return JsonResponse({"detail": "CSRF token missing or invalid."}, status=403)
+            envelope = build_error_envelope(
+                request=request,
+                status_code=403,
+                exc=None,
+                details={
+                    "detail": "CSRF token missing or invalid.",
+                    "required_header": "X-CSRF-Token",
+                    "csrf_cookie_name": settings.AUTH_COOKIE_CSRF_NAME,
+                },
+            )
+            return JsonResponse(envelope, status=403)
 
         return self.get_response(request)

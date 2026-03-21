@@ -148,19 +148,26 @@ def _link_accounting_for_movement(*, movement: StockMovement, outbox_event, acto
     try:
         from apps.modulos.accounting.services import (
             apply_accounting_link_to_outbox_event,
+            is_operational_accounting_link_sync_enabled,
             link_operational_event_to_accounting,
         )
-
-        link = link_operational_event_to_accounting(outbox_event=outbox_event, actor_user=actor)
-        apply_accounting_link_to_outbox_event(outbox_event=outbox_event, link=link)
-        _set_movement_accounting(
-            movement=movement,
-            status=str(link.status or ""),
-            error=str(link.error or ""),
-            economic_event_id=link.economic_event_id,
-            journal_draft_id=link.journal_draft_id,
-            journal_entry_id=link.journal_entry_id,
-        )
+        if is_operational_accounting_link_sync_enabled():
+            link = link_operational_event_to_accounting(outbox_event=outbox_event, actor_user=actor)
+            apply_accounting_link_to_outbox_event(outbox_event=outbox_event, link=link)
+            _set_movement_accounting(
+                movement=movement,
+                status=str(link.status or ""),
+                error=str(link.error or ""),
+                economic_event_id=link.economic_event_id,
+                journal_draft_id=link.journal_draft_id,
+                journal_entry_id=link.journal_entry_id,
+            )
+        else:
+            _set_movement_accounting(
+                movement=movement,
+                status=StockMovement.AccountingStatus.PENDING_RULESET,
+                error="",
+            )
     except (ImportError, AttributeError, ValueError, RuntimeError, IntegrationError) as exc:
         wrapped = IntegrationError(
             "Inventory to accounting link failed.",

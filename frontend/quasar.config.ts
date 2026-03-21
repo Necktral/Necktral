@@ -2,6 +2,7 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '#q-app/wrappers';
+import type { ManualChunkMeta, OutputOptions } from 'rollup';
 
 export default defineConfig((/* ctx */) => {
   return {
@@ -33,7 +34,7 @@ export default defineConfig((/* ctx */) => {
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
     build: {
       target: {
-        browser: ['es2022', 'firefox115', 'chrome115', 'safari14'],
+        browser: ['es2022', 'firefox115', 'chrome115', 'safari15'],
         node: 'node20',
       },
 
@@ -41,6 +42,16 @@ export default defineConfig((/* ctx */) => {
         strict: true,
         vueShim: true,
         // extendTsConfig (tsConfig) {}
+      },
+
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          passes: 2,
+        },
+        format: {
+          comments: false,
+        },
       },
 
       vueRouterMode: 'hash', // available values: 'hash', 'history'
@@ -59,7 +70,39 @@ export default defineConfig((/* ctx */) => {
       // polyfillModulePreload: true,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      extendViteConf(viteConf) {
+        const build = (viteConf.build ??= {});
+        const rollupOptions = (build.rollupOptions ??= {});
+        if (Array.isArray(rollupOptions.output)) {
+          return;
+        }
+        const output = ((rollupOptions.output ??= {}) as OutputOptions);
+        const previousManualChunks =
+          typeof output.manualChunks === 'function' ? output.manualChunks.bind(output) : null;
+        output.manualChunks = (id: string, meta: ManualChunkMeta) => {
+          const existingChunk = previousManualChunks?.(id, meta);
+          if (existingChunk) {
+            return existingChunk;
+          }
+
+          if (id.includes('/node_modules/echarts/') || id.includes('/node_modules/zrender/')) {
+            return 'analytics-echarts';
+          }
+          if (id.includes('/node_modules/ag-grid-community/') || id.includes('/node_modules/ag-grid-vue3/')) {
+            return 'analytics-aggrid';
+          }
+          if (
+            id.includes('/src/modules/dashboard_v3/pages/') ||
+            id.includes('/src/modules/dashboard_v3/stores/') ||
+            id.includes('/src/modules/dashboard_v3/services/') ||
+            id.includes('/src/modules/dashboard_v3/types/')
+          ) {
+            return 'dashboard-v3-route';
+          }
+
+          return undefined;
+        };
+      },
       // viteVuePluginOptions: {},
 
       vitePlugins: [

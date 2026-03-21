@@ -95,7 +95,7 @@ Requisitos:
 Si no tienes credenciales conocidas (o tu entorno no está "fresh"), crea un usuario dedicado para carga:
 
 ```bash
-docker compose exec -T backend python src/manage.py seed_auth_users
+docker compose exec -T backend python src/manage.py seed_auth_users --admin-2fa 0
 ```
 
 O bien crea un usuario manual:
@@ -109,6 +109,19 @@ Luego corre k6 con:
 
 - `-e USERNAME=k6`
 - `-e PASSWORD=<SET_STRONG_PASSWORD>`
+
+### Gate auth/sync (cookie + CSRF + contexto)
+
+Para validación end-to-end del flujo de dispositivos (login, challenge, enroll, batch firmado, revoke):
+
+```bash
+make qa-auth-sync-reset-run
+```
+
+Artefactos generados:
+
+- `qa/reports/auth_sync_smoke_report.json`
+- `qa/reports/auth_sync_smoke_report.md`
 
 ### Smoke de autenticación + ACL
 
@@ -196,6 +209,32 @@ Evidencia generada:
 - `k6_summary.json`
 - `snapshot_after.json`
 - `gate_report.json` + `gate_report.sha256`
+
+Modo híbrido de enlace contable operacional:
+
+- `ACCOUNTING_OPERATIONAL_LINK_MODE=sync` (default): linking contable dentro del hot path.
+- `ACCOUNTING_OPERATIONAL_LINK_MODE=async`: el hot path deja estado `PENDING_RULESET` y se drena con projector.
+
+Comando de drenaje projector (async):
+
+```bash
+make qa-operational-projector-drain COMPANY_ID=<COMPANY_ID>
+```
+
+Gate agresivo local (3 corridas, `2m` con `2/2/1`, `POSTING_LIMIT=15`, smoke auth/sync previo):
+
+```bash
+make qa-operational-aggressive-gate \
+  COMPANY_ID=<COMPANY_ID> \
+  BRANCH_ID=<BRANCH_ID> \
+  USERNAME=<OPER_USER> \
+  PASSWORD=<OPER_PASSWORD>
+```
+
+Notas del runner agresivo:
+- Aplica overlay temporal de `.env.loadtest` sobre `.env` para ejecutar con throttles/perfil de carga.
+- Recreate de `backend` al iniciar y restauración automática de `.env` al finalizar.
+- Falla en la primera corrida que no cumpla SLO (fail-fast).
 
 ### Rollout piloto (Fase 5)
 

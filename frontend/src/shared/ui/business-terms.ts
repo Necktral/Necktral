@@ -7,10 +7,12 @@ export const BUSINESS_LABELS = {
   identityAndAccess: 'Identidad y Acceso',
   fuel: 'Combustible',
   synchronization: 'Sincronizacion',
+  analytics: 'Analitica',
 } as const;
 
 export const UI_ROUTE_PATHS = {
   dashboard: '/dashboard',
+  analyticsV3: '/analitica/v3',
   accountingDashboard: '/contabilidad/tablero',
   selectContext: '/select-context',
   organizationCompanies: '/organizacion/empresas',

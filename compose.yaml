@@ -5,6 +5,16 @@ services:
     image: postgres:16.2-alpine
     container_name: erpcrm_db
     restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${POSTGRES_SHARED_BUFFERS:-256MB}
+      - -c
+      - work_mem=${POSTGRES_WORK_MEM:-16MB}
+      - -c
+      - effective_cache_size=${POSTGRES_EFFECTIVE_CACHE_SIZE:-768MB}
+      - -c
+      - max_connections=${POSTGRES_MAX_CONNECTIONS:-250}
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -110,7 +120,8 @@ services:
         npm run lint &&
         npm run typecheck &&
         npm run test &&
-        npm run build
+        npm run build &&
+        npm run bundle:budget:dashboard-v3
       "
 
   # Herramienta opcional para inspeccionar DB por navegador:

@@ -76,6 +76,15 @@ npm run dev
   ```bash
   npm run test
   ```
+- Build + budget de bundle `dashboard_v3`:
+  ```bash
+  npm run build
+  npm run bundle:budget:dashboard-v3
+  ```
+  Presupuestos aplicados:
+  - `dashboard-v3-route` <= `700KB`
+  - `analytics-echarts` <= `500KB`
+  - `analytics-aggrid` <= `500KB`
 
 ## 🧱 Arquitectura SPA Modular
 

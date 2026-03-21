@@ -105,6 +105,13 @@
           <q-item-section>Tablero</q-item-section>
         </q-item>
 
+        <q-item clickable :to="routes.analyticsV3" :disable="!canDashboardV3Read">
+          <q-item-section avatar>
+            <q-icon name="analytics" />
+          </q-item-section>
+          <q-item-section>Analítica avanzada</q-item-section>
+        </q-item>
+
         <q-item clickable :to="routes.selectContext">
           <q-item-section avatar>
             <q-icon name="business" />
@@ -261,6 +268,12 @@ const canAccountingDashboardRead = computed(() => {
   const companyId = ctx.activeCompanyId;
   if (!companyId) return false;
   return acl.hasPermission(companyId, 'accounting.dashboard.read');
+});
+
+const canDashboardV3Read = computed(() => {
+  const companyId = ctx.activeCompanyId;
+  if (!companyId) return false;
+  return acl.hasPermission(companyId, 'dashboard.workspace.read');
 });
 
 const canFuelRead = computed(() => {

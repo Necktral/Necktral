@@ -182,6 +182,8 @@ class JournalDraft(models.Model):
         indexes = [
             models.Index(fields=["state", "generated_at"]),
             models.Index(fields=["economic_event", "state"]),
+            models.Index(fields=["state", "generated_at", "id"], name="ix_acc_jdraft_state_ga_id"),
+            models.Index(fields=["close_run_id", "state", "generated_at", "id"], name="ix_acc_jdraft_run_state_ga_id"),
         ]
 
     def clean(self):

@@ -9,7 +9,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
 from django.conf import settings
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, connection, transaction
 from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.utils import timezone
 
@@ -64,6 +64,9 @@ OPERATIONAL_ACCOUNTING_EVENTS = {
     ("PROCUREMENT", "ProcurementDocumentVoided"),
 }
 PERIOD_CLOSE_FAILED_OUTBOX_MODULES = ("BILLING", "INVENTORY", "ACCOUNTING")
+OPERATIONAL_LINK_MODE_SYNC = "SYNC"
+OPERATIONAL_LINK_MODE_ASYNC = "ASYNC"
+OPERATIONAL_ACCOUNTING_PROJECTOR_CONSUMER = "accounting.operational_projector"
 logger = logging.getLogger(__name__)
 
 
@@ -120,8 +123,27 @@ class OperationalAccountingLinkResult:
     error: str = ""
 
 
+@dataclass(frozen=True)
+class OperationalAccountingProjectorResult:
+    attempted: int
+    processed: int
+    skipped: int
+    failed: int
+
+
 def _q_money(value: Decimal) -> Decimal:
     return value.quantize(MONEY_Q, rounding=ROUND_HALF_UP)
+
+
+def resolve_operational_accounting_link_mode() -> str:
+    mode = str(getattr(settings, "ACCOUNTING_OPERATIONAL_LINK_MODE", "sync") or "").strip().upper()
+    if mode not in (OPERATIONAL_LINK_MODE_SYNC, OPERATIONAL_LINK_MODE_ASYNC):
+        return OPERATIONAL_LINK_MODE_SYNC
+    return mode
+
+
+def is_operational_accounting_link_sync_enabled() -> bool:
+    return resolve_operational_accounting_link_mode() == OPERATIONAL_LINK_MODE_SYNC
 
 
 def resolve_operational_posting_runtime(*, company, branch=None) -> OperationalPostingRuntime:
@@ -626,6 +648,126 @@ def apply_accounting_link_to_outbox_event(
     payload["schema_version"] = int(payload.get("schema_version") or outbox_event.schema_version or 1)
     outbox_event.payload = payload
     outbox_event.save(update_fields=["payload"])
+
+
+def _outbox_payload_data(*, outbox_event: OutboxEvent) -> dict[str, Any]:
+    payload = outbox_event.payload if isinstance(outbox_event.payload, dict) else {}
+    data = payload.get("data", {})
+    return data if isinstance(data, dict) else {}
+
+
+def _apply_link_to_billing_doc(*, outbox_event: OutboxEvent, link: OperationalAccountingLinkResult) -> None:
+    from kernels.facturacion.models import BillingDocument
+
+    data = _outbox_payload_data(outbox_event=outbox_event)
+    doc_id = int(data.get("doc_id") or 0)
+    if doc_id <= 0:
+        raise ValueError("Missing doc_id in billing event payload.")
+    doc = BillingDocument.objects.filter(id=doc_id).first()
+    if doc is None:
+        raise ValueError(f"BillingDocument {doc_id} not found for operational projector.")
+    doc.accounting_status = str(link.status or "")[:24]
+    doc.accounting_error = str(link.error or "")[:255]
+    doc.accounting_economic_event_id = int(link.economic_event_id) if link.economic_event_id else None
+    doc.accounting_journal_draft_id = int(link.journal_draft_id) if link.journal_draft_id else None
+    doc.accounting_journal_entry_id = int(link.journal_entry_id) if link.journal_entry_id else None
+    doc.save(
+        update_fields=[
+            "accounting_status",
+            "accounting_error",
+            "accounting_economic_event",
+            "accounting_journal_draft",
+            "accounting_journal_entry",
+        ]
+    )
+
+
+def _apply_link_to_inventory_movement(*, outbox_event: OutboxEvent, link: OperationalAccountingLinkResult) -> None:
+    from kernels.inventarios.models import StockMovement
+
+    data = _outbox_payload_data(outbox_event=outbox_event)
+    movement_id = int(data.get("movement_id") or 0)
+    if movement_id <= 0:
+        raise ValueError("Missing movement_id in inventory event payload.")
+    movement = StockMovement.objects.filter(id=movement_id).first()
+    if movement is None:
+        raise ValueError(f"StockMovement {movement_id} not found for operational projector.")
+    movement.accounting_status = str(link.status or "")[:24]
+    movement.accounting_error = str(link.error or "")[:255]
+    movement.accounting_economic_event_id = int(link.economic_event_id) if link.economic_event_id else None
+    movement.accounting_journal_draft_id = int(link.journal_draft_id) if link.journal_draft_id else None
+    movement.accounting_journal_entry_id = int(link.journal_entry_id) if link.journal_entry_id else None
+    movement.save(
+        update_fields=[
+            "accounting_status",
+            "accounting_error",
+            "accounting_economic_event",
+            "accounting_journal_draft",
+            "accounting_journal_entry",
+        ]
+    )
+
+
+def _apply_link_to_operational_source(*, outbox_event: OutboxEvent, link: OperationalAccountingLinkResult) -> None:
+    if outbox_event.source_module == "BILLING":
+        _apply_link_to_billing_doc(outbox_event=outbox_event, link=link)
+        return
+    if outbox_event.source_module == "INVENTORY":
+        _apply_link_to_inventory_movement(outbox_event=outbox_event, link=link)
+        return
+
+
+def project_pending_operational_accounting_links(
+    *,
+    company_id: int | None = None,
+    limit: int = 200,
+    actor_user=None,
+    consumer: str = OPERATIONAL_ACCOUNTING_PROJECTOR_CONSUMER,
+) -> OperationalAccountingProjectorResult:
+    limit = max(1, int(limit))
+    selector = Q()
+    for source_module, event_type in sorted(OPERATIONAL_ACCOUNTING_EVENTS):
+        selector |= Q(source_module=source_module, event_type=event_type)
+    qs = OutboxEvent.objects.filter(selector).order_by("occurred_at", "id")
+    if company_id is not None:
+        qs = qs.filter(company_id=int(company_id))
+    rows = list(qs[:limit])
+
+    attempted = processed = skipped = failed = 0
+    for row in rows:
+        attempted += 1
+        inbox, _ = create_or_get_inbox_event(
+            event=row,
+            consumer=str(consumer or OPERATIONAL_ACCOUNTING_PROJECTOR_CONSUMER),
+            status=InboxEvent.Status.RECEIVED,
+        )
+        if inbox.status == InboxEvent.Status.PROCESSED:
+            skipped += 1
+            continue
+
+        try:
+            with transaction.atomic():
+                link = link_operational_event_to_accounting(outbox_event=row, actor_user=actor_user)
+                apply_accounting_link_to_outbox_event(outbox_event=row, link=link)
+                _apply_link_to_operational_source(outbox_event=row, link=link)
+                inbox.status = InboxEvent.Status.PROCESSED
+                inbox.last_error = ""
+                inbox.processed_at = timezone.now()
+                inbox.save(update_fields=["status", "last_error", "processed_at"])
+            processed += 1
+        except Exception as exc:  # noqa: BLE001
+            inbox.status = InboxEvent.Status.FAILED
+            inbox.last_error = f"OP_LINK_FAILED:{exc}"[:255]
+            inbox.processed_at = None
+            inbox.save(update_fields=["status", "last_error", "processed_at"])
+            failed += 1
+
+    return OperationalAccountingProjectorResult(
+        attempted=int(attempted),
+        processed=int(processed),
+        skipped=int(skipped),
+        failed=int(failed),
+    )
 
 def _extract_when_value(*, normalized: dict[str, Any], key: str):
     if "." in key:
@@ -1713,6 +1855,37 @@ def _period_for_occurrence(*, company, occurred_at) -> FiscalPeriod:
     return period
 
 
+def _period_for_occurrence_cached(
+    *,
+    company,
+    occurred_at,
+    cache: dict[tuple[int, int, int], FiscalPeriod],
+) -> FiscalPeriod:
+    local_occurrence = timezone.localtime(occurred_at)
+    key = (int(company.id), int(local_occurrence.year), int(local_occurrence.month))
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    period, _ = FiscalPeriod.objects.get_or_create(
+        company=company,
+        year=key[1],
+        month=key[2],
+        defaults={"status": FiscalPeriod.Status.OPEN},
+    )
+    cache[key] = period
+    return period
+
+
+def _accounting_config_for_company_cached(*, company, cache: dict[int, Any]):
+    key = int(company.id)
+    cfg = cache.get(key)
+    if cfg is not None:
+        return cfg
+    cfg = get_or_create_accounting_config(company=company)
+    cache[key] = cfg
+    return cfg
+
+
 def _period_date_bounds(*, year: int, month: int) -> tuple[date, date]:
     if month < 1 or month > 12:
         raise ValueError("month debe estar en rango 1..12.")
@@ -1859,21 +2032,92 @@ def evaluate_period_close_gates(
     )
 
 
-def _posting_candidates_qs(*, company_id: int | None, run_id: str, require_approved: bool):
-    states = [JournalDraft.State.VALIDATED, JournalDraft.State.APPROVED_FOR_POSTING]
-
-    qs = JournalDraft.objects.select_related(
-        "economic_event",
-        "economic_event__company",
-        "economic_event__branch",
-    ).filter(
-        state__in=states,
-    )
+def _draft_queue_rows_for_state(
+    *,
+    state: str,
+    company_id: int | None,
+    run_id: str,
+    limit: int,
+) -> list[tuple[int, datetime]]:
+    qs = JournalDraft.objects.filter(state=state)
     if company_id is not None:
         qs = qs.filter(economic_event__company_id=int(company_id))
     if run_id:
         qs = qs.filter(close_run_id=str(run_id))
-    return qs.order_by("generated_at", "id")
+    return list(qs.order_by("generated_at", "id").values_list("id", "generated_at")[: int(limit)])
+
+
+def _merge_draft_queue_rows(
+    *,
+    validated_rows: list[tuple[int, datetime]],
+    approved_rows: list[tuple[int, datetime]],
+    limit: int,
+) -> list[int]:
+    merged_ids: list[int] = []
+    i = j = 0
+    while len(merged_ids) < int(limit) and (i < len(validated_rows) or j < len(approved_rows)):
+        take_validated = False
+        if i >= len(validated_rows):
+            take_validated = False
+        elif j >= len(approved_rows):
+            take_validated = True
+        else:
+            v_time, v_id = validated_rows[i][1], validated_rows[i][0]
+            a_time, a_id = approved_rows[j][1], approved_rows[j][0]
+            take_validated = (v_time, v_id) <= (a_time, a_id)
+
+        if take_validated:
+            merged_ids.append(int(validated_rows[i][0]))
+            i += 1
+        else:
+            merged_ids.append(int(approved_rows[j][0]))
+            j += 1
+    return merged_ids
+
+
+def _posting_candidate_ids(*, company_id: int | None, run_id: str, limit: int) -> list[int]:
+    rows_limit = max(1, int(limit))
+    validated_rows = _draft_queue_rows_for_state(
+        state=JournalDraft.State.VALIDATED,
+        company_id=company_id,
+        run_id=run_id,
+        limit=rows_limit,
+    )
+    approved_rows = _draft_queue_rows_for_state(
+        state=JournalDraft.State.APPROVED_FOR_POSTING,
+        company_id=company_id,
+        run_id=run_id,
+        limit=rows_limit,
+    )
+    return _merge_draft_queue_rows(validated_rows=validated_rows, approved_rows=approved_rows, limit=rows_limit)
+
+
+def _posting_candidates(*, company_id: int | None, run_id: str, limit: int) -> list[JournalDraft]:
+    ordered_ids = _posting_candidate_ids(company_id=company_id, run_id=run_id, limit=limit)
+    if not ordered_ids:
+        return []
+    rows_by_id = {
+        row.id: row
+        for row in JournalDraft.objects.select_related(
+            "economic_event",
+            "economic_event__company",
+            "economic_event__branch",
+        ).filter(id__in=ordered_ids)
+    }
+    return [rows_by_id[draft_id] for draft_id in ordered_ids if draft_id in rows_by_id]
+
+
+def _lock_journal_draft_for_update(*, draft_id: int) -> JournalDraft | None:
+    qs = JournalDraft.objects.select_related(
+        "economic_event",
+        "economic_event__company",
+    ).filter(pk=int(draft_id))
+    if connection.features.has_select_for_update:
+        if connection.features.has_select_for_update_skip_locked:
+            qs = qs.select_for_update(skip_locked=True)
+        else:
+            qs = qs.select_for_update()
+    return qs.first()
 
 
 def _reverse_batch_candidates_qs(
@@ -1944,6 +2188,15 @@ def approve_journal_drafts(
     if run_id:
         qs = qs.filter(close_run_id=run_id)
     rows = list(qs.order_by("generated_at", "id")[: int(limit)])
+    validation_by_draft_id: dict[int, bool] = {}
+    if require_passed_validation and rows:
+        validation_by_draft_id = {
+            int(row["draft_id"]): bool(row["passed"])
+            for row in DraftValidationResult.objects.filter(draft_id__in=[int(r.id) for r in rows]).values(
+                "draft_id",
+                "passed",
+            )
+        }
 
     attempted = approved = skipped = failed = 0
     errors: list[dict[str, str]] = []
@@ -1951,14 +2204,16 @@ def approve_journal_drafts(
     for row in rows:
         attempted += 1
         with transaction.atomic():
-            draft = JournalDraft.objects.select_for_update().get(pk=row.pk)
+            draft = _lock_journal_draft_for_update(draft_id=row.pk)
+            if draft is None:
+                skipped += 1
+                continue
             if draft.state != JournalDraft.State.VALIDATED:
                 skipped += 1
                 continue
 
             if require_passed_validation:
-                result = DraftValidationResult.objects.filter(draft=draft).first()
-                if result is None or not bool(result.passed):
+                if not validation_by_draft_id.get(int(draft.id), False):
                     failed += 1
                     errors.append(
                         {
@@ -2016,12 +2271,17 @@ def post_journal_drafts(
 
     attempted = approved = posted = skipped = failed = 0
     errors: list[dict[str, str]] = []
-    rows = list(_posting_candidates_qs(company_id=company_id, run_id=run_id, require_approved=require_approved)[: int(limit)])
+    period_cache: dict[tuple[int, int, int], FiscalPeriod] = {}
+    config_cache: dict[int, Any] = {}
+    rows = _posting_candidates(company_id=company_id, run_id=run_id, limit=int(limit))
 
     for row in rows:
         attempted += 1
         with transaction.atomic():
-            draft = JournalDraft.objects.select_for_update().get(pk=row.pk)
+            draft = _lock_journal_draft_for_update(draft_id=row.pk)
+            if draft is None:
+                skipped += 1
+                continue
 
             if require_approved and draft.state != JournalDraft.State.APPROVED_FOR_POSTING:
                 if auto_approve and draft.state == JournalDraft.State.VALIDATED:
@@ -2065,9 +2325,10 @@ def post_journal_drafts(
                 )
                 continue
 
-            period = _period_for_occurrence(
+            period = _period_for_occurrence_cached(
                 company=draft.economic_event.company,
                 occurred_at=draft.economic_event.occurred_at,
+                cache=period_cache,
             )
             if period.status == FiscalPeriod.Status.CLOSED:
                 failed += 1
@@ -2079,7 +2340,7 @@ def post_journal_drafts(
                 )
                 continue
 
-            cfg = get_or_create_accounting_config(company=draft.economic_event.company)
+            cfg = _accounting_config_for_company_cached(company=draft.economic_event.company, cache=config_cache)
             phase7_enabled = bool(cfg.phase7_enabled)
             functional_currency = str(cfg.functional_currency or "NIO").upper() or "NIO"
 

@@ -1,7 +1,8 @@
 .PHONY: qa-backend-gunicorn qa-backend-runserver \
 	qa-load-user qa-load-reset-axes qa-load-smoke qa-load-smoke-cookie qa-load-smoke-header qa-load-stress qa-gate3 \
-	qa-operational-hygiene qa-operational-gate qa-operational-pilot-stage1 qa-operational-pilot-stage2 qa-operational-pilot-stage3 qa-operational-pilot-rollback qa-operational-all \
+	qa-operational-hygiene qa-operational-gate qa-operational-projector-drain qa-operational-aggressive-gate qa-operational-pilot-stage1 qa-operational-pilot-stage2 qa-operational-pilot-stage3 qa-operational-pilot-rollback qa-operational-all \
 	qa-operational-go-live \
+	qa-auth-sync-prepare qa-auth-sync-smoke qa-auth-sync-reset-run \
 	qa-ci-up qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci \
 	qa-coverage-domains \
 	qa-repo-hygiene qa-repo-hygiene-inventory qa-architecture-boundaries qa-simulation-contract-guard qa-accounting-http-contract-guard \
@@ -35,6 +36,11 @@ QA_FRESH_DB ?= 0
 # Credenciales por defecto (ajusta en tu entorno/CI)
 USERNAME ?= k6
 PASSWORD ?=
+AUTH_SYNC_ADMIN_USERNAME ?= k6_admin
+AUTH_SYNC_COMPANY_NAME ?= Acme Demo
+AUTH_SYNC_COMPANY_CODE ?= ACME
+AUTH_SYNC_BRANCH_NAME ?= Central
+AUTH_SYNC_BRANCH_CODE ?= CEN
 
 # k6 defaults
 VUS ?= 5
@@ -57,6 +63,22 @@ OPER_BILLING_VUS ?= 6
 OPER_INVENTORY_VUS ?= 6
 OPER_POSTING_VUS ?= 1
 OPER_DURATION ?= 2m
+
+# Perfil específico para gate operacional (evita heredar por accidente el perfil agresivo de loadtest)
+OPER_GATE_BILLING_VUS ?= 1
+OPER_GATE_INVENTORY_VUS ?= 1
+OPER_GATE_POSTING_VUS ?= 1
+OPER_GATE_DURATION ?= 90s
+OPER_GATE_SLEEP ?= 0.35
+OPER_GATE_POSTING_LIMIT ?= 15
+OPER_GATE_AUTH_TRANSPORT ?= header
+OPER_AGGR_BILLING_VUS ?= 2
+OPER_AGGR_INVENTORY_VUS ?= 2
+OPER_AGGR_POSTING_VUS ?= 1
+OPER_AGGR_DURATION ?= 2m
+OPER_AGGR_SLEEP ?= 0.1
+OPER_AGGR_POSTING_LIMIT ?= 15
+OPER_AGGR_RUNS ?= 3
 LOADTEST_ENV_FILE ?= .env.loadtest
 PRECHECK_SIM_PROFILE ?= integral
 TARGET_HTTP_REQS ?= 150000
@@ -102,6 +124,19 @@ qa-backend-wait:
 
 qa-ci-fresh:
 	$(MAKE) QA_FRESH_DB=1 qa-ci
+
+qa-auth-sync-prepare:
+	docker compose exec -T backend bash -lc "python /app/qa/wait_backend_schema_ready.py"
+	docker compose exec -T backend python src/manage.py seed_auth_users --admin-2fa 0 --show-secrets
+	docker compose exec -T backend python src/manage.py bootstrap_company --no-input --company-name '$(AUTH_SYNC_COMPANY_NAME)' --company-code $(AUTH_SYNC_COMPANY_CODE) --branch-name '$(AUTH_SYNC_BRANCH_NAME)' --branch-code $(AUTH_SYNC_BRANCH_CODE) --admin-username $(AUTH_SYNC_ADMIN_USERNAME)
+
+qa-auth-sync-smoke:
+	QA_REPORTS_DIR="$(QA_REPORTS_DIR)" AUTH_SYNC_BASE_URL="$(BASE_URL)/backend" AUTH_SYNC_USERNAME="$(AUTH_SYNC_ADMIN_USERNAME)" bash ./qa/run_auth_sync_smoke.sh
+
+qa-auth-sync-reset-run:
+	$(MAKE) QA_FRESH_DB=1 qa-ci-up
+	$(MAKE) qa-auth-sync-prepare
+	$(MAKE) qa-auth-sync-smoke
 
 # Alias explícito para pipelines CI
 qa-ci-ci: qa-ci-fresh
@@ -248,11 +283,41 @@ qa-operational-gate:
 	BRANCH_ID=$(BRANCH_ID) \
 	USERNAME=$(USERNAME) \
 	PASSWORD=$(PASSWORD) \
-	DURATION=$(OPER_DURATION) \
-	BILLING_VUS=$(OPER_BILLING_VUS) \
-	INVENTORY_VUS=$(OPER_INVENTORY_VUS) \
-	POSTING_VUS=$(OPER_POSTING_VUS) \
+	DURATION=$(OPER_GATE_DURATION) \
+	BILLING_VUS=$(OPER_GATE_BILLING_VUS) \
+	INVENTORY_VUS=$(OPER_GATE_INVENTORY_VUS) \
+	POSTING_VUS=$(OPER_GATE_POSTING_VUS) \
+	SLEEP=$(OPER_GATE_SLEEP) \
+	POSTING_LIMIT=$(OPER_GATE_POSTING_LIMIT) \
+	AUTH_TRANSPORT=$(OPER_GATE_AUTH_TRANSPORT) \
 	./qa/run_operational_performance_gate.sh
+
+qa-operational-projector-drain:
+	@if [ -z "$(COMPANY_ID)" ]; then \
+		echo "Set COMPANY_ID antes de qa-operational-projector-drain"; \
+		exit 1; \
+	fi
+	docker compose exec -T backend python src/manage.py run_operational_accounting_projector --company-id $(COMPANY_ID) --limit 500
+
+qa-operational-aggressive-gate:
+	@if [ -z "$(COMPANY_ID)" ] || [ -z "$(BRANCH_ID)" ] || [ -z "$(PASSWORD)" ]; then \
+		echo "Set COMPANY_ID, BRANCH_ID y PASSWORD antes de qa-operational-aggressive-gate"; \
+		exit 1; \
+	fi
+	COMPANY_ID=$(COMPANY_ID) \
+	BRANCH_ID=$(BRANCH_ID) \
+	USERNAME=$(USERNAME) \
+	PASSWORD=$(PASSWORD) \
+	OPER_AGGR_RUNS=$(OPER_AGGR_RUNS) \
+	OPER_AGGR_DURATION=$(OPER_AGGR_DURATION) \
+	OPER_AGGR_BILLING_VUS=$(OPER_AGGR_BILLING_VUS) \
+	OPER_AGGR_INVENTORY_VUS=$(OPER_AGGR_INVENTORY_VUS) \
+	OPER_AGGR_POSTING_VUS=$(OPER_AGGR_POSTING_VUS) \
+	OPER_AGGR_SLEEP=$(OPER_AGGR_SLEEP) \
+	OPER_AGGR_POSTING_LIMIT=$(OPER_AGGR_POSTING_LIMIT) \
+	OPER_GATE_AUTH_TRANSPORT=$(OPER_GATE_AUTH_TRANSPORT) \
+	LOADTEST_ENV_FILE=$(LOADTEST_ENV_FILE) \
+	./qa/run_operational_aggressive_gate.sh
 
 qa-operational-pilot-stage1:
 	@if [ -z "$(COMPANY_ID)" ] || [ -z "$(BRANCH_ID)" ]; then \

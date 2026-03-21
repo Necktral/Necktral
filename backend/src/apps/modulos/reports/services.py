@@ -65,6 +65,16 @@ SENSITIVITY_ALLOWED_EXPORTS: dict[str, set[str]] = {
     ReportRun.SensitivityLevel.RESTRICTED: {"pdf"},
 }
 
+ANALYTICS_PARAM_KEYS = {
+    "filters",
+    "group_by",
+    "metrics",
+    "sort",
+    "cursor",
+    "comparison",
+    "drill_path",
+}
+
 
 _REPORTS_METRICS_LOCK = threading.Lock()
 _REPORTS_RUN_STATUS_COUNT: Counter[str] = Counter()
@@ -194,6 +204,43 @@ def _masked_value(value: Any) -> Any:
     return f"{raw[:2]}***{raw[-2:]}"
 
 
+def _contains_v3_analytics_params(params: dict[str, Any]) -> bool:
+    return bool(ANALYTICS_PARAM_KEYS.intersection(params.keys()))
+
+
+def _assert_v3_analytics_params_enabled(params: dict[str, Any]) -> None:
+    if not _contains_v3_analytics_params(params):
+        return
+    if not bool(getattr(settings, "FF_REPORTS_V3_QUERY", False)):
+        raise ReportDomainError(
+            code="REPORT_INVALID_PARAMS",
+            message="reports v3 query disabled",
+            http_status=422,
+            details={"feature_flag": "FF_REPORTS_V3_QUERY"},
+        )
+    group_by = params.get("group_by")
+    metrics = params.get("metrics")
+    drill_path = params.get("drill_path")
+    if isinstance(group_by, list) and len(group_by) > 12:
+        raise ReportDomainError(
+            code="REPORT_INVALID_PARAMS",
+            message="group_by max length is 12",
+            http_status=422,
+        )
+    if isinstance(metrics, list) and len(metrics) > 24:
+        raise ReportDomainError(
+            code="REPORT_INVALID_PARAMS",
+            message="metrics max length is 24",
+            http_status=422,
+        )
+    if isinstance(drill_path, list) and len(drill_path) > 12:
+        raise ReportDomainError(
+            code="REPORT_INVALID_PARAMS",
+            message="drill_path max length is 12",
+            http_status=422,
+        )
+
+
 def _mask_sensitive_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     masked: list[dict[str, Any]] = []
     for row in rows:
@@ -283,6 +330,20 @@ def _seed_sources(*, company) -> None:
         ("OBS_METRICS", "COMMON", "METRICS", "observability"),
         ("OUTBOX_EVENTS", "INTEGRATION", "DOMAIN_EVENTS", "operational"),
         ("SYNC_EVENTS", "SYNC_ENGINE", "SYNC_EVENTS", "operational"),
+        ("ACCOUNTS_EVENTS", "ACCOUNTS", "READ_MODELS", "operational"),
+        ("IAM_SCOPE", "IAM", "READ_MODELS", "audit_control"),
+        ("ORG_SCOPE", "ORG", "READ_MODELS", "operational"),
+        ("HR_SCOPE", "HR", "READ_MODELS", "operational"),
+        ("RBAC_SCOPE", "RBAC", "READ_MODELS", "audit_control"),
+        ("ACCOUNTING_SCOPE", "ACCOUNTING", "READ_MODELS", "certified_financial"),
+        ("PAYMENTS_SCOPE", "PAYMENTS", "READ_MODELS", "operational"),
+        ("CEC_SCOPE", "CEC", "READ_MODELS", "audit_control"),
+        ("REPORTS_SCOPE", "REPORTS", "READ_MODELS", "audit_control"),
+        ("AUTH_KERNEL_SCOPE", "AUTH_KERNEL", "READ_MODELS", "audit_control"),
+        ("BILLING_KERNEL_SCOPE", "FACTURACION", "READ_MODELS", "operational"),
+        ("INVENTORY_KERNEL_SCOPE", "INVENTARIOS", "READ_MODELS", "operational"),
+        ("PROCUREMENT_KERNEL_SCOPE", "COMPRAS", "READ_MODELS", "operational"),
+        ("FUEL_KERNEL_SCOPE", "ESTACION_SERVICIOS", "READ_MODELS", "operational"),
     ]
     for source_code, producer, source_type, truth_level in defaults:
         SourceRegistry.objects.get_or_create(
@@ -722,6 +783,7 @@ def run_report(
         _require_permission(user=actor, company=company, branch=branch, permission_code=family_perm)
 
     merged_params = dict(params or {})
+    _assert_v3_analytics_params_enabled(merged_params)
     tw = _build_time_window(definition=definition, params=merged_params, time_window=time_window)
     req_id = _get_request_id(request)
     scope = _scope_payload(company=company, branch=branch, request=request)

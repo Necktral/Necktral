@@ -141,7 +141,11 @@ class BillingDocument(models.Model):
                 condition=~models.Q(idempotency_key=""),
                 name="uniq_bill_idempotency_per_company",
             ),
-            models.UniqueConstraint(fields=["company", "branch", "doc_type", "series", "number"], name="uniq_bill_number"),
+            models.UniqueConstraint(
+                fields=["company", "branch", "doc_type", "series", "number"],
+                condition=models.Q(number__gt=0),
+                name="uniq_bill_number",
+            ),
         ]
 
 

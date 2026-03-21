@@ -52,6 +52,7 @@ OVERRIDE_AUTH_ADMIN_2FA_SLEEP="${AUTH_ADMIN_2FA_SLEEP-}"
 OVERRIDE_OPER_BILLING_VUS="${OPER_BILLING_VUS-}"
 OVERRIDE_OPER_INVENTORY_VUS="${OPER_INVENTORY_VUS-}"
 OVERRIDE_OPER_POSTING_VUS="${OPER_POSTING_VUS-}"
+OVERRIDE_OPER_POSTING_LIMIT="${OPER_POSTING_LIMIT-}"
 OVERRIDE_RUN_QA_GATES="${RUN_QA_GATES-}"
 OVERRIDE_RUN_SECURITY_SCAN="${RUN_SECURITY_SCAN-}"
 OVERRIDE_TARGET_HTTP_REQS="${TARGET_HTTP_REQS-}"
@@ -179,6 +180,7 @@ if [ -n "${OVERRIDE_AUTH_ADMIN_2FA_SLEEP}" ]; then AUTH_ADMIN_2FA_SLEEP="${OVERR
 if [ -n "${OVERRIDE_OPER_BILLING_VUS}" ]; then OPER_BILLING_VUS="${OVERRIDE_OPER_BILLING_VUS}"; fi
 if [ -n "${OVERRIDE_OPER_INVENTORY_VUS}" ]; then OPER_INVENTORY_VUS="${OVERRIDE_OPER_INVENTORY_VUS}"; fi
 if [ -n "${OVERRIDE_OPER_POSTING_VUS}" ]; then OPER_POSTING_VUS="${OVERRIDE_OPER_POSTING_VUS}"; fi
+if [ -n "${OVERRIDE_OPER_POSTING_LIMIT}" ]; then OPER_POSTING_LIMIT="${OVERRIDE_OPER_POSTING_LIMIT}"; fi
 if [ -n "${OVERRIDE_RUN_QA_GATES}" ]; then RUN_QA_GATES="${OVERRIDE_RUN_QA_GATES}"; fi
 if [ -n "${OVERRIDE_RUN_SECURITY_SCAN}" ]; then RUN_SECURITY_SCAN="${OVERRIDE_RUN_SECURITY_SCAN}"; fi
 if [ -n "${OVERRIDE_TARGET_HTTP_REQS}" ]; then TARGET_HTTP_REQS="${OVERRIDE_TARGET_HTTP_REQS}"; fi
@@ -209,6 +211,7 @@ AUTH_ADMIN_2FA_SLEEP="${AUTH_ADMIN_2FA_SLEEP:-1}"
 OPER_BILLING_VUS="${OPER_BILLING_VUS:-80}"
 OPER_INVENTORY_VUS="${OPER_INVENTORY_VUS:-80}"
 OPER_POSTING_VUS="${OPER_POSTING_VUS:-24}"
+OPER_POSTING_LIMIT="${OPER_POSTING_LIMIT:-15}"
 RUN_QA_GATES="${RUN_QA_GATES:-1}"
 RUN_SECURITY_SCAN="${RUN_SECURITY_SCAN:-1}"
 TARGET_HTTP_REQS="${TARGET_HTTP_REQS:-150000}"
@@ -611,9 +614,9 @@ import os
 
 from django.contrib.auth import get_user_model
 
-from apps.iam.models import OrgUnit, UserMembership
-from apps.rbac.models import Role, RoleAssignment
-from apps.rbac.seed_v01 import seed_rbac_v01
+from apps.modulos.iam.models import OrgUnit, UserMembership
+from apps.modulos.rbac.models import Role, RoleAssignment
+from apps.modulos.rbac.seed_v01 import seed_rbac_v01
 
 
 def fail(msg: str) -> None:
@@ -783,6 +786,13 @@ if ! (
   exit 1
 fi
 
+log "Fase 1.2: validar prerequisitos RBAC/contexto para carga operacional"
+if ! ensure_operational_prereqs; then
+  OPER_PHASE_STATUS="hard-fail"
+  OVERALL_STATUS="hard-fail"
+  exit 1
+fi
+
 log "Fase 2/5: levantar observabilidad (InfluxDB + Grafana)"
 monitoring_start_ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 if ! (
@@ -850,13 +860,6 @@ else
 fi
 redact_summary_file "${AUTH_SUMMARY_HOST}"
 
-log "Fase 2.2: asegurar prerequisitos RBAC/contexto para carga operacional"
-if ! ensure_operational_prereqs; then
-  OPER_PHASE_STATUS="hard-fail"
-  OVERALL_STATUS="hard-fail"
-  exit 1
-fi
-
 log "Fase 3/5: corrida operacional + snapshot de DB"
 OP_BEFORE="${REPORT_DIR}/snapshot_before.json"
 OP_AFTER="${REPORT_DIR}/snapshot_after.json"
@@ -895,6 +898,7 @@ set +e
     -e BILLING_VUS="${OPER_BILLING_VUS}" \
     -e INVENTORY_VUS="${OPER_INVENTORY_VUS}" \
     -e POSTING_VUS="${OPER_POSTING_VUS}" \
+    -e POSTING_LIMIT="${OPER_POSTING_LIMIT}" \
     grafana/k6 run /workspace/qa/k6/operational_posting_load.js \
     --summary-export "/workspace/simulacion/reports/advanced_${REPORT_TS}/operational_summary.json"
 )
@@ -967,6 +971,7 @@ PY
         -e BILLING_VUS="${adaptive_billing_vus}" \
         -e INVENTORY_VUS="${OPER_INVENTORY_VUS}" \
         -e POSTING_VUS="${OPER_POSTING_VUS}" \
+        -e POSTING_LIMIT="${OPER_POSTING_LIMIT}" \
         grafana/k6 run /workspace/qa/k6/operational_posting_load.js \
         --summary-export "/workspace/simulacion/reports/advanced_${REPORT_TS}/operational_summary_adaptive.json"
     )

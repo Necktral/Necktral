@@ -58,6 +58,7 @@ urlpatterns = [
     path("api/backend/metrics/", include("apps.modulos.common.urls")),
     path("api/backend/hr/", include("apps.modulos.hr.urls")),
     path("api/backend/accounting/", include("apps.modulos.accounting.urls")),
+    path("api/backend/dashboard/", include("apps.modulos.dashboard.urls")),
     path("api/backend/payments/", include("apps.modulos.payments.urls")),
     path("api/backend/cec/", include("apps.modulos.cec.urls")),
     path("api/backend/integration/", include("apps.modulos.integration.urls")),

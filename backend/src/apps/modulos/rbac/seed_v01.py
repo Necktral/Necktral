@@ -90,6 +90,11 @@ def seed_rbac_v01() -> SeedResult:
         "reports.security.read": "Ver reportes de seguridad.",
         "reports.trace.read": "Ver reportes de trazabilidad.",
         "reports.admin": "Administrar políticas y gobierno del módulo de reportes.",
+        # Dashboard transversal v3
+        "dashboard.workspace.read": "Ver catálogo y definición de workspaces del dashboard transversal.",
+        "dashboard.widget.read": "Consultar widgets del dashboard transversal.",
+        "dashboard.drilldown.read": "Ejecutar drill-down en widgets del dashboard transversal.",
+        "dashboard.intercompany.read": "Consultar vistas intercompany del dashboard transversal.",
         # Sync (placeholder)
         "sync.device.enroll": "Enrolar dispositivos.",
         "sync.device.revoke": "Revocar dispositivos.",
@@ -344,6 +349,10 @@ def seed_rbac_v01() -> SeedResult:
             "reports.security.read",
             "reports.trace.read",
             "reports.admin",
+            "dashboard.workspace.read",
+            "dashboard.widget.read",
+            "dashboard.drilldown.read",
+            "dashboard.intercompany.read",
             "reports.export",
             # Compat
             "inventory.read",
@@ -466,6 +475,9 @@ def seed_rbac_v01() -> SeedResult:
             "reports.security.read",
             "reports.trace.read",
             "reports.export",
+            "dashboard.workspace.read",
+            "dashboard.widget.read",
+            "dashboard.drilldown.read",
             "cec.close_run.read",
             "cec.exception.read",
             "integration.outbox.read",

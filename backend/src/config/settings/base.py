@@ -16,6 +16,7 @@ from pathlib import Path
 import sys
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 # base.py está en: backend/src/config/settings/base.py
 # BASE_DIR = backend/src
@@ -30,6 +31,7 @@ if str(REPO_ROOT) not in sys.path:
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
     DJANGO_SECRET_KEY=(str, "unsafe-dev-secret"),
+    DJANGO_JWT_SIGNING_KEY=(str, ""),
     DJANGO_ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
     DJANGO_CORS_ALLOWED_ORIGINS=(list, ["http://localhost:3000"]),
     DJANGO_CSRF_TRUSTED_ORIGINS=(list, ["http://localhost:3000"]),
@@ -70,12 +72,23 @@ env = environ.Env(
     ACCOUNTING_POSTING_ENABLE_INVENTORY=(bool, True),
     ACCOUNTING_POSTING_ENABLE_PROCUREMENT=(bool, True),
     ACCOUNTING_POSTING_AUTO_POST_ON_WRITE=(bool, False),
+    ACCOUNTING_OPERATIONAL_LINK_MODE=(str, "sync"),
+    FF_REPORTS_V3_QUERY=(bool, True),
+    FF_DASHBOARD_V3_GLOBAL=(bool, True),
+    FF_DASHBOARD_V3_INTERCOMPANY=(bool, False),
 )
 
 if ENV_FILE.exists():
     env.read_env(str(ENV_FILE))
 
 SECRET_KEY = env("DJANGO_SECRET_KEY")
+JWT_SIGNING_KEY = (env("DJANGO_JWT_SIGNING_KEY", default="") or "").strip()
+if not JWT_SIGNING_KEY:
+    raise ImproperlyConfigured(
+        "DJANGO_JWT_SIGNING_KEY requerido: define una clave dedicada para firma JWT (minimo 32 bytes)."
+    )
+if len(JWT_SIGNING_KEY.encode("utf-8")) < 32:
+    raise ImproperlyConfigured("DJANGO_JWT_SIGNING_KEY invalido: debe tener al menos 32 bytes.")
 DEBUG = env("DJANGO_DEBUG")
 ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS")
 OPENAPI_ALLOW_ANON = env.bool("OPENAPI_ALLOW_ANON", default=DEBUG)
@@ -182,6 +195,10 @@ ACCOUNTING_POSTING_ENABLE_BILLING = env("ACCOUNTING_POSTING_ENABLE_BILLING")
 ACCOUNTING_POSTING_ENABLE_INVENTORY = env("ACCOUNTING_POSTING_ENABLE_INVENTORY")
 ACCOUNTING_POSTING_ENABLE_PROCUREMENT = env("ACCOUNTING_POSTING_ENABLE_PROCUREMENT")
 ACCOUNTING_POSTING_AUTO_POST_ON_WRITE = env("ACCOUNTING_POSTING_AUTO_POST_ON_WRITE")
+ACCOUNTING_OPERATIONAL_LINK_MODE = env("ACCOUNTING_OPERATIONAL_LINK_MODE")
+FF_REPORTS_V3_QUERY = env("FF_REPORTS_V3_QUERY")
+FF_DASHBOARD_V3_GLOBAL = env("FF_DASHBOARD_V3_GLOBAL")
+FF_DASHBOARD_V3_INTERCOMPANY = env("FF_DASHBOARD_V3_INTERCOMPANY")
 
 INSTALLED_APPS = [
     # Django
@@ -214,6 +231,7 @@ INSTALLED_APPS = [
     "apps.modulos.cec.apps.CecConfig",
     "apps.modulos.integration.apps.IntegrationConfig",
     "apps.modulos.reports.apps.ReportsConfig",
+    "apps.modulos.dashboard.apps.DashboardConfig",
     "apps.modulos.sync_engine",
     "apps.modulos.sync.apps.SyncConfig",
     # Módulos de dominio vertical (raíz/kernels)
@@ -366,6 +384,7 @@ REST_FRAMEWORK = {
 
 # SimpleJWT
 SIMPLE_JWT = {
+    "SIGNING_KEY": JWT_SIGNING_KEY,
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,

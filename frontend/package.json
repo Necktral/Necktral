@@ -14,11 +14,14 @@
     "test:watch": "vitest",
     "dev": "quasar dev",
     "build": "quasar build",
+    "bundle:budget:dashboard-v3": "node ./scripts/check-dashboard-v3-bundle-budget.mjs",
     "postinstall": "quasar prepare"
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",
+    "ag-grid-community": "^33.0.0",
     "axios": "^1.2.1",
+    "echarts": "^6.0.0",
     "pinia": "^3.0.1",
     "qrcode": "^1.5.4",
     "quasar": "^2.16.0",
@@ -39,6 +42,7 @@
     "globals": "^16.4.0",
     "jsdom": "^24.0.0",
     "prettier": "^3.3.3",
+    "terser": "^5.46.1",
     "typescript": "^5.9.2",
     "vite-plugin-checker": "^0.11.0",
     "vitest": "^4.0.18",

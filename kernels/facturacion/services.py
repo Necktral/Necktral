@@ -6,7 +6,7 @@ from decimal import Decimal, ROUND_HALF_UP
 import logging
 from typing import Any
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -329,13 +329,31 @@ def create_draft(
 
 
 def _allocate_document_number(*, doc: BillingDocument) -> None:
-    seq, _ = BillingSequence.objects.select_for_update().get_or_create(
+    seq = BillingSequence.objects.select_for_update().filter(
         company=doc.company,
         branch=doc.branch,
         doc_type=doc.doc_type,
         series=doc.series,
-        defaults={"next_number": 1, "updated_at": timezone.now()},
-    )
+    ).first()
+    if seq is None:
+        now = timezone.now()
+        try:
+            seq = BillingSequence.objects.create(
+                company=doc.company,
+                branch=doc.branch,
+                doc_type=doc.doc_type,
+                series=doc.series,
+                next_number=1,
+                updated_at=now,
+            )
+            seq = BillingSequence.objects.select_for_update().get(pk=seq.pk)
+        except IntegrityError:
+            seq = BillingSequence.objects.select_for_update().get(
+                company=doc.company,
+                branch=doc.branch,
+                doc_type=doc.doc_type,
+                series=doc.series,
+            )
     number = int(seq.next_number)
     seq.next_number = number + 1
     seq.updated_at = timezone.now()
@@ -563,26 +581,33 @@ def issue_doc(
             correlation_id=correlation_id or "",
             causation_id=causation_id or "",
         )
-        accounting_link = None
         try:
             from apps.modulos.accounting.services import (
                 apply_accounting_link_to_outbox_event,
+                is_operational_accounting_link_sync_enabled,
                 link_operational_event_to_accounting,
             )
 
-            accounting_link = link_operational_event_to_accounting(
-                outbox_event=issued_outbox,
-                actor_user=actor,
-            )
-            apply_accounting_link_to_outbox_event(outbox_event=issued_outbox, link=accounting_link)
-            _apply_accounting_link_to_doc(
-                doc=doc,
-                status=accounting_link.status,
-                error=accounting_link.error,
-                economic_event_id=accounting_link.economic_event_id,
-                journal_draft_id=accounting_link.journal_draft_id,
-                journal_entry_id=accounting_link.journal_entry_id,
-            )
+            if is_operational_accounting_link_sync_enabled():
+                accounting_link = link_operational_event_to_accounting(
+                    outbox_event=issued_outbox,
+                    actor_user=actor,
+                )
+                apply_accounting_link_to_outbox_event(outbox_event=issued_outbox, link=accounting_link)
+                _apply_accounting_link_to_doc(
+                    doc=doc,
+                    status=accounting_link.status,
+                    error=accounting_link.error,
+                    economic_event_id=accounting_link.economic_event_id,
+                    journal_draft_id=accounting_link.journal_draft_id,
+                    journal_entry_id=accounting_link.journal_entry_id,
+                )
+            else:
+                _apply_accounting_link_to_doc(
+                    doc=doc,
+                    status=BillingDocument.AccountingStatus.PENDING_RULESET,
+                    error="",
+                )
         except (ImportError, AttributeError, IntegrationError, RuntimeError, ValueError) as exc:
             wrapped = IntegrationError(
                 "Billing accounting link failed during issue flow.",
@@ -1073,22 +1098,30 @@ def void_doc(
         try:
             from apps.modulos.accounting.services import (
                 apply_accounting_link_to_outbox_event,
+                is_operational_accounting_link_sync_enabled,
                 link_operational_event_to_accounting,
             )
 
-            accounting_link = link_operational_event_to_accounting(
-                outbox_event=voided_outbox,
-                actor_user=actor,
-            )
-            apply_accounting_link_to_outbox_event(outbox_event=voided_outbox, link=accounting_link)
-            _apply_accounting_link_to_doc(
-                doc=doc,
-                status=accounting_link.status,
-                error=accounting_link.error,
-                economic_event_id=accounting_link.economic_event_id,
-                journal_draft_id=accounting_link.journal_draft_id,
-                journal_entry_id=accounting_link.journal_entry_id,
-            )
+            if is_operational_accounting_link_sync_enabled():
+                accounting_link = link_operational_event_to_accounting(
+                    outbox_event=voided_outbox,
+                    actor_user=actor,
+                )
+                apply_accounting_link_to_outbox_event(outbox_event=voided_outbox, link=accounting_link)
+                _apply_accounting_link_to_doc(
+                    doc=doc,
+                    status=accounting_link.status,
+                    error=accounting_link.error,
+                    economic_event_id=accounting_link.economic_event_id,
+                    journal_draft_id=accounting_link.journal_draft_id,
+                    journal_entry_id=accounting_link.journal_entry_id,
+                )
+            else:
+                _apply_accounting_link_to_doc(
+                    doc=doc,
+                    status=BillingDocument.AccountingStatus.PENDING_RULESET,
+                    error="",
+                )
         except (ImportError, AttributeError, IntegrationError, RuntimeError, ValueError) as exc:
             wrapped = IntegrationError(
                 "Billing accounting link failed during void flow.",

@@ -33,17 +33,40 @@ class Command(BaseCommand):
     help = "Seed usuarios para simulacion de auth (k6)."
 
     def add_arguments(self, parser):
+        default_admin_2fa = _truthy(os.getenv("AUTH_SIM_ADMIN_2FA", "1"))
+
         parser.add_argument("--admin-username", default=os.getenv("AUTH_SIM_ADMIN_USERNAME", "k6_admin"))
         parser.add_argument("--admin-email", default=os.getenv("AUTH_SIM_ADMIN_EMAIL", "k6_admin@test.com"))
         parser.add_argument("--admin-password", default=os.getenv("AUTH_SIM_ADMIN_PASSWORD") or _default_demo_pwd())
         parser.add_argument("--admin-totp-secret", default=os.getenv("AUTH_SIM_ADMIN_TOTP_SECRET", ""))
-        parser.add_argument("--admin-enable-2fa", action="store_true", default=_truthy(os.getenv("AUTH_SIM_ADMIN_2FA", "1")))
+        parser.add_argument(
+            "--admin-2fa",
+            choices=("0", "1"),
+            default=None,
+            help="Override explicito para 2FA admin (0=off, 1=on).",
+        )
+        parser.add_argument(
+            "--admin-enable-2fa",
+            dest="admin_enable_2fa",
+            action="store_true",
+            default=None,
+            help="Compat: habilita 2FA admin.",
+        )
+        parser.add_argument(
+            "--admin-disable-2fa",
+            dest="admin_enable_2fa",
+            action="store_false",
+            default=None,
+            help="Compat: deshabilita 2FA admin.",
+        )
         parser.add_argument("--admin-superuser", action="store_true", default=_truthy(os.getenv("AUTH_SIM_ADMIN_SUPERUSER", "0")))
 
         parser.add_argument("--user-username", default=os.getenv("AUTH_SIM_USER_USERNAME", "k6_user"))
         parser.add_argument("--user-email", default=os.getenv("AUTH_SIM_USER_EMAIL", "k6_user@test.com"))
         parser.add_argument("--user-password", default=os.getenv("AUTH_SIM_USER_PASSWORD") or _default_demo_pwd())
         parser.add_argument("--show-secrets", action="store_true", default=_truthy(os.getenv("AUTH_SIM_SHOW_SECRETS", "0")))
+
+        parser.set_defaults(_default_admin_2fa=default_admin_2fa)
 
     def _upsert_user(
         self,
@@ -95,13 +118,21 @@ class Command(BaseCommand):
         return user, totp_secret
 
     def handle(self, *args, **options):
+        admin_2fa_opt = options.get("admin_2fa")
+        if admin_2fa_opt is not None:
+            admin_enable_2fa = admin_2fa_opt == "1"
+        elif options.get("admin_enable_2fa") is not None:
+            admin_enable_2fa = bool(options["admin_enable_2fa"])
+        else:
+            admin_enable_2fa = bool(options.get("_default_admin_2fa"))
+
         admin_user, admin_secret = self._upsert_user(
             username=options["admin_username"],
             email=options["admin_email"],
             password=options["admin_password"],
             is_staff=True,
             is_superuser=bool(options["admin_superuser"]),
-            enable_2fa=bool(options["admin_enable_2fa"]),
+            enable_2fa=admin_enable_2fa,
             totp_secret=(options["admin_totp_secret"] or ""),
         )
 
@@ -118,5 +149,5 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Usuarios de simulacion listos"))
         self.stdout.write(f"ADMIN: {admin_user.username} (staff={admin_user.is_staff}, superuser={admin_user.is_superuser})")
         self.stdout.write(f"USER:  {regular_user.username}")
-        if options["show_secrets"] and options["admin_enable_2fa"]:
+        if options["show_secrets"] and admin_enable_2fa:
             self.stdout.write(f"ADMIN_TOTP_SECRET: {admin_secret}")

@@ -1,3 +1,7 @@
+import os
+
+os.environ.setdefault("DJANGO_JWT_SIGNING_KEY", "test-jwt-signing-key-with-minimum-32-bytes-2026")
+
 from .base import *  # noqa
 
 from datetime import timedelta
@@ -8,7 +12,7 @@ DEBUG = False
 SECRET_KEY = "test-signing-key-with-minimum-32-bytes-2026"
 SIMPLE_JWT = {
     **SIMPLE_JWT,
-    "SIGNING_KEY": SECRET_KEY,
+    "SIGNING_KEY": os.environ["DJANGO_JWT_SIGNING_KEY"],
     "ACCESS_TOKEN_LIFETIME": timedelta(days=365),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=365),
 }

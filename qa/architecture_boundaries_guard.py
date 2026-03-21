@@ -66,6 +66,7 @@ def main() -> int:
     _require_contains(config_urls, 'path("api/backend/metrics/"', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'path("api/backend/hr/"', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'path("api/backend/accounting/"', source="config/urls.py", errors=errors)
+    _require_contains(config_urls, 'path("api/backend/dashboard/"', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'path("api/backend/payments/"', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'path("api/backend/cec/"', source="config/urls.py", errors=errors)
     _require_contains(config_urls, 'path("api/backend/integration/"', source="config/urls.py", errors=errors)
@@ -84,6 +85,12 @@ def main() -> int:
     _require_contains(
         settings_base,
         "apps.modulos.reports.apps.ReportsConfig",
+        source="config/settings/base.py",
+        errors=errors,
+    )
+    _require_contains(
+        settings_base,
+        "apps.modulos.dashboard.apps.DashboardConfig",
         source="config/settings/base.py",
         errors=errors,
     )
