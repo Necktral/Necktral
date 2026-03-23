@@ -13,8 +13,10 @@ Operar el enrolamiento/revocación de dispositivos móviles en entorno DEV o QA 
 - Stack arriba: `db`, `backend`, `frontend`.
 - Usuario admin con permisos `sync.device.enroll` y `sync.device.revoke`.
 - Contexto activo válido (`X-Company-Id`, opcional `X-Branch-Id`).
-- Auth en cookie (`AUTH_TOKEN_TRANSPORT=cookie`) y CORS/CSRF para `localhost:3100`.
+- Auth en cookie (`AUTH_TOKEN_TRANSPORT=cookie`) y CORS/CSRF para `localhost:3000/3001/3100`.
 - `DJANGO_JWT_SIGNING_KEY` configurada con minimo 32 bytes (backend no inicia si no cumple).
+
+Nota: los ejemplos usan `localhost:3100`; si tu frontend corre en `3000` o `3001`, reemplaza `Origin`/`Referer`.
 
 ## 3) Procedimiento estándar
 

@@ -16,6 +16,13 @@ class DeviceEnrollment(models.Model):
     device_name = models.CharField(max_length=120, blank=True, default="")
     secret_b64 = models.CharField(max_length=256)  # base64 del secreto (HMAC key)
     is_active = models.BooleanField(default=True)
+    core_device = models.OneToOneField(
+        "sync_engine.Device",
+        on_delete=models.SET_NULL,
+        related_name="legacy_hmac_enrollment",
+        null=True,
+        blank=True,
+    )
 
     created_at = models.DateTimeField(default=timezone.now)
     revoked_at = models.DateTimeField(null=True, blank=True)

@@ -8,6 +8,7 @@ Precedente:
 import base64
 import datetime as dt
 import hashlib
+import hmac
 import json
 from typing import Any
 
@@ -69,6 +70,37 @@ def build_command_signing_message(
     s = "" if sequence is None else str(sequence)
     msg = f"{command_id}|{command_type}|{company_id}|{b}|{occurred_at}|{s}|{payload_hash}|{prev_hash}"
     return msg.encode("utf-8")
+
+
+def request_body_without_signature(payload: dict[str, Any]) -> dict[str, Any]:
+    """
+    Body canónico para firma request-level:
+    excluye únicamente auth.signature.
+    """
+    cloned = json.loads(json.dumps(payload))
+    auth = cloned.get("auth")
+    if isinstance(auth, dict):
+        auth = dict(auth)
+        auth.pop("signature", None)
+        cloned["auth"] = auth
+    return cloned
+
+
+def build_request_signing_message(*, ts: int, nonce: str, body_without_signature: dict[str, Any]) -> bytes:
+    body_canon = canon_json(body_without_signature).encode("utf-8")
+    body_hash = sha256_hex_bytes(body_canon)
+    return f"{ts}.{nonce}.{body_hash}".encode("utf-8")
+
+
+def hmac_signature_b64(secret_b64: str, message: bytes) -> str:
+    secret = base64.b64decode(secret_b64.encode("utf-8"))
+    mac = hmac.new(secret, message, hashlib.sha256).digest()
+    return base64.b64encode(mac).decode("utf-8")
+
+
+def verify_hmac_signature(*, secret_b64: str, message: bytes, provided_sig_b64: str) -> bool:
+    expected = hmac_signature_b64(secret_b64, message)
+    return hmac.compare_digest(expected, provided_sig_b64)
 
 
 def verify_ed25519_signature(*, public_key_raw: bytes, signature_b64: str, message: bytes) -> bool:

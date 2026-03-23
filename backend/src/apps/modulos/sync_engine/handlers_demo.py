@@ -10,3 +10,9 @@ def handle_demo_ping(ctx: dict[str, Any], payload: dict[str, Any]) -> HandlerRes
     # Comando toy: valida pipeline end-to-end sin tocar dominios reales todavía.
     msg = str(payload.get("msg", ""))
     return {"refs": {"pong": True, "echo": msg}}
+
+
+@register("PING")
+def handle_ping_legacy_alias(ctx: dict[str, Any], payload: dict[str, Any]) -> HandlerResult:
+    # Alias de compatibilidad para wrapper legacy /api/sync-hmac/batch/.
+    return {"refs": {"pong": True, "echo": payload}}

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from config.error_envelope import build_error_envelope
 from django.utils import timezone
 from django.db.models import Q
 import uuid
@@ -23,9 +24,15 @@ from apps.modulos.common.permissions import rbac_permission
 from apps.modulos.iam.models import OrgUnit
 
 from .models import Device, DeviceEnrollmentChallenge
-from .serializers import EnrollmentChallengeCreateIn, DeviceEnrollIn, SyncBatchIn
-from .signing import public_key_from_b64
-from .services import process_batch, resolve_device
+from .serializers import EnrollmentChallengeCreateIn, DeviceEnrollIn, SyncBatchIn, SyncV2BatchIn
+from .signing import public_key_from_b64, request_body_without_signature
+from .services import (
+    RequestAuthError,
+    normalize_v2_batch_commands,
+    process_batch,
+    resolve_device,
+    validate_request_level_auth,
+)
 
 
 class EnrollmentChallengeCreateView(APIView):
@@ -283,22 +290,77 @@ class SyncBatchView(APIView):
     permission_classes = [AllowAny]
     throttle_scope = "sync_batch"
 
+    @staticmethod
+    def _security_error_response(request, *, status_code: int, reason: str, details: dict | None = None) -> Response:
+        payload = build_error_envelope(
+            request=request,
+            status_code=status_code,
+            exc=None,
+            details={"detail": reason, **(details or {})},
+        )
+        return Response(payload, status=status_code)
+
+    @staticmethod
+    def _effective_device_id(*, request, body_device_id) -> str:
+        hdr_device_id = request.headers.get("X-Device-Id")
+        if hdr_device_id:
+            return hdr_device_id.strip()
+        if body_device_id:
+            return str(body_device_id)
+        raise PermissionDenied("X-Device-Id requerido.")
+
+    def _post_v2(self, request):
+        ser = SyncV2BatchIn(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+
+        device_id = self._effective_device_id(request=request, body_device_id=data.get("device_id"))
+        if data.get("device_id") and str(data["device_id"]) != str(device_id):
+            return self._security_error_response(request, status_code=401, reason="DEVICE_ID_MISMATCH")
+
+        device = resolve_device(device_id=device_id)
+
+        auth = data["auth"]
+        raw_without_sig = request_body_without_signature(dict(request.data))
+        try:
+            validate_request_level_auth(
+                device=device,
+                ts=int(data["ts"]),
+                nonce=str(data["nonce"]),
+                auth_scheme=str(auth["scheme"]),
+                auth_signature_b64=str(auth["signature"]),
+                body_without_signature=raw_without_sig,
+                verify_signature=True,
+            )
+        except RequestAuthError as exc:
+            return self._security_error_response(
+                request,
+                status_code=exc.status_code,
+                reason=exc.reason,
+                details=exc.details,
+            )
+
+        commands = normalize_v2_batch_commands(batch=data["batch"])
+        out = process_batch(
+            request=request._request if hasattr(request, "_request") else request,
+            actor_user=getattr(request, "user", None),
+            device=device,
+            batch_id=data["batch_id"],
+            sent_at=timezone.now(),
+            commands=commands,
+            require_command_signature=False,
+        )
+        return Response(out, status=200)
+
     def post(self, request):
+        if str(request.data.get("protocol_version", "")) == "2":
+            return self._post_v2(request)
+
         ser = SyncBatchIn(data=request.data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
 
-        hdr_device_id = request.headers.get("X-Device-Id")
-        body_device_id = data.get("device_id")
-
-        # Regla fuerte: el device_id efectivo se toma del header si está presente.
-        # Motivo: evita discrepancias entre infraestructura (gateway) y body.
-        if hdr_device_id:
-            device_id = hdr_device_id.strip()
-        elif body_device_id:
-            device_id = str(body_device_id)
-        else:
-            raise PermissionDenied("X-Device-Id requerido.")
+        device_id = self._effective_device_id(request=request, body_device_id=data.get("device_id"))
 
         device = resolve_device(device_id=device_id)
 
@@ -309,5 +371,6 @@ class SyncBatchView(APIView):
             batch_id=data["batch_id"],
             sent_at=data.get("sent_at"),
             commands=data["commands"],
+            require_command_signature=True,
         )
         return Response(out, status=200)

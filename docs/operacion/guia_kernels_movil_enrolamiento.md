@@ -52,10 +52,10 @@ Nota: `/api/backend/sync-hmac/` y aliases legacy `/api/*` se mantienen solo por 
 
 ## 4) Precondiciones DEV para frontend móvil/web
 
-- Frontend local: `http://localhost:3100`.
+- Frontend local: `http://localhost:3000` (fallback habitual: `3001`, también soportado `3100`).
 - CORS/CSRF confiables en `.env`:
-  - `DJANGO_CORS_ALLOWED_ORIGINS=http://localhost:3100,http://127.0.0.1:3100`
-  - `DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:3100,http://127.0.0.1:3100`
+  - `DJANGO_CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,http://localhost:3100,http://127.0.0.1:3100`
+  - `DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,http://localhost:3100,http://127.0.0.1:3100`
 - Transporte auth DEV: `AUTH_TOKEN_TRANSPORT=cookie`.
 - Firma JWT obligatoria dedicada: `DJANGO_JWT_SIGNING_KEY` con minimo `32 bytes` (fail-fast al iniciar backend).
 - Para requests autenticados `POST/PUT/PATCH/DELETE` desde browser: enviar `X-CSRFToken` con cookie `nt_csrf`.
@@ -106,7 +106,7 @@ make qa-operational-projector-drain COMPANY_ID=<COMPANY_ID>
 
 - Reset DB total con volúmenes: OK.
 - Bootstrap org mínimo (`company=2`, `branch=3`): OK.
-- CORS con credenciales en `localhost:3100`: OK.
+- CORS con credenciales en `localhost:3000/3001/3100`: OK.
 - Flujo canónico `challenge -> enroll -> batch(APPLIED) -> revoke`: OK.
 
 ## 9) Gate recomendado de verificación

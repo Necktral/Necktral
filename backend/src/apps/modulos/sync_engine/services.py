@@ -32,7 +32,7 @@ from apps.modulos.common.domain_errors import IntegrationError
 from apps.modulos.iam.models import OrgUnit
 
 from .errors import SyncRejectError
-from .models import AppliedCommand, Device, SyncReceipt
+from .models import AppliedCommand, Device, DeviceRequestNonce, SyncReceipt
 from .registry import get_handler
 
 # Import por side-effect: registra handlers demo en el registry.
@@ -41,8 +41,10 @@ from . import handlers_demo as _handlers_demo  # noqa: F401
 from . import handlers_inventory as _handlers_inventory  # noqa: F401
 from .signing import (
     build_command_signing_message,
+    build_request_signing_message,
     canon_json,
     sha256_hex,
+    verify_hmac_signature,
     verify_ed25519_signature,
     occurred_at_canonical,
 )
@@ -53,6 +55,7 @@ class SyncPolicy:
     max_commands_per_batch: int
     max_payload_bytes: int
     max_device_clock_skew_seconds: int
+    max_request_skew_seconds: int
     seq_tolerant: bool
 
 
@@ -61,6 +64,7 @@ def get_policy() -> SyncPolicy:
         max_commands_per_batch=int(getattr(settings, "SYNC_MAX_COMMANDS_PER_BATCH", 100)),
         max_payload_bytes=int(getattr(settings, "SYNC_MAX_PAYLOAD_BYTES", 64_000)),
         max_device_clock_skew_seconds=int(getattr(settings, "SYNC_MAX_DEVICE_CLOCK_SKEW_SECONDS", 6 * 3600)),
+        max_request_skew_seconds=int(getattr(settings, "SYNC_MAX_REQUEST_SKEW_SECONDS", 300)),
         seq_tolerant=bool(getattr(settings, "SYNC_SEQ_TOLERANT", True)),
     )
 
@@ -101,8 +105,103 @@ def ensure_scope_matches(*, device: Device, company_id: int, branch_id: int | No
     return branch_id == device.branch_id
 
 
+class RequestAuthError(Exception):
+    def __init__(self, *, status_code: int, reason: str, details: dict[str, Any] | None = None):
+        super().__init__(reason)
+        self.status_code = int(status_code)
+        self.reason = reason
+        self.details = details or {}
+
+
+def normalize_v2_batch_commands(*, batch: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Traduce comandos Sync v2 al shape interno del core.
+    """
+    out: list[dict[str, Any]] = []
+    for cmd in batch:
+        scope = cmd["scope"]
+        out.append(
+            {
+                "command_id": cmd["command_id"],
+                "command_type": cmd["type"],
+                "company_id": int(scope["company_id"]),
+                "branch_id": scope.get("branch_id"),
+                "occurred_at": cmd["occurred_at"],
+                "sequence": cmd.get("sequence"),
+                "payload": cmd.get("payload") or {},
+                "payload_hash": cmd.get("payload_hash") or "",
+                "prev_hash": cmd.get("prev_hash") or "",
+                "signature": cmd.get("command_sig") or "",
+            }
+        )
+    return out
+
+
+def validate_request_level_auth(
+    *,
+    device: Device,
+    ts: int,
+    nonce: str,
+    auth_scheme: str,
+    auth_signature_b64: str,
+    body_without_signature: dict[str, Any],
+    verify_signature: bool = True,
+    policy: SyncPolicy | None = None,
+) -> None:
+    """
+    Valida invariantes request-level de Sync v2:
+    1) ventana temporal
+    2) firma request-level (si aplica)
+    3) persistencia nonce única por device
+    """
+    eff_policy = policy or get_policy()
+    now = int(timezone.now().timestamp())
+    if abs(now - int(ts)) > int(eff_policy.max_request_skew_seconds):
+        raise RequestAuthError(status_code=401, reason="TS_OUT_OF_WINDOW")
+
+    if verify_signature:
+        message = build_request_signing_message(ts=int(ts), nonce=str(nonce), body_without_signature=body_without_signature)
+        scheme = str(auth_scheme or "").lower()
+        if scheme == "hmac":
+            secret = (getattr(device, "hmac_secret_b64", "") or "").strip()
+            if not secret:
+                raise RequestAuthError(status_code=401, reason="SYNC_DEVICE_NO_HMAC_SECRET")
+            try:
+                valid_sig = verify_hmac_signature(
+                    secret_b64=secret,
+                    message=message,
+                    provided_sig_b64=auth_signature_b64,
+                )
+            except Exception:
+                valid_sig = False
+            if not valid_sig:
+                raise RequestAuthError(status_code=401, reason="BAD_SIGNATURE")
+        elif scheme == "ed25519":
+            if not verify_ed25519_signature(
+                public_key_raw=bytes(device.public_key),
+                signature_b64=auth_signature_b64,
+                message=message,
+            ):
+                raise RequestAuthError(status_code=401, reason="BAD_SIGNATURE")
+        else:
+            raise RequestAuthError(status_code=401, reason="BAD_SIGNATURE")
+
+    try:
+        with transaction.atomic():
+            DeviceRequestNonce.objects.create(device=device, nonce=str(nonce), ts=int(ts))
+    except IntegrityError:
+        raise RequestAuthError(status_code=401, reason="REPLAY_DETECTED")
+
+
 def process_batch(
-    *, request, actor_user, device: Device, batch_id, sent_at, commands: list[dict[str, Any]]
+    *,
+    request,
+    actor_user,
+    device: Device,
+    batch_id,
+    sent_at,
+    commands: list[dict[str, Any]],
+    require_command_signature: bool = True,
 ) -> dict[str, Any]:
     policy = get_policy()
     if len(commands) > policy.max_commands_per_batch:
@@ -157,7 +256,14 @@ def process_batch(
 
     for c in commands:
         try:
-            r = process_command(request=request, actor_user=actor_user, device=device, cmd=c, policy=policy)
+            r = process_command(
+                request=request,
+                actor_user=actor_user,
+                device=device,
+                cmd=c,
+                policy=policy,
+                require_command_signature=require_command_signature,
+            )
         except Exception as e:
             # 1) auditar
             write_event(
@@ -220,7 +326,15 @@ def process_batch(
     }
 
 
-def process_command(*, request, actor_user, device: Device, cmd: dict[str, Any], policy: SyncPolicy) -> dict[str, Any]:
+def process_command(
+    *,
+    request,
+    actor_user,
+    device: Device,
+    cmd: dict[str, Any],
+    policy: SyncPolicy,
+    require_command_signature: bool = True,
+) -> dict[str, Any]:
     """Procesa un comando individual.
 
     Precondición:
@@ -242,7 +356,7 @@ def process_command(*, request, actor_user, device: Device, cmd: dict[str, Any],
     occurred_at = cmd["occurred_at"]
     sequence = cmd.get("sequence")
     payload = cmd["payload"]
-    signature = cmd["signature"]
+    signature = cmd.get("signature") or ""
     prev_hash = cmd.get("prev_hash") or ""
 
     # Límite de payload (regla fuerte: evita batches gigantes y firma sobre datos arbitrarios)
@@ -337,7 +451,12 @@ def process_command(*, request, actor_user, device: Device, cmd: dict[str, Any],
             payload_hash=computed_payload_hash,
             prev_hash=prev_hash,
         )
-        if not verify_ed25519_signature(public_key_raw=device.public_key, signature_b64=signature, message=msg):
+        should_verify_command_signature = bool(require_command_signature or signature)
+        if should_verify_command_signature and not verify_ed25519_signature(
+            public_key_raw=device.public_key,
+            signature_b64=signature,
+            message=msg,
+        ):
             return _reject_with_db(
                 request=request,
                 actor_user=actor_user,

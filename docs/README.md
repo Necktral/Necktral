@@ -16,6 +16,7 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 - [CONTRACT_PACK_v1.1.md](CONTRACT_PACK_v1.1.md) — Guía contractual vigente para organización y escalamiento modular.
 - [CONTRACT_PACK_v1.0.md](CONTRACT_PACK_v1.0.md) — Base histórica de organización contractual.
 - [CONTRACT_PACK_v2.0.md](CONTRACT_PACK_v2.0.md) — Contrato canónico vigente para Sync v2.
+- [operacion/SYNC_V2_COMPAT_MATRIX.md](operacion/SYNC_V2_COMPAT_MATRIX.md) — Matriz trazable de compatibilidad legacy/v2 y estado real de unificación.
 - [ESTANDAR_COMENTARIOS.md](ESTANDAR_COMENTARIOS.md) — Estándar de comentarios en el código.
 - [ADDENDUM_OFFLINE_FIRST_v1.0.md](ADDENDUM_OFFLINE_FIRST_v1.0.md) — Reglas offline-first (sync, idempotencia y auditoría).
 - [ADDENDUM_SEGURIDAD_v1.0.md](ADDENDUM_SEGURIDAD_v1.0.md) — Plan de mejoras de seguridad y robustez.

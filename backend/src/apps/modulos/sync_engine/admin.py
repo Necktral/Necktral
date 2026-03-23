@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from django.contrib import admin
 
-from .models import AppliedCommand, Device, DeviceEnrollmentChallenge, SyncReceipt
+from .models import AppliedCommand, Device, DeviceEnrollmentChallenge, DeviceRequestNonce, SyncReceipt
 
 
 @admin.register(Device)
@@ -33,6 +33,12 @@ class AppliedCommandAdmin(admin.ModelAdmin):
     )
     list_filter = ("result_status", "company", "command_type")
     search_fields = ("command_id", "device__id", "command_type")
+
+
+@admin.register(DeviceRequestNonce)
+class DeviceRequestNonceAdmin(admin.ModelAdmin):
+    list_display = ("device", "nonce", "ts", "created_at")
+    search_fields = ("device__id", "nonce")
 
 
 @admin.register(SyncReceipt)

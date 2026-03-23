@@ -38,7 +38,7 @@ Cada comando usa:
 - `payload`, `payload_hash`, `prev_hash`
 - `signature` (firma Ed25519 por comando)
 
-El esquema **request-level** con `protocol_version/ts/nonce/auth` aplica a wrappers legacy y aún no está integrado en el core `sync_engine`.
+El esquema **request-level** con `protocol_version/ts/nonce/auth` está integrado en el core `sync_engine` para `protocol_version="2"` y se reutiliza desde wrappers legacy.
 
 ---
 
@@ -216,20 +216,19 @@ Los endpoints legacy deben:
 **Headers obligatorios en wrappers legacy**
 
 - `Deprecation: true`
-- `Sunset: 2026-06-30T00:00:00Z`
 - `Link: </docs/CONTRACT_PACK_v2.0.md>; rel="deprecation"`
+- `Sunset: <opcional>` solo cuando `SYNC_HMAC_LEGACY_SUNSET` está configurado.
 
 **Métricas mínimas (legacy)**
 
 - `metrics:sync_legacy:requests`
 - `metrics:sync_legacy:errors:<ERROR_CODE>`
 
-**Plan de retiro (hitos)**
+**Política operativa legacy**
 
-- T0: Sync v2 canónico operativo (hoy).
-- T0 + 30 días: legacy con warnings + seguimiento de métricas.
-- T0 + 60 días: no se aceptan nuevas devices legacy.
-- T0 + 90 días: legacy retirado.
+- Sync v2 sigue siendo el camino canónico.
+- Legacy se mantiene por compatibilidad sin fecha fija de retiro.
+- El retiro futuro, si aplica, se publica por runbook operativo y activación explícita de `SYNC_HMAC_LEGACY_SUNSET`.
 
 ---
 
