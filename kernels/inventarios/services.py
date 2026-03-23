@@ -46,9 +46,30 @@ class PostResult:
     accounting_journal_entry_id: int | None = None
 
 
-def create_item(*, request, company: OrgUnit, actor_user, sku: str, name: str, uom: str = "UNIT") -> InventoryItem:
+def create_item(
+    *,
+    request,
+    company: OrgUnit,
+    actor_user,
+    sku: str,
+    name: str,
+    uom: str = "UNIT",
+    extra_fields: dict | None = None,
+) -> InventoryItem:
+    data = {
+        "company": company,
+        "sku": sku,
+        "name": name,
+        "uom": uom,
+        "uom_base": uom,
+        "uom_purchase": uom,
+        "uom_sale": uom,
+    }
+    if extra_fields:
+        data.update(extra_fields)
+
     with transaction.atomic():
-        item = InventoryItem.objects.create(company=company, sku=sku, name=name, uom=uom)
+        item = InventoryItem.objects.create(**data)
 
         write_event(
             request=request,

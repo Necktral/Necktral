@@ -29,6 +29,14 @@ describe('router routes', () => {
       UI_ROUTE_PATHS.organizationBranches,
       UI_ROUTE_PATHS.analyticsV3,
       UI_ROUTE_PATHS.accountingDashboard,
+      UI_ROUTE_PATHS.inventoryDashboard,
+      UI_ROUTE_PATHS.inventoryItems,
+      UI_ROUTE_PATHS.inventoryItemNew,
+      UI_ROUTE_PATHS.inventoryItemEdit,
+      UI_ROUTE_PATHS.inventoryWarehouses,
+      UI_ROUTE_PATHS.inventoryMovements,
+      UI_ROUTE_PATHS.inventoryBalances,
+      UI_ROUTE_PATHS.inventoryKardex,
       UI_ROUTE_PATHS.fuelDashboard,
       UI_ROUTE_PATHS.fuelHealth,
       UI_ROUTE_PATHS.synchronizationEnrollment,
@@ -71,6 +79,30 @@ describe('router routes', () => {
         canonical: UI_ROUTE_PATHS.fuelHealth,
       },
       {
+        legacy: LEGACY_ROUTE_PATHS.inventoryDashboard,
+        canonical: UI_ROUTE_PATHS.inventoryDashboard,
+      },
+      {
+        legacy: LEGACY_ROUTE_PATHS.inventoryItems,
+        canonical: UI_ROUTE_PATHS.inventoryItems,
+      },
+      {
+        legacy: LEGACY_ROUTE_PATHS.inventoryWarehouses,
+        canonical: UI_ROUTE_PATHS.inventoryWarehouses,
+      },
+      {
+        legacy: LEGACY_ROUTE_PATHS.inventoryMovements,
+        canonical: UI_ROUTE_PATHS.inventoryMovements,
+      },
+      {
+        legacy: LEGACY_ROUTE_PATHS.inventoryBalances,
+        canonical: UI_ROUTE_PATHS.inventoryBalances,
+      },
+      {
+        legacy: LEGACY_ROUTE_PATHS.inventoryKardex,
+        canonical: UI_ROUTE_PATHS.inventoryKardex,
+      },
+      {
         legacy: LEGACY_ROUTE_PATHS.synchronizationEnrollment,
         canonical: UI_ROUTE_PATHS.synchronizationEnrollment,
       },
@@ -107,5 +139,23 @@ describe('router routes', () => {
     const route = findChild(UI_ROUTE_PATHS.analyticsV3);
     expect(route).toBeDefined();
     expect(route?.meta?.requiredPermissions).toEqual(['dashboard.workspace.read']);
+  });
+
+  it('protege inventario tablero con permiso inventory.balance.read', () => {
+    const route = findChild(UI_ROUTE_PATHS.inventoryDashboard);
+    expect(route).toBeDefined();
+    expect(route?.meta?.requiredPermissions).toEqual(['inventory.balance.read']);
+  });
+
+  it('protege alta de item master con permisos read + create', () => {
+    const route = findChild(UI_ROUTE_PATHS.inventoryItemNew);
+    expect(route).toBeDefined();
+    expect(route?.meta?.requiredPermissions).toEqual(['inventory.item.read', 'inventory.item.create']);
+  });
+
+  it('protege edición de item master con permisos read + update', () => {
+    const route = findChild(UI_ROUTE_PATHS.inventoryItemEdit);
+    expect(route).toBeDefined();
+    expect(route?.meta?.requiredPermissions).toEqual(['inventory.item.read', 'inventory.item.update']);
   });
 });

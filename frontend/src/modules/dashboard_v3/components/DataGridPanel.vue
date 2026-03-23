@@ -4,12 +4,14 @@
 
 <script setup lang="ts">
 import {
+  AllCommunityModule,
+  ClientSideRowModelModule,
   ModuleRegistry,
+  ValidationModule,
   createGrid,
   type ColDef,
   type GridApi,
   type GridOptions,
-  ClientSideRowModelModule,
 } from 'ag-grid-community';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
@@ -21,7 +23,9 @@ const globalScope = globalThis as typeof globalThis & {
 };
 
 if (!globalScope.__dashboardV3AgGridModulesRegistered) {
-  ModuleRegistry.registerModules([ClientSideRowModelModule]);
+  const modules = [ClientSideRowModelModule, AllCommunityModule];
+  if (import.meta.env.DEV) modules.push(ValidationModule);
+  ModuleRegistry.registerModules(modules);
   globalScope.__dashboardV3AgGridModulesRegistered = true;
 }
 

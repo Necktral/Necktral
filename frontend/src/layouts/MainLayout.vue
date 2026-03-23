@@ -129,6 +129,34 @@
 
         <q-separator spaced />
 
+        <q-item-label header>{{ labels.inventory }}</q-item-label>
+        <q-item clickable :to="routes.inventoryDashboard" :disable="!canInventoryRead">
+          <q-item-section avatar><q-icon name="inventory_2" /></q-item-section>
+          <q-item-section>Dashboard inventario</q-item-section>
+        </q-item>
+        <q-item clickable :to="routes.inventoryItems" :disable="!canInventoryItemRead">
+          <q-item-section avatar><q-icon name="category" /></q-item-section>
+          <q-item-section>Ítems</q-item-section>
+        </q-item>
+        <q-item clickable :to="routes.inventoryWarehouses" :disable="!canInventoryRead">
+          <q-item-section avatar><q-icon name="warehouse" /></q-item-section>
+          <q-item-section>Almacenes</q-item-section>
+        </q-item>
+        <q-item clickable :to="routes.inventoryMovements" :disable="!canInventoryRead">
+          <q-item-section avatar><q-icon name="swap_horiz" /></q-item-section>
+          <q-item-section>Movimientos</q-item-section>
+        </q-item>
+        <q-item clickable :to="routes.inventoryBalances" :disable="!canInventoryRead">
+          <q-item-section avatar><q-icon name="balance" /></q-item-section>
+          <q-item-section>Balances</q-item-section>
+        </q-item>
+        <q-item clickable :to="routes.inventoryKardex" :disable="!canInventoryRead">
+          <q-item-section avatar><q-icon name="receipt_long" /></q-item-section>
+          <q-item-section>Kardex</q-item-section>
+        </q-item>
+
+        <q-separator spaced />
+
         <q-item-label header>{{ labels.organization }}</q-item-label>
         <q-item clickable :to="routes.organizationCompanies">
           <q-item-section avatar><q-icon name="domain" /></q-item-section>
@@ -191,13 +219,16 @@
     <q-page-container class="app-page-container">
       <router-view />
     </q-page-container>
+
+    <InventoryCommandPalette v-model="inventoryPaletteOpen" />
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
+import InventoryCommandPalette from 'src/modules/inventory/components/InventoryCommandPalette.vue';
 import { BUSINESS_LABELS, UI_ROUTE_PATHS } from 'src/shared/ui/business-terms';
 import { useAuthStore } from 'src/stores/auth.store';
 import { useAclStore } from 'src/stores/acl.store';
@@ -217,6 +248,7 @@ ui.initFromStorage();
 ctx.initFromStorage();
 
 const leftDrawerOpen = ref(true);
+const inventoryPaletteOpen = ref(false);
 
 const usernameLabel = computed(() => acl.snapshot?.username ?? 'Usuario');
 
@@ -276,6 +308,18 @@ const canDashboardV3Read = computed(() => {
   return acl.hasPermission(companyId, 'dashboard.workspace.read');
 });
 
+const canInventoryRead = computed(() => {
+  const companyId = ctx.activeCompanyId;
+  if (!companyId) return false;
+  return acl.hasPermission(companyId, 'inventory.balance.read');
+});
+
+const canInventoryItemRead = computed(() => {
+  const companyId = ctx.activeCompanyId;
+  if (!companyId) return false;
+  return acl.hasPermission(companyId, 'inventory.item.read');
+});
+
 const canFuelRead = computed(() => {
   const companyId = ctx.activeCompanyId;
   if (!companyId) return false;
@@ -298,4 +342,35 @@ async function onLogout() {
   await auth.logout();
   await router.replace('/login');
 }
+
+function onGlobalShortcut(event: KeyboardEvent) {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    inventoryPaletteOpen.value = true;
+    return;
+  }
+
+  if (!event.altKey || event.ctrlKey || event.metaKey) return;
+  const key = event.key;
+  const routeByAltKey: Record<string, string> = {
+    '1': routes.inventoryDashboard,
+    '2': routes.inventoryItems,
+    '3': routes.inventoryWarehouses,
+    '4': routes.inventoryMovements,
+    '5': routes.inventoryBalances,
+    '6': routes.inventoryKardex,
+  };
+  const target = routeByAltKey[key];
+  if (!target) return;
+  event.preventDefault();
+  void router.push(target);
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onGlobalShortcut);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onGlobalShortcut);
+});
 </script>

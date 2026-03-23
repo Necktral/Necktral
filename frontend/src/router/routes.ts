@@ -91,6 +91,86 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: childPath(UI_ROUTE_PATHS.inventoryDashboard),
+        name: 'inventario-tablero',
+        component: () => import('pages/InventoryDashboardPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+          requiredPermissions: ['inventory.balance.read'],
+        },
+      },
+      {
+        path: childPath(UI_ROUTE_PATHS.inventoryItems),
+        name: 'inventario-items',
+        component: () => import('pages/InventoryItemsPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+          requiredPermissions: ['inventory.item.read'],
+        },
+      },
+      {
+        path: childPath(UI_ROUTE_PATHS.inventoryItemNew),
+        name: 'inventario-item-nuevo',
+        component: () => import('pages/InventoryItemMasterPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+          requiredPermissions: ['inventory.item.read', 'inventory.item.create'],
+        },
+      },
+      {
+        path: childPath(UI_ROUTE_PATHS.inventoryItemEdit),
+        name: 'inventario-item-editar',
+        component: () => import('pages/InventoryItemMasterPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+          requiredPermissions: ['inventory.item.read', 'inventory.item.update'],
+        },
+      },
+      {
+        path: childPath(UI_ROUTE_PATHS.inventoryWarehouses),
+        name: 'inventario-almacenes',
+        component: () => import('pages/InventoryWarehousesPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+          requiredPermissions: ['inventory.balance.read'],
+        },
+      },
+      {
+        path: childPath(UI_ROUTE_PATHS.inventoryMovements),
+        name: 'inventario-movimientos',
+        component: () => import('pages/InventoryMovementsPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+          requiredPermissions: ['inventory.balance.read'],
+        },
+      },
+      {
+        path: childPath(UI_ROUTE_PATHS.inventoryBalances),
+        name: 'inventario-balances',
+        component: () => import('pages/InventoryBalancesPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+          requiredPermissions: ['inventory.balance.read'],
+        },
+      },
+      {
+        path: childPath(UI_ROUTE_PATHS.inventoryKardex),
+        name: 'inventario-kardex',
+        component: () => import('pages/InventoryKardexPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+          requiredPermissions: ['inventory.balance.read'],
+        },
+      },
+      {
         path: '403',
         component: () => import('pages/ForbiddenPage.vue'),
         meta: { requiresAuth: true, requiresContext: false },
@@ -231,6 +311,30 @@ const routes: RouteRecordRaw[] = [
       {
         path: childPath(LEGACY_ROUTE_PATHS.fuelHealth),
         redirect: redirectToCanonical(UI_ROUTE_PATHS.fuelHealth),
+      },
+      {
+        path: childPath(LEGACY_ROUTE_PATHS.inventoryDashboard),
+        redirect: redirectToCanonical(UI_ROUTE_PATHS.inventoryDashboard),
+      },
+      {
+        path: childPath(LEGACY_ROUTE_PATHS.inventoryItems),
+        redirect: redirectToCanonical(UI_ROUTE_PATHS.inventoryItems),
+      },
+      {
+        path: childPath(LEGACY_ROUTE_PATHS.inventoryWarehouses),
+        redirect: redirectToCanonical(UI_ROUTE_PATHS.inventoryWarehouses),
+      },
+      {
+        path: childPath(LEGACY_ROUTE_PATHS.inventoryMovements),
+        redirect: redirectToCanonical(UI_ROUTE_PATHS.inventoryMovements),
+      },
+      {
+        path: childPath(LEGACY_ROUTE_PATHS.inventoryBalances),
+        redirect: redirectToCanonical(UI_ROUTE_PATHS.inventoryBalances),
+      },
+      {
+        path: childPath(LEGACY_ROUTE_PATHS.inventoryKardex),
+        redirect: redirectToCanonical(UI_ROUTE_PATHS.inventoryKardex),
       },
       {
         path: childPath(LEGACY_ROUTE_PATHS.synchronizationEnrollment),

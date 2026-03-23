@@ -226,6 +226,17 @@ body {
   color: var(--app-text-muted);
 }
 
+.inventory-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.inventory-sticky-actionbar {
+  display: flex;
+  gap: var(--app-space-2);
+  flex-wrap: wrap;
+}
+
 @keyframes app-fade-up {
   from {
     opacity: 0;
@@ -262,5 +273,22 @@ body {
 
   .app-container {
     padding: var(--app-space-3);
+  }
+}
+
+@media (pointer: coarse) {
+  .inventory-sticky-actionbar {
+    position: sticky;
+    bottom: var(--app-space-3);
+    z-index: 4;
+    background: var(--app-surface-strong);
+    padding: var(--app-space-2);
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-sm);
+  }
+
+  .inventory-touch-target {
+    min-height: 48px;
+    min-width: 48px;
   }
 }
