@@ -35,6 +35,8 @@ Esta sección contiene documentación de **operación del negocio** (playbooks, 
 - [Checklist PR release F1-F12](PR_RELEASE_F1_F12_CHECKLIST.md)
 - [Publicación release F6-F12 (2026-03-18)](PUBLICACION_RELEASE_F6_F12_20260318.md)
 - [Runbook transición contable a `/api/backend/accounting/*` (2026-03-19)](RUNBOOK_TRANSICION_ACCOUNTING_BACKEND_API_20260319.md)
+- [Branch protection + Release Gate (2026-03-22)](BRANCH_PROTECTION_RELEASE_GATE_v1.0.md)
+- [Runbook TLS con LB externo (2026-03-22)](TLS_LB_EXTERNO_RUNBOOK_v1.0.md)
 - [Guía transversal kernels + móvil + enrolamiento (2026-03-20)](guia_kernels_movil_enrolamiento.md)
 - [Runbook de enrolamiento de dispositivos (2026-03-20)](runbook_enrolamiento_dispositivos.md)
 - [Checklist de validación kernels + móvil (2026-03-20)](checklist_validacion_kernels_movil.md)
@@ -79,3 +81,5 @@ Esta sección contiene documentación de **operación del negocio** (playbooks, 
 - 2026-03-19: Se agrega runbook de transición contable a rutas canónicas `/api/backend/accounting/*` con sunset explícito de alias `/api/accounting/*` para 2026-05-18.
 - 2026-03-20: Se agrega guía transversal de kernels + móvil + enrolamiento, runbook operativo de dispositivos y checklist de validación auth/sync con gate `qa-auth-sync-reset-run`.
 - 2026-03-20: Hardening de latencia operacional local: modo híbrido `ACCOUNTING_OPERATIONAL_LINK_MODE=sync|async`, comando `run_operational_accounting_projector`, gate agresivo `qa-operational-aggressive-gate` y drenaje `qa-operational-projector-drain`.
+- 2026-03-22: Se agrega gobernanza de release con `Release Gate` como check obligatorio y runbook de branch protection para ramas protegidas.
+- 2026-03-22: Se agrega runbook operacional de TLS con LB externo y contrato de headers `X-Forwarded-*` para HSTS/cookies secure.

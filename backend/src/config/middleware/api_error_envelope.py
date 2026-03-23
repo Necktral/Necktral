@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from config.error_envelope import build_error_envelope
+from config.metrics import increment_counter
 
 
 def _is_error_envelope(data) -> bool:
@@ -38,6 +39,9 @@ class ApiErrorEnvelopeMiddleware:
         path = getattr(request, "path", "") or ""
         if not path.startswith("/api/"):
             return response
+        if status_code == 429 and (path.startswith("/api/sync-hmac/") or path.startswith("/api/backend/sync-hmac/")):
+            increment_counter("metrics:sync_legacy:errors:THROTTLED")
+            increment_counter("metrics:sync_legacy:throttled")
 
         # DRF Response: podemos operar sobre response.data
         if hasattr(response, "data"):

@@ -22,7 +22,7 @@ Esto levantará:
 
 - **Backend**: http://localhost:8000
 - **Base de Datos**: Postgres 16
-- **Frontend**: http://localhost:3000
+- **Frontend**: http://localhost:3000 (si está ocupado, Quasar usa 3001)
 
 > Para stack PROD (SPA servida por Nginx y proxy `/api/`), ver el README raíz y usar `compose.prod.yaml`.
 
@@ -37,7 +37,7 @@ docker compose exec backend python src/manage.py migrate --noinput
 El sistema cuenta con un asistente de instalación automático. **No es necesario crear superusuarios por consola.**
 
 1. Levanta el frontend (ver abajo).
-2. Accede a `http://localhost:3000`.
+2. Accede a `http://localhost:3000` (o `http://localhost:3001` si hubo fallback).
 3. Si es una instalación fresca, el login mostrará un CTA fuerte para ir a `/bootstrap` (crear usuario inicial).
 4. El asistente (`/bootstrap`) te guiará para:
    - Crear el **Administrador Inicial**.
@@ -54,7 +54,7 @@ El frontend está desarrollado en Vue 3 + Quasar.
 cd frontend
 npm install
 npm run dev
-# Accede a http://localhost:3000
+# Accede a http://localhost:3000 (o 3001)
 ```
 
 ### API base
@@ -109,6 +109,7 @@ docker compose up -d frontend
 ```
 
 Luego abre http://localhost:3000
+Si el puerto `3000` está ocupado, abre `http://localhost:3001`.
 
 ---
 
