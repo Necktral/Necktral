@@ -10,10 +10,18 @@ type RetailShortcutHandlers = {
   decreaseQty?: () => void;
   confirm?: () => void;
   cancel?: () => void;
+  isSuspended?: () => boolean;
 };
 
 export function useRetailShortcuts(handlers: RetailShortcutHandlers) {
   function onKeydown(event: KeyboardEvent) {
+    if (handlers.isSuspended?.()) {
+      if (event.key === 'Escape') {
+        handlers.cancel?.();
+      }
+      return;
+    }
+
     if (event.key === 'F2') {
       event.preventDefault();
       handlers.focusSearch?.();

@@ -16,7 +16,21 @@ export const useRetailCatalogStore = defineStore('retail-catalog', {
       this.error = null;
       this.query = query;
       try {
-        const data = await searchRetailCatalog(query);
+        const data = await searchRetailCatalog({ q: query, limit: 24 });
+        this.results = data.results;
+      } catch (error: unknown) {
+        this.error = error instanceof Error ? error.message : 'No se pudo consultar el catálogo retail.';
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async searchByBarcode(barcode: string) {
+      this.loading = true;
+      this.error = null;
+      this.query = barcode;
+      try {
+        const data = await searchRetailCatalog({ barcode, limit: 24 });
         this.results = data.results;
       } catch (error: unknown) {
         this.error = error instanceof Error ? error.message : 'No se pudo consultar el catálogo retail.';

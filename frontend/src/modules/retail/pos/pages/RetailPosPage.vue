@@ -7,8 +7,34 @@
       <template #badges>
         <RetailCashSessionBadge :session="bootstrap.data?.active_cash_session ?? null" />
         <RetailFiscalStatusChip :status="checkout.lastCommit?.billing.status ?? ticket.currentTicket?.status ?? null" />
+        <q-chip square dense :color="scannerModeEnabled ? 'primary' : 'grey-6'" text-color="white" icon="qr_code_scanner">
+          Scanner {{ scannerModeEnabled ? 'ON' : 'OFF' }}
+        </q-chip>
+        <q-chip
+          square
+          dense
+          :color="offlineQueue.pendingCount > 0 ? 'warning' : 'grey-6'"
+          :text-color="offlineQueue.pendingCount > 0 ? 'black' : 'white'"
+          icon="sync_problem"
+        >
+          Cola {{ offlineQueue.pendingCount }}
+        </q-chip>
       </template>
       <template #actions>
+        <q-btn
+          outline
+          icon="sync"
+          label="Flush cola"
+          :disable="offlineQueue.pendingCount === 0 || offlineQueue.syncing"
+          :loading="offlineQueue.syncing"
+          @click="flushOfflineQueue"
+        />
+        <q-btn
+          outline
+          :icon="scannerModeEnabled ? 'qr_code_scanner' : 'qr_code_2'"
+          :label="scannerModeEnabled ? 'Scanner ON' : 'Scanner OFF'"
+          @click="scannerModeEnabled = !scannerModeEnabled"
+        />
         <q-btn outline icon="history" label="Recientes" @click="openRecent" />
         <q-btn
           outline
@@ -37,6 +63,28 @@
 
     <q-banner v-if="ticket.error || checkout.error || catalog.error" rounded dense class="bg-negative text-white q-mt-md">
       {{ ticket.error || checkout.error || catalog.error }}
+    </q-banner>
+
+    <q-banner v-if="checkout.notice" rounded dense class="bg-blue-2 text-black q-mt-md">
+      {{ checkout.notice }}
+    </q-banner>
+
+    <q-banner
+      v-if="offlineQueue.lastSyncError"
+      rounded
+      dense
+      class="bg-orange-2 text-black q-mt-md"
+    >
+      Cola offline retail: {{ offlineQueue.lastSyncError }}
+    </q-banner>
+
+    <q-banner
+      v-if="scannerFeedback.message"
+      rounded
+      dense
+      :class="scannerFeedback.kind === 'ok' ? 'bg-positive text-white q-mt-md' : 'bg-warning text-black q-mt-md'"
+    >
+      {{ scannerFeedback.message }}
     </q-banner>
 
     <q-banner
@@ -116,11 +164,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 import AppContainer from 'src/ui/AppContainer.vue';
 import AppPageHeader from 'src/ui/AppPageHeader.vue';
 import { BUSINESS_LABELS } from 'src/shared/ui/business-terms';
+import { useContextStore } from 'src/stores/context.store';
 
 import RetailCatalogPanel from '../components/RetailCatalogPanel.vue';
 import RetailCashSessionBadge from '../components/RetailCashSessionBadge.vue';
@@ -131,18 +180,22 @@ import RetailRecentTicketsDrawer from '../components/RetailRecentTicketsDrawer.v
 import RetailReturnDialog from '../components/RetailReturnDialog.vue';
 import RetailTicketPanel from '../components/RetailTicketPanel.vue';
 import RetailTotalsBar from '../components/RetailTotalsBar.vue';
+import { useRetailScannerInput } from '../composables/useRetailScannerInput';
 import { useRetailShortcuts } from '../composables/useRetailShortcuts';
 import type { RetailCatalogItem } from '../services/retail-pos.service';
 import { useRetailBootstrapStore } from '../stores/useRetailBootstrapStore';
 import { useRetailCatalogStore } from '../stores/useRetailCatalogStore';
 import { useRetailCheckoutStore } from '../stores/useRetailCheckoutStore';
+import { useRetailOfflineQueueStore } from '../stores/useRetailOfflineQueueStore';
 import { useRetailTicketStore } from '../stores/useRetailTicketStore';
 
 const labels = BUSINESS_LABELS;
+const ctx = useContextStore();
 const bootstrap = useRetailBootstrapStore();
 const catalog = useRetailCatalogStore();
 const ticket = useRetailTicketStore();
 const checkout = useRetailCheckoutStore();
+const offlineQueue = useRetailOfflineQueueStore();
 
 const catalogQuery = ref('');
 const checkoutOpen = ref(false);
@@ -150,13 +203,71 @@ const holdOpen = ref(false);
 const recentOpen = ref(false);
 const returnOpen = ref(false);
 const selectedLineId = ref<number | null>(null);
+const scannerModeEnabled = ref(true);
+const scannerFeedback = ref<{ kind: 'ok' | 'warn'; message: string }>({
+  kind: 'ok',
+  message: '',
+});
 
 const catalogPanelRef = ref<InstanceType<typeof RetailCatalogPanel> | null>(null);
 const checkoutDrawerRef = ref<InstanceType<typeof RetailCheckoutDrawer> | null>(null);
+let offlineFlushTimer: number | null = null;
 
 const canOpenReturn = computed(
   () => Boolean(ticket.currentSale && selectedLineId.value && ticket.currentTicket?.status === 'CLOSED'),
 );
+
+const scanner = useRetailScannerInput({
+  enabled: () => scannerModeEnabled.value,
+  onScan: async (event) => {
+    catalogQuery.value = event.normalized;
+    await catalog.searchByBarcode(event.normalized);
+
+    const normalized = event.normalized;
+    const exactBarcode = catalog.results.find((row) => String(row.barcode || '').trim().toUpperCase() === normalized);
+    const exactSku = catalog.results.find((row) => String(row.sku || '').trim().toUpperCase() === normalized);
+    const candidate = exactBarcode ?? exactSku ?? (catalog.results.length === 1 ? catalog.results[0] : null);
+
+    if (!candidate) {
+      scannerFeedback.value = {
+        kind: 'warn',
+        message: `Scanner: sin match único para ${normalized}.`,
+      };
+      playTone(false);
+      return;
+    }
+
+    await addCatalogItem(candidate);
+    scannerFeedback.value = {
+      kind: 'ok',
+      message: `Scanner: agregado ${candidate.sku}.`,
+    };
+    playTone(true);
+  },
+});
+
+function playTone(success: boolean) {
+  if (typeof window === 'undefined') return;
+  const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioCtx) return;
+  try {
+    const ctxAudio = new AudioCtx();
+    const osc = ctxAudio.createOscillator();
+    const gain = ctxAudio.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = success ? 880 : 220;
+    gain.gain.value = 0.05;
+    osc.connect(gain);
+    gain.connect(ctxAudio.destination);
+    osc.start();
+    osc.stop(ctxAudio.currentTime + 0.08);
+    window.setTimeout(() => {
+      void ctxAudio.close();
+    }, 150);
+  } catch {
+    // tono opcional: no bloquea operación
+  }
+}
 
 async function ensureTicket() {
   if (!bootstrap.data?.active_cash_session || ticket.currentTicket) return;
@@ -200,8 +311,17 @@ async function previewCheckout() {
 
 async function commitCheckout(cashReceived: string) {
   if (!ticket.currentTicket) return;
-  await checkout.commit(ticket.currentTicket.id, ticket.currentTicket.version, cashReceived || ticket.currentTicket.total);
-  if (checkout.lastCommit) {
+  await bootstrap.load();
+  if (!bootstrap.data?.active_cash_session) {
+    checkout.error = 'No hay CashSession OPEN para confirmar checkout.';
+    return;
+  }
+  const outcome = await checkout.commit(
+    ticket.currentTicket.id,
+    ticket.currentTicket.version,
+    cashReceived || ticket.currentTicket.total,
+  );
+  if (outcome === 'COMPLETED' && checkout.lastCommit) {
     await ticket.reload(checkout.lastCommit.ticket_id);
     await ticket.loadRecent();
     checkoutOpen.value = false;
@@ -210,10 +330,12 @@ async function commitCheckout(cashReceived: string) {
 
 async function voidTicket() {
   if (!ticket.currentTicket) return;
-  await checkout.voidTicket(ticket.currentTicket.id, ticket.currentTicket.version, 'Anulación POS');
-  await ticket.reload(ticket.currentTicket.id);
-  await ticket.loadRecent();
-  checkoutOpen.value = false;
+  const outcome = await checkout.voidTicket(ticket.currentTicket.id, ticket.currentTicket.version, 'Anulación POS');
+  if (outcome === 'COMPLETED') {
+    await ticket.reload(ticket.currentTicket.id);
+    await ticket.loadRecent();
+    checkoutOpen.value = false;
+  }
 }
 
 async function confirmHold(reason: string) {
@@ -239,11 +361,27 @@ async function processReturn(qty: string, reason: string) {
   if (!ticket.currentSale || !selectedLineId.value) return;
   const saleId = Number(ticket.currentSale.sale_id || checkout.lastCommit?.sale_id || 0);
   if (!saleId) return;
-  await checkout.createReturn(saleId, selectedLineId.value, qty, reason);
-  if (ticket.currentTicket) {
+  await bootstrap.load();
+  if (!bootstrap.data?.active_cash_session) {
+    checkout.error = 'No hay CashSession OPEN para procesar devolución.';
+    return;
+  }
+  const outcome = await checkout.createReturn(saleId, selectedLineId.value, qty, reason);
+  if (outcome === 'COMPLETED' && ticket.currentTicket) {
     await ticket.reload(ticket.currentTicket.id);
   }
-  returnOpen.value = false;
+  if (outcome === 'COMPLETED') {
+    returnOpen.value = false;
+  }
+}
+
+async function flushOfflineQueue() {
+  await offlineQueue.flush();
+  await offlineQueue.purgeDone();
+}
+
+function onOnline() {
+  void flushOfflineQueue();
 }
 
 useRetailShortcuts({
@@ -266,13 +404,46 @@ useRetailShortcuts({
     recentOpen.value = false;
     returnOpen.value = false;
   },
+  isSuspended: () => scannerModeEnabled.value && scanner.isCapturing.value,
 });
+
+watch(
+  () => [ctx.activeCompanyId, ctx.activeBranchId] as const,
+  async ([companyId, branchId]) => {
+    if (!companyId) {
+      offlineQueue.$patch({
+        companyId: null,
+        branchId: null,
+        queue: [],
+        syncing: false,
+        lastSyncError: '',
+      });
+      return;
+    }
+    await offlineQueue.loadScope(companyId, branchId ?? null);
+  },
+  { immediate: true },
+);
 
 onMounted(async () => {
   await bootstrap.load();
   await runCatalogSearch();
   await ensureTicket();
   await ticket.loadRecent();
+  await flushOfflineQueue();
+
+  window.addEventListener('online', onOnline);
+  offlineFlushTimer = window.setInterval(() => {
+    void flushOfflineQueue();
+  }, 15000);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('online', onOnline);
+  if (offlineFlushTimer !== null) {
+    window.clearInterval(offlineFlushTimer);
+    offlineFlushTimer = null;
+  }
 });
 </script>
 

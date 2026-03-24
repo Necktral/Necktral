@@ -26,4 +26,29 @@ describe('useRetailShortcuts', () => {
 
     wrapper.unmount();
   });
+
+  it('ignores shortcuts when suspended', () => {
+    const focusSearch = vi.fn();
+    const cancel = vi.fn();
+
+    const Harness = defineComponent({
+      setup() {
+        useRetailShortcuts({
+          focusSearch,
+          cancel,
+          isSuspended: () => true,
+        });
+        return () => null;
+      },
+    });
+
+    const wrapper = mount(Harness);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(focusSearch).not.toHaveBeenCalled();
+    expect(cancel).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+  });
 });

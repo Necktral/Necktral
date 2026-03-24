@@ -265,11 +265,21 @@ export async function fetchRetailBootstrap() {
   return requestData(api.get<RetailBootstrapResponse>('/backend/retail/bootstrap/'));
 }
 
-export async function searchRetailCatalog(query: string) {
+export async function searchRetailCatalog(
+  input: string | { q?: string; barcode?: string; limit?: number },
+) {
+  const params =
+    typeof input === 'string'
+      ? { q: input, limit: 24 }
+      : {
+          q: input.q ?? '',
+          barcode: input.barcode ?? '',
+          limit: input.limit ?? 24,
+        };
   return requestData(
     api.get<{ count: number; limit: number; offset: number; results: RetailCatalogItem[] }>(
       '/backend/retail/catalog/search/',
-      { params: { q: query, limit: 24 } },
+      { params },
     ),
   );
 }
