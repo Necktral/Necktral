@@ -4,10 +4,8 @@
 
 <script setup lang="ts">
 import {
-  AllCommunityModule,
   ClientSideRowModelModule,
   ModuleRegistry,
-  ValidationModule,
   createGrid,
   type ColDef,
   type GridApi,
@@ -23,9 +21,7 @@ const globalScope = globalThis as typeof globalThis & {
 };
 
 if (!globalScope.__dashboardV3AgGridModulesRegistered) {
-  const modules = [ClientSideRowModelModule, AllCommunityModule];
-  if (import.meta.env.DEV) modules.push(ValidationModule);
-  ModuleRegistry.registerModules(modules);
+  ModuleRegistry.registerModules([ClientSideRowModelModule]);
   globalScope.__dashboardV3AgGridModulesRegistered = true;
 }
 
@@ -44,14 +40,32 @@ const gridEl = ref<HTMLDivElement | null>(null);
 
 const defaultColDef: ColDef = {
   sortable: true,
-  filter: true,
+  filter: false,
   resizable: true,
   minWidth: 120,
   flex: 1,
 };
 
+function normalizeValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value.toLocaleLowerCase();
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return `${value}`.toLocaleLowerCase();
+  }
+  if (value instanceof Date) return value.toISOString().toLocaleLowerCase();
+  return '';
+}
+
+const normalizedQuickFilter = computed(() => (props.quickFilter ?? '').trim().toLocaleLowerCase());
+
+const filteredRows = computed<Array<Record<string, unknown>>>(() => {
+  const query = normalizedQuickFilter.value;
+  if (!query) return props.rows;
+  return props.rows.filter((row) => Object.values(row).some((value) => normalizeValue(value).includes(query)));
+});
+
 const columnDefs = computed<ColDef[]>(() => {
-  const first = props.rows[0] ?? {};
+  const first = filteredRows.value[0] ?? props.rows[0] ?? {};
   return Object.keys(first).map((key) => ({
     field: key,
     headerName: key.replace(/_/g, ' ').toUpperCase(),
@@ -60,21 +74,13 @@ const columnDefs = computed<ColDef[]>(() => {
 
 function currentGridOptions(): GridOptions {
   return {
-    rowData: props.rows,
+    rowData: filteredRows.value,
     columnDefs: columnDefs.value,
     defaultColDef,
     suppressCellFocus: true,
     animateRows: false,
   };
 }
-
-watch(
-  () => props.quickFilter,
-  (value) => {
-    if (!api.value) return;
-    api.value.setGridOption('quickFilterText', value ?? '');
-  },
-);
 
 watch(
   columnDefs,
@@ -86,20 +92,17 @@ watch(
 );
 
 watch(
-  () => props.rows,
+  filteredRows,
   (value) => {
     if (!api.value) return;
     api.value.setGridOption('rowData', value);
   },
-  { deep: true },
+  { deep: false },
 );
 
 onMounted(() => {
   if (!gridEl.value) return;
   api.value = createGrid(gridEl.value, currentGridOptions());
-  if (props.quickFilter) {
-    api.value.setGridOption('quickFilterText', props.quickFilter);
-  }
 });
 
 onBeforeUnmount(() => {

@@ -3,11 +3,11 @@
 	qa-operational-hygiene qa-operational-gate qa-operational-projector-drain qa-operational-aggressive-gate qa-operational-pilot-stage1 qa-operational-pilot-stage2 qa-operational-pilot-stage3 qa-operational-pilot-rollback qa-operational-all \
 	qa-operational-go-live \
 	qa-auth-sync-prepare qa-auth-sync-smoke qa-auth-sync-reset-run \
-	qa-ci-up qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci \
+	qa-ci-up qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-preflight qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci \
 	qa-coverage-domains \
 	qa-repo-hygiene qa-repo-hygiene-inventory qa-architecture-boundaries qa-simulation-contract-guard qa-accounting-http-contract-guard \
 		qa-repo-comment-audit \
-		qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-backend-mypy-baseline-refresh qa-backend-tests qa-static-scan qa-frontend-ci qa-audit-integrity qa-reports-contract-check \
+		qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-backend-mypy-baseline-refresh qa-backend-tests qa-static-scan qa-frontend-ci qa-frontend-quality qa-frontend-bundle-budget qa-audit-integrity qa-reports-contract-check \
 		docker-clean docker-clean-all \
 		loadtest-precheck-auth loadtest loadtest-150k
 
@@ -168,8 +168,15 @@ qa-audit-integrity:
 qa-reports-contract-check:
 	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd $(CONTAINER_BACKEND_DIR) && python manage.py reports_check_contracts | tee /app/$(QA_REPORTS_DIR)/reports_contract_check.txt && python manage.py reports_verify_reproducibility | tee /app/$(QA_REPORTS_DIR)/reports_repro_check.txt"
 
+qa-frontend-quality:
+	docker compose --profile qa run --rm -e FRONTEND_CI_MODE=quality frontend_ci
+
+qa-frontend-bundle-budget:
+	docker compose --profile qa run --rm -e FRONTEND_CI_MODE=bundle_budget frontend_ci
+
 qa-frontend-ci:
-	docker compose --profile qa run --rm frontend_ci
+	$(MAKE) qa-frontend-quality
+	$(MAKE) qa-frontend-bundle-budget
 
 qa-repo-hygiene:
 	python3 ./qa/repo_hygiene_guard.py
@@ -186,8 +193,11 @@ qa-accounting-http-contract-guard:
 qa-repo-hygiene-inventory:
 	python3 ./qa/repo_hygiene_inventory.py
 
-# Gate 1: calidad estática + typecheck
-qa-ci-gate1: qa-repo-hygiene qa-architecture-boundaries qa-simulation-contract-guard qa-accounting-http-contract-guard qa-ci-up qa-static-scan qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-frontend-ci
+# Gate 1 (preflight): calidad estática + tipado backend
+qa-ci-preflight: qa-repo-hygiene qa-architecture-boundaries qa-simulation-contract-guard qa-accounting-http-contract-guard qa-static-scan qa-backend-bandit qa-backend-ruff qa-backend-mypy
+
+# Gate 1 completo: preflight + frontend quality + budget bundle
+qa-ci-gate1: qa-ci-up qa-ci-preflight qa-frontend-quality qa-frontend-bundle-budget
 
 # Gate 2: pruebas deterministas (pytest + cobertura)
 qa-ci-gate2: qa-ci-up qa-backend-tests qa-coverage-domains qa-reports-contract-check

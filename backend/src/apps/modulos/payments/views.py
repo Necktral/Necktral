@@ -8,8 +8,22 @@ from apps.modulos.common.pagination import get_limit_offset, paginate_queryset
 from apps.modulos.common.permissions import rbac_permission
 
 from .models import CashSession, PaymentIntent
-from .serializers import CashMovementCreateIn, CashSessionCloseIn, CashSessionOpenIn, PaymentIntentCreateIn
-from .services import close_cash_session, create_payment_intent, open_cash_session, post_cash_movement
+from .serializers import (
+    CashMovementCreateIn,
+    CashSessionCloseIn,
+    CashSessionOpenIn,
+    PaymentIntentCaptureIn,
+    PaymentIntentCreateIn,
+    PaymentIntentRefundIn,
+)
+from .services import (
+    capture_payment_intent,
+    close_cash_session,
+    create_payment_intent,
+    open_cash_session,
+    post_cash_movement,
+    refund_payment_intent,
+)
 
 
 class HealthView(APIView):
@@ -79,6 +93,68 @@ class PaymentIntentListCreateView(APIView):
                 "idempotent": bool(idempotent),
             },
             status=status.HTTP_200_OK if idempotent else status.HTTP_201_CREATED,
+        )
+
+
+class PaymentIntentCaptureView(APIView):
+    permission_classes = [rbac_permission("payments.intent.capture")]
+
+    def post(self, request, payment_id: str):
+        s = PaymentIntentCaptureIn(data=request.data)
+        s.is_valid(raise_exception=True)
+        v = s.validated_data
+        try:
+            result = capture_payment_intent(
+                request=request,
+                actor=request.user,
+                payment_id=payment_id,
+                amount=v.get("amount"),
+                idempotency_key=v.get("idempotency_key", "") or "",
+                provider_txn_id=v.get("provider_txn_id", "") or "",
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "payment_id": result.payment_id,
+                "status": result.status,
+                "amount": str(result.amount),
+                "idempotent": bool(result.idempotent),
+                "refunded_total": str(result.refunded_total),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class PaymentIntentRefundView(APIView):
+    permission_classes = [rbac_permission("payments.intent.refund")]
+
+    def post(self, request, payment_id: str):
+        s = PaymentIntentRefundIn(data=request.data)
+        s.is_valid(raise_exception=True)
+        v = s.validated_data
+        try:
+            result = refund_payment_intent(
+                request=request,
+                actor=request.user,
+                payment_id=payment_id,
+                amount=v.get("amount"),
+                idempotency_key=v.get("idempotency_key", "") or "",
+                reason=v.get("reason", "") or "",
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "payment_id": result.payment_id,
+                "status": result.status,
+                "amount": str(result.amount),
+                "idempotent": bool(result.idempotent),
+                "refunded_total": str(result.refunded_total),
+            },
+            status=status.HTTP_200_OK,
         )
 
 

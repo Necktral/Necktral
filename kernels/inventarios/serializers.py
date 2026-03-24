@@ -72,6 +72,17 @@ class TaxProfileCreateSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=32)
     name = serializers.CharField(max_length=120)
     tax_treatment = serializers.ChoiceField(choices=TaxTreatment.choices, default=TaxTreatment.GRAVADO)
+    rate = serializers.DecimalField(max_digits=8, decimal_places=4, required=False, default="0.0000")
+
+    def validate(self, attrs):
+        tax_treatment = attrs.get("tax_treatment", TaxTreatment.GRAVADO)
+        rate = attrs.get("rate")
+        if tax_treatment in (TaxTreatment.EXENTO, TaxTreatment.EXONERADO):
+            attrs["rate"] = "0.0000"
+            return attrs
+        if rate is None:
+            attrs["rate"] = "0.0000"
+        return attrs
 
 
 class ItemCreateSerializer(serializers.Serializer):
@@ -370,7 +381,7 @@ class CategoryOut(serializers.ModelSerializer):
 class TaxProfileOut(serializers.ModelSerializer):
     class Meta:
         model = InventoryTaxProfile
-        fields = ["id", "code", "name", "tax_treatment", "is_active"]
+        fields = ["id", "code", "name", "tax_treatment", "rate", "is_active"]
 
 
 class InventoryItemOut(serializers.ModelSerializer):

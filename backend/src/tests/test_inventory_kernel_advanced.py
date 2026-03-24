@@ -270,11 +270,12 @@ def test_item_master_p0_lookups_extended_payload_and_barcode_uniqueness():
 
     tax_profile_resp = client.post(
         "/api/inventory/lookups/tax-profiles/",
-        {"code": "IVA15", "name": "IVA 15%", "tax_treatment": "GRAVADO"},
+        {"code": "IVA15", "name": "IVA 15%", "tax_treatment": "GRAVADO", "rate": "0.1500"},
         format="json",
     )
     assert tax_profile_resp.status_code == 201
     tax_profile_id = int(tax_profile_resp.data["id"])
+    assert tax_profile_resp.data["rate"] == "0.1500"
 
     brand_list = client.get("/api/inventory/lookups/brands/?q=brand")
     assert brand_list.status_code == 200
@@ -287,6 +288,7 @@ def test_item_master_p0_lookups_extended_payload_and_barcode_uniqueness():
     tax_profile_list = client.get("/api/inventory/lookups/tax-profiles/?q=iva")
     assert tax_profile_list.status_code == 200
     assert tax_profile_list.data["count"] >= 1
+    assert tax_profile_list.data["results"][0]["rate"] == "0.1500"
 
     payload = {
         "sku": f"ITEM-P0-{uuid.uuid4().hex[:6]}",

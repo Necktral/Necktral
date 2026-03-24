@@ -204,6 +204,14 @@
 
         <q-separator spaced />
 
+        <q-item-label header>{{ labels.retail }}</q-item-label>
+        <q-item clickable :to="routes.retailPos" :disable="!canRetailUse">
+          <q-item-section avatar><q-icon name="point_of_sale" /></q-item-section>
+          <q-item-section>POS retail</q-item-section>
+        </q-item>
+
+        <q-separator spaced />
+
         <q-item-label header>{{ labels.synchronization }}</q-item-label>
         <q-item clickable :to="routes.synchronizationEnrollment" :disable="!canSyncEnroll">
           <q-item-section avatar><q-icon name="qr_code_2" /></q-item-section>
@@ -326,6 +334,12 @@ const canFuelRead = computed(() => {
   return acl.hasPermission(companyId, 'fuel.shift.read');
 });
 
+const canRetailUse = computed(() => {
+  const companyId = ctx.activeCompanyId;
+  if (!companyId) return false;
+  return acl.hasPermission(companyId, 'retail.pos.use');
+});
+
 const canSyncEnroll = computed(() => {
   const companyId = ctx.activeCompanyId;
   if (!companyId) return false;
@@ -359,6 +373,7 @@ function onGlobalShortcut(event: KeyboardEvent) {
     '4': routes.inventoryMovements,
     '5': routes.inventoryBalances,
     '6': routes.inventoryKardex,
+    '7': routes.retailPos,
   };
   const target = routeByAltKey[key];
   if (!target) return;

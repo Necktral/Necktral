@@ -111,17 +111,34 @@ services:
     container_name: erpcrm_frontend_ci
     profiles: ["qa"]
     working_dir: /app/frontend
+    environment:
+      QA_REPORTS_DIR: /app/qa/reports
     volumes:
       - ./frontend:/app/frontend
+      - ./qa:/app/qa
       - frontend_node_modules:/app/frontend/node_modules
     command: >
       bash -lc "
+        set -euo pipefail &&
         npm ci &&
-        npm run lint &&
-        npm run typecheck &&
-        npm run test &&
-        npm run build &&
-        npm run bundle:budget:dashboard-v3
+        MODE=$${FRONTEND_CI_MODE:-all} &&
+        if [ \"$$MODE\" = \"quality\" ]; then
+          npm run lint &&
+          npm run typecheck &&
+          npm run test ;
+        elif [ \"$$MODE\" = \"bundle_budget\" ]; then
+          npm run build &&
+          npm run bundle:budget:dashboard-v3 ;
+        elif [ \"$$MODE\" = \"all\" ]; then
+          npm run lint &&
+          npm run typecheck &&
+          npm run test &&
+          npm run build &&
+          npm run bundle:budget:dashboard-v3 ;
+        else
+          echo \"[frontend_ci] invalid FRONTEND_CI_MODE=$$MODE\" ;
+          exit 2 ;
+        fi
       "
 
   # Herramienta opcional para inspeccionar DB por navegador:

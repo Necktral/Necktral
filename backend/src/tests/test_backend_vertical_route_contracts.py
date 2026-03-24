@@ -11,6 +11,7 @@ def test_backend_vertical_canonical_health_endpoints_are_available():
         ("/api/backend/inventory/health/", "inventory"),
         ("/api/backend/procurement/health/", "procurement"),
         ("/api/backend/fuel/health/", "fuel"),
+        ("/api/backend/retail/health/", "retail"),
     ]
 
     for path, module in checks:
@@ -27,6 +28,7 @@ def test_vertical_legacy_aliases_emit_deprecation_headers():
         ("/api/inventory/health/", "/api/backend/inventory/"),
         ("/api/procurement/health/", "/api/backend/procurement/"),
         ("/api/fuel/health/", "/api/backend/fuel/"),
+        ("/api/retail/health/", "/api/backend/retail/"),
     ]
 
     for path, successor in checks:

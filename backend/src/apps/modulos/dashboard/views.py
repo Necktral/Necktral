@@ -78,6 +78,8 @@ class DashboardWorkspaceDetailView(APIView):
                 code=exc.code,
                 details=dict(exc.details or {}),
             )
+        widgets_raw = payload.get("widgets")
+        widget_rows = widgets_raw if isinstance(widgets_raw, list) else []
 
         body = build_envelope(
             request=request,
@@ -85,7 +87,7 @@ class DashboardWorkspaceDetailView(APIView):
             summary={
                 "workspace_code": workspace_code,
                 "title": payload.get("title"),
-                "widget_count": len(list(payload.get("widgets") or [])),
+                "widget_count": len(widget_rows),
             },
             results=payload,
             pagination={},

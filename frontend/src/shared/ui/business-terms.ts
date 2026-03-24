@@ -7,6 +7,7 @@ export const BUSINESS_LABELS = {
   rolesAndPermissions: 'Roles y Permisos',
   identityAndAccess: 'Identidad y Acceso',
   fuel: 'Combustible',
+  retail: 'Ventas',
   synchronization: 'Sincronizacion',
   analytics: 'Analitica',
 } as const;
@@ -31,6 +32,7 @@ export const UI_ROUTE_PATHS = {
   humanResourcesEmployees: '/recursos-humanos/empleados',
   fuelDashboard: '/combustible',
   fuelHealth: '/combustible/salud',
+  retailPos: '/ventas',
   auditLog: '/audit/bitacora',
   synchronizationEnrollment: '/sincronizacion/enrolamiento',
   synchronizationDevices: '/sincronizacion/dispositivos',
@@ -44,6 +46,7 @@ export const LEGACY_ROUTE_PATHS = {
   humanResourcesEmployees: '/hr/employees',
   fuelDashboard: '/fuel',
   fuelHealth: '/fuel/health',
+  retailPos: '/retail',
   inventoryDashboard: '/inventory',
   inventoryItems: '/inventory/items',
   inventoryWarehouses: '/inventory/warehouses',

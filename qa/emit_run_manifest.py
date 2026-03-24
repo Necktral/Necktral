@@ -15,9 +15,15 @@ ARTIFACTS = [
     ("mypy.txt", "gate1"),
     ("mypy_delta.json", "gate1"),
     ("mypy_delta.txt", "gate1"),
+    ("frontend_bundle_budget.json", "gate1"),
+    ("frontend_bundle_budget.md", "gate1"),
     ("pytest.xml", "gate2"),
     ("coverage.xml", "gate2"),
     ("coverage.txt", "gate2"),
+    ("coverage_by_domain.json", "gate2"),
+    ("coverage_by_domain.md", "gate2"),
+    ("reports_contract_check.txt", "gate2"),
+    ("reports_repro_check.txt", "gate2"),
     ("audit_integrity.json", "gate3"),
     ("qa-ci-run.log", "setup"),
 ]
@@ -35,6 +41,8 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--gate3-status", required=True)
     p.add_argument("--run-status", required=True)
     p.add_argument("--failed-gate", default="")
+    p.add_argument("--failed-step", default="")
+    p.add_argument("--steps-file", default="")
     return p.parse_args()
 
 
@@ -60,6 +68,32 @@ def _artifact_status(
     if gate_status in {"failed", "blocked"}:
         return "failed", False, None
     return "missing", False, None
+
+
+def _parse_steps_file(path: Path) -> list[dict[str, object]]:
+    if not path.exists():
+        return []
+
+    rows: list[dict[str, object]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        name, status, started_at, finished_at, duration_sec = (line.split("|", 4) + ["", "", "", "", ""])[:5]
+        duration_value = 0
+        try:
+            duration_value = max(0, int(duration_sec))
+        except Exception:
+            duration_value = 0
+        rows.append(
+            {
+                "name": name,
+                "status": status,
+                "started_at": started_at or None,
+                "finished_at": finished_at or None,
+                "duration_sec": duration_value,
+            }
+        )
+    return rows
 
 
 def main() -> int:
@@ -89,12 +123,29 @@ def main() -> int:
             "generated_at": generated_at,
         }
 
+    steps_file = Path(args.steps_file) if args.steps_file else None
+    steps = _parse_steps_file(steps_file) if steps_file is not None else []
+    durations = {
+        str(step.get("name") or ""): int(step.get("duration_sec") or 0)
+        for step in steps
+        if str(step.get("name") or "")
+    }
+    step_statuses = {
+        str(step.get("name") or ""): str(step.get("status") or "unknown")
+        for step in steps
+        if str(step.get("name") or "")
+    }
+
     manifest = {
         "run_started_at": args.run_started_at,
         "run_finished_at": args.run_finished_at,
         "run_status": args.run_status,
         "failed_gate": args.failed_gate or None,
+        "failed_step": args.failed_step or (args.failed_gate or None),
         "gates": gate_statuses,
+        "steps": steps,
+        "step_statuses": step_statuses,
+        "durations": durations,
         "artifacts": artifacts,
     }
 

@@ -66,6 +66,7 @@ urlpatterns = [
     path("api/backend/inventory/", include("kernels.inventarios.urls")),
     path("api/backend/billing/", include("kernels.facturacion.urls")),
     path("api/backend/procurement/", include("kernels.compras.urls")),
+    path("api/backend/retail/", include("apps.modulos.ventas_retail.urls")),
     # Legacy API aliases (temporales por compatibilidad)
     path("api/auth/", include("kernels.auth_kernel.urls")),
     path("api/iam/", include("apps.modulos.iam.urls")),
@@ -84,6 +85,7 @@ urlpatterns = [
     path("api/inventory/", include("kernels.inventarios.urls")),
     path("api/billing/", include("kernels.facturacion.urls")),
     path("api/procurement/", include("kernels.compras.urls")),
+    path("api/retail/", include("apps.modulos.ventas_retail.urls")),
     # Alias histórico de billing (v0) mantenido solo en legacy.
     path("api/billing/", include("kernels.facturacion.urls_legacy")),
 ]

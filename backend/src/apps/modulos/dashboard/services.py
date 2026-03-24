@@ -117,7 +117,12 @@ def _resolve_widget_or_422(*, workspace: WorkspaceSpec, widget_code: str) -> Wid
 def _resolve_widgets(*, workspace: WorkspaceSpec, widget_code: str) -> list[WidgetSpec]:
     if str(widget_code or "").strip():
         return [_resolve_widget_or_422(workspace=workspace, widget_code=widget_code)]
-    return [get_widget(code) for code in workspace.widget_codes if get_widget(code) is not None]
+    widgets: list[WidgetSpec] = []
+    for code in workspace.widget_codes:
+        widget = get_widget(code)
+        if widget is not None:
+            widgets.append(widget)
+    return widgets
 
 
 def _resolve_company_targets(*, request, actor, workspace: WorkspaceSpec, company_ids: list[int], branch_id: int | None):

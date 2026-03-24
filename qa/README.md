@@ -6,6 +6,17 @@ Este directorio contiene artefactos de QA que complementan los tests unitarios/i
 
 El Makefile incluye un runner para CI/local que genera reportes en `qa/reports/`:
 
+- `qa-ci-preflight`: hygiene + boundaries + static scan + bandit + ruff + mypy.
+- `qa-frontend-quality`: lint + typecheck + tests frontend.
+- `qa-frontend-bundle-budget`: build + budget estricto de chunks dashboard v3.
+- `qa-ci-gate1`: orquesta preflight + frontend quality + frontend bundle budget.
+
+El runner `make qa-ci` mantiene short-circuit, pero ahora reporta granularidad por step en `run_manifest`:
+
+- `failed_step`
+- `steps[]` con `name`, `status`, `started_at`, `finished_at`, `duration_sec`
+- `durations` por step (mapa)
+
 ## Cobertura (Gate 2): alcance y criterio de éxito
 
 **Alcance (scope):** el reporte de coverage usa `.coveragerc` y está filtrado a `src/apps/sync_engine`.
@@ -55,12 +66,15 @@ Artefactos principales del runner (`make qa-ci`):
 - `qa/reports/static_scan.txt`
 - `qa/reports/ruff.txt`
 - `qa/reports/mypy.txt`
+- `qa/reports/frontend_bundle_budget.json`
+- `qa/reports/frontend_bundle_budget.md`
 - `qa/reports/pytest.xml`
 - `qa/reports/coverage.xml`
 - `qa/reports/coverage.txt`
 - `qa/reports/coverage_by_domain.json`
 - `qa/reports/coverage_by_domain.md`
 - `qa/reports/audit_integrity.json`
+- `qa/reports/run_manifest.json`
 
 ## Auditoría integral de repositorio y comentarios
 

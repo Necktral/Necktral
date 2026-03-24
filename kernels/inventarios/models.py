@@ -110,6 +110,7 @@ class InventoryTaxProfile(models.Model):
     code = models.CharField(max_length=32)
     name = models.CharField(max_length=120)
     tax_treatment = models.CharField(max_length=16, choices=TaxTreatment.choices, default=TaxTreatment.GRAVADO)
+    rate = models.DecimalField(max_digits=8, decimal_places=4, default=Decimal("0.0000"))
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(default=timezone.now)
 

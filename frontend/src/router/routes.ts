@@ -263,6 +263,16 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: childPath(UI_ROUTE_PATHS.retailPos),
+        name: 'retail-pos',
+        component: () => import('src/modules/retail/pos/pages/RetailPosPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+          requiredPermissions: ['retail.pos.use'],
+        },
+      },
+      {
         path: childPath(UI_ROUTE_PATHS.synchronizationEnrollment),
         name: 'sincronizacion-enrolamiento',
         component: () => import('pages/SyncEnrollmentPage.vue'),
@@ -311,6 +321,10 @@ const routes: RouteRecordRaw[] = [
       {
         path: childPath(LEGACY_ROUTE_PATHS.fuelHealth),
         redirect: redirectToCanonical(UI_ROUTE_PATHS.fuelHealth),
+      },
+      {
+        path: childPath(LEGACY_ROUTE_PATHS.retailPos),
+        redirect: redirectToCanonical(UI_ROUTE_PATHS.retailPos),
       },
       {
         path: childPath(LEGACY_ROUTE_PATHS.inventoryDashboard),

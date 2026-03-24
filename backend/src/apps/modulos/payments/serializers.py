@@ -13,6 +13,18 @@ class PaymentIntentCreateIn(serializers.Serializer):
     provider = serializers.CharField(max_length=32, required=False, allow_blank=True)
 
 
+class PaymentIntentCaptureIn(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=18, decimal_places=2, required=False)
+    idempotency_key = serializers.CharField(max_length=96, required=False, allow_blank=True)
+    provider_txn_id = serializers.CharField(max_length=96, required=False, allow_blank=True)
+
+
+class PaymentIntentRefundIn(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=18, decimal_places=2, required=False)
+    idempotency_key = serializers.CharField(max_length=96, required=False, allow_blank=True)
+    reason = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+
 class CashSessionOpenIn(serializers.Serializer):
     opening_amount = serializers.DecimalField(max_digits=18, decimal_places=2, required=False)
     notes = serializers.CharField(required=False, allow_blank=True)

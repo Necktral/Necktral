@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  qa:
+  preflight:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -34,24 +34,192 @@ jobs:
         run: |
           cp .env.example .env
 
-      - name: Run QA gates (deterministic)
+      - name: Setup backend stack (fresh)
         run: |
-          make qa-ci-ci
+          make QA_FRESH_DB=1 qa-ci-up
 
-      - name: Publish repo audit summary (PR)
-        if: always() && github.event_name == 'pull_request'
+      - name: Preflight checks
         run: |
-          if [ -f qa/reports/repo_comment_audit.md ]; then
-            cat qa/reports/repo_comment_audit.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "No se encontró qa/reports/repo_comment_audit.md" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          make qa-ci-preflight
 
-      - name: Upload QA reports
+      - name: Frontend quality checks
+        run: |
+          make qa-frontend-quality
+
+      - name: Publish preflight summary
+        if: always()
+        run: |
+          {
+            echo "## QA Preflight";
+            echo "- Workflow run: [${GITHUB_RUN_ID}](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})";
+            echo "- Artifact: \`qa-reports-preflight\`";
+            if [ -f qa/reports/repo_comment_audit.md ]; then
+              echo "";
+              echo "### Repo comment audit";
+              cat qa/reports/repo_comment_audit.md;
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload preflight reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qa-reports
+          name: qa-reports-preflight
+          path: qa/reports/
+          if-no-files-found: warn
+
+      - name: Backend logs (on failure)
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --no-color --timestamps backend db | tail -n 400
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose down -v --remove-orphans
+
+  frontend-budget:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [preflight]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker info
+        run: |
+          docker version
+          docker compose version
+
+      - name: Run frontend bundle budget gate
+        run: |
+          make qa-frontend-bundle-budget
+
+      - name: Publish bundle summary
+        if: always()
+        run: |
+          {
+            echo "## Frontend Bundle Budget";
+            echo "- Workflow run: [${GITHUB_RUN_ID}](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})";
+            echo "- Artifact: \`qa-reports-frontend-budget\`";
+            if [ -f qa/reports/frontend_bundle_budget.md ]; then
+              echo "";
+              cat qa/reports/frontend_bundle_budget.md;
+            else
+              echo "";
+              echo "- No se encontró \`qa/reports/frontend_bundle_budget.md\`";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload frontend budget reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-reports-frontend-budget
+          path: qa/reports/
+          if-no-files-found: warn
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose down -v --remove-orphans
+
+  backend-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [preflight]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare .env for Docker Compose
+        run: |
+          cp .env.example .env
+
+      - name: Setup backend stack (fresh)
+        run: |
+          make QA_FRESH_DB=1 qa-ci-up
+
+      - name: Backend tests with coverage
+        run: |
+          make qa-backend-tests
+          make qa-coverage-domains
+          make qa-reports-contract-check
+
+      - name: Publish backend tests summary
+        if: always()
+        run: |
+          {
+            echo "## Backend Tests & Coverage";
+            echo "- Workflow run: [${GITHUB_RUN_ID}](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})";
+            echo "- Artifact: \`qa-reports-backend-tests\`";
+            if [ -f qa/reports/coverage_by_domain.md ]; then
+              echo "";
+              cat qa/reports/coverage_by_domain.md;
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload backend test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-reports-backend-tests
+          path: qa/reports/
+          if-no-files-found: warn
+
+      - name: Backend logs (on failure)
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --no-color --timestamps backend db | tail -n 400
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose down -v --remove-orphans
+
+  audit-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [preflight]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare .env for Docker Compose
+        run: |
+          cp .env.example .env
+
+      - name: Setup backend stack (fresh)
+        run: |
+          make QA_FRESH_DB=1 qa-ci-up
+
+      - name: Audit integrity gate
+        run: |
+          make qa-audit-integrity
+
+      - name: Publish audit summary
+        if: always()
+        run: |
+          {
+            echo "## Audit Integrity";
+            echo "- Workflow run: [${GITHUB_RUN_ID}](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})";
+            echo "- Artifact: \`qa-reports-audit-integrity\`";
+            if [ -f qa/reports/audit_integrity.json ]; then
+              echo "";
+              echo "- Archivo generado: \`qa/reports/audit_integrity.json\`";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-reports-audit-integrity
           path: qa/reports/
           if-no-files-found: warn
 

@@ -13,19 +13,24 @@ Se ejecuto una reestructura fisica para separar kernels internos del backend Dja
    - `backend/src/apps/modulos/*`
 2. Verticales de dominio:
    - `kernels/*`
-3. Namespace interno canonical:
+3. Excepcion transicional aprobada:
+   - `backend/src/apps/modulos/ventas_retail` alojara `RETAIL` aunque semánticamente sea vertical.
+   - No se moveran fisicamente `Fuel`, `Billing`, `Inventory` ni `Procurement` en esta iniciativa.
+   - La clasificacion kernel/vertical se congela por ownership e invariantes, no solo por carpeta.
+4. Namespace interno canonical:
    - `apps.modulos.*` para kernels internos
    - `kernels.*` para verticales
-4. Prefijo publico canonical:
+5. Prefijo publico canonical:
    - `/api/backend/*`
-5. Prefijos legacy controlados por deprecacion temporal:
-   - `/api/auth|iam|org|accounting|billing|inventory|procurement|fuel/*`
+6. Prefijos legacy controlados por deprecacion temporal:
+   - `/api/auth|iam|org|accounting|billing|inventory|procurement|fuel|retail/*`
 
 ## Consecuencias
 
 - Claridad de ownership por modulo.
 - Menos acoplamiento entre infraestructura base y verticales.
 - Migraciones/middleware quedan concentrados en backend interno sin mover verticales.
+- `RETAIL` puede evolucionar como vertical POS serio en `modulos` sin forzar una migracion fisica del resto del arbol.
 
 ## Riesgos
 
@@ -37,4 +42,3 @@ Se ejecuto una reestructura fisica para separar kernels internos del backend Dja
 - `qa/architecture_boundaries_guard.py`
 - `qa/repo_hygiene_guard.py`
 - `qa/simulation_contract_guard.py`
-

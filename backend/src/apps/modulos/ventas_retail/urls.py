@@ -1,0 +1,40 @@
+from django.urls import path
+
+from .views import (
+    BootstrapView,
+    CatalogSearchView,
+    CompensationRetryView,
+    HealthView,
+    HoldActiveListView,
+    HoldResumeView,
+    RetailReturnDetailView,
+    RetailReturnListCreateView,
+    TicketCheckoutCommitView,
+    TicketCheckoutPreviewView,
+    TicketDetailView,
+    TicketHoldView,
+    TicketLineView,
+    TicketListCreateView,
+    TicketRecentListView,
+    TicketVoidView,
+)
+
+urlpatterns = [
+    path("health/", HealthView.as_view()),
+    path("bootstrap/", BootstrapView.as_view()),
+    path("catalog/search/", CatalogSearchView.as_view()),
+    path("tickets/", TicketListCreateView.as_view()),
+    path("tickets/recent/", TicketRecentListView.as_view()),
+    path("tickets/<int:ticket_id>/", TicketDetailView.as_view()),
+    path("tickets/<int:ticket_id>/lines/", TicketLineView.as_view()),
+    path("tickets/<int:ticket_id>/lines/<int:line_id>/", TicketLineView.as_view()),
+    path("tickets/<int:ticket_id>/hold/", TicketHoldView.as_view()),
+    path("holds/active/", HoldActiveListView.as_view()),
+    path("holds/<int:hold_id>/resume/", HoldResumeView.as_view()),
+    path("tickets/<int:ticket_id>/checkout/preview/", TicketCheckoutPreviewView.as_view()),
+    path("tickets/<int:ticket_id>/checkout/commit/", TicketCheckoutCommitView.as_view()),
+    path("tickets/<int:ticket_id>/void/", TicketVoidView.as_view()),
+    path("returns/", RetailReturnListCreateView.as_view()),
+    path("returns/<int:return_id>/", RetailReturnDetailView.as_view()),
+    path("sales/<int:sale_id>/compensate/retry/", CompensationRetryView.as_view()),
+]

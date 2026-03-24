@@ -71,7 +71,7 @@ def test_inventory_item_create_writes_audit_event():
     company, branch = _mk_org()
     client = _client_with_perms(company=company, branch=branch, perm_codes=["inventory.item.create"])
 
-    sku = f"SKU-{uuid.uuid4().hex[:8]}"
+    sku = f"SKU-{uuid.uuid4().hex[:8].upper()}"
     resp = client.post("/api/inventory/items/", {"sku": sku, "name": "Aceite 20W-50"}, format="json")
     assert resp.status_code == 201
     assert resp.data["sku"] == sku

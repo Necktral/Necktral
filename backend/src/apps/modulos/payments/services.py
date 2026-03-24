@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -20,6 +21,22 @@ def _branch_from_request(request):
     return branch
 
 
+@dataclass(frozen=True)
+class PaymentMutationResult:
+    payment_id: str
+    status: str
+    amount: Decimal
+    idempotent: bool
+    refunded_total: Decimal = Decimal("0.00")
+
+
+def _metadata_decimal(value) -> Decimal:
+    try:
+        return Decimal(str(value or "0.00"))
+    except Exception:  # noqa: BLE001
+        return Decimal("0.00")
+
+
 def create_payment_intent(
     *,
     request,
@@ -29,6 +46,8 @@ def create_payment_intent(
     idempotency_key: str = "",
     external_ref: str = "",
     provider: str = "",
+    correlation_id: str = "",
+    causation_id: str = "",
 ) -> tuple[PaymentIntent, bool]:
     company = request.company
     branch = _branch_from_request(request)
@@ -79,6 +98,8 @@ def create_payment_intent(
             actor_user=actor,
             company=company,
             branch=branch,
+            correlation_id=correlation_id or "",
+            causation_id=causation_id or "",
         )
         return intent, False
 
@@ -132,6 +153,111 @@ def open_cash_session(*, request, actor, opening_amount: Decimal = Decimal("0.00
         return session
 
 
+def capture_payment_intent(
+    *,
+    request,
+    actor,
+    payment_id: str,
+    amount: Decimal | None = None,
+    idempotency_key: str = "",
+    provider_txn_id: str = "",
+    correlation_id: str = "",
+    causation_id: str = "",
+) -> PaymentMutationResult:
+    company = request.company
+    branch = _branch_from_request(request)
+
+    with transaction.atomic():
+        intent = get_object_or_404(
+            PaymentIntent.objects.select_for_update(),
+            company=company,
+            branch=branch,
+            payment_id=payment_id,
+        )
+        normalized_key = str(idempotency_key or "").strip()
+        requested_amount = Decimal(str(amount if amount is not None else intent.amount))
+        if requested_amount <= 0:
+            raise ValueError("capture amount debe ser > 0.")
+        if requested_amount > intent.amount:
+            raise ValueError("capture amount no puede exceder el amount del intent.")
+
+        metadata = dict(intent.metadata or {})
+        if normalized_key and metadata.get("capture_idempotency_key") == normalized_key:
+            captured_amount = _metadata_decimal(metadata.get("captured_amount", intent.amount))
+            return PaymentMutationResult(
+                payment_id=str(intent.payment_id),
+                status=intent.status,
+                amount=captured_amount,
+                idempotent=True,
+                refunded_total=_metadata_decimal(metadata.get("refunded_total")),
+            )
+        if intent.status == PaymentIntent.Status.CAPTURED:
+            captured_amount = _metadata_decimal(metadata.get("captured_amount", intent.amount))
+            return PaymentMutationResult(
+                payment_id=str(intent.payment_id),
+                status=intent.status,
+                amount=captured_amount,
+                idempotent=True,
+                refunded_total=_metadata_decimal(metadata.get("refunded_total")),
+            )
+        if intent.status in (PaymentIntent.Status.REFUNDED, PaymentIntent.Status.FAILED):
+            raise ValueError("Intent no permite captura en su estado actual.")
+
+        intent.status = PaymentIntent.Status.CAPTURED
+        intent.captured_at = timezone.now()
+        if provider_txn_id:
+            intent.provider_txn_id = str(provider_txn_id)
+        metadata["captured_amount"] = str(requested_amount)
+        if normalized_key:
+            metadata["capture_idempotency_key"] = normalized_key
+        intent.metadata = metadata
+        intent.save(update_fields=["status", "captured_at", "provider_txn_id", "metadata", "updated_at"])
+
+        write_event(
+            request=request,
+            module="PAYMENTS",
+            event_type="PAYMENT_CAPTURED",
+            reason_code="PAYMENTS_OK",
+            actor_user=actor,
+            subject_type="PAYMENT_INTENT",
+            subject_id=str(intent.payment_id),
+            metadata={
+                "payment_id": str(intent.payment_id),
+                "amount": str(requested_amount),
+                "currency": intent.currency,
+                "idempotency_key": normalized_key,
+                "provider": intent.provider,
+                "provider_txn_id": intent.provider_txn_id,
+            },
+        )
+        publish_outbox_event(
+            request=request,
+            source_module="PAYMENTS",
+            event_type="PaymentCaptured",
+            payload={
+                "payment_id": str(intent.payment_id),
+                "amount": str(requested_amount),
+                "currency": intent.currency,
+                "status": intent.status,
+                "idempotency_key": normalized_key,
+                "provider": intent.provider,
+                "provider_txn_id": intent.provider_txn_id,
+            },
+            actor_user=actor,
+            company=company,
+            branch=branch,
+            correlation_id=correlation_id or "",
+            causation_id=causation_id or "",
+        )
+        return PaymentMutationResult(
+            payment_id=str(intent.payment_id),
+            status=intent.status,
+            amount=requested_amount,
+            idempotent=False,
+            refunded_total=_metadata_decimal(metadata.get("refunded_total")),
+        )
+
+
 def post_cash_movement(
     *,
     request,
@@ -141,6 +267,8 @@ def post_cash_movement(
     amount: Decimal,
     reference: str = "",
     reason: str = "",
+    correlation_id: str = "",
+    causation_id: str = "",
 ) -> CashMovement:
     company = request.company
     branch = _branch_from_request(request)
@@ -195,8 +323,119 @@ def post_cash_movement(
             actor_user=actor,
             company=company,
             branch=branch,
+            correlation_id=correlation_id or "",
+            causation_id=causation_id or "",
         )
         return mov
+
+
+def refund_payment_intent(
+    *,
+    request,
+    actor,
+    payment_id: str,
+    amount: Decimal | None = None,
+    idempotency_key: str = "",
+    reason: str = "",
+    correlation_id: str = "",
+    causation_id: str = "",
+) -> PaymentMutationResult:
+    company = request.company
+    branch = _branch_from_request(request)
+
+    with transaction.atomic():
+        intent = get_object_or_404(
+            PaymentIntent.objects.select_for_update(),
+            company=company,
+            branch=branch,
+            payment_id=payment_id,
+        )
+        normalized_key = str(idempotency_key or "").strip()
+        metadata = dict(intent.metadata or {})
+        refund_events = list(metadata.get("refund_events") or [])
+        if normalized_key:
+            for event in refund_events:
+                if event.get("idempotency_key") == normalized_key:
+                    refunded_total = _metadata_decimal(metadata.get("refunded_total"))
+                    return PaymentMutationResult(
+                        payment_id=str(intent.payment_id),
+                        status=intent.status,
+                        amount=_metadata_decimal(event.get("amount")),
+                        idempotent=True,
+                        refunded_total=refunded_total,
+                    )
+
+        if intent.status not in (PaymentIntent.Status.CAPTURED, PaymentIntent.Status.REFUNDED):
+            raise ValueError("Intent no permite refund en su estado actual.")
+
+        capture_amount = _metadata_decimal(metadata.get("captured_amount", intent.amount))
+        refunded_total = _metadata_decimal(metadata.get("refunded_total"))
+        remaining = capture_amount - refunded_total
+        refund_amount = Decimal(str(amount if amount is not None else remaining))
+        if refund_amount <= 0:
+            raise ValueError("refund amount debe ser > 0.")
+        if refund_amount > remaining:
+            raise ValueError("refund amount excede el saldo capturado pendiente.")
+
+        refunded_total = refunded_total + refund_amount
+        metadata["refunded_total"] = str(refunded_total)
+        refund_event = {
+            "amount": str(refund_amount),
+            "reason": str(reason or ""),
+            "processed_at": timezone.now().isoformat(),
+            "idempotency_key": normalized_key,
+        }
+        refund_events.append(refund_event)
+        metadata["refund_events"] = refund_events
+        intent.metadata = metadata
+        if refunded_total >= capture_amount:
+            intent.status = PaymentIntent.Status.REFUNDED
+            intent.refunded_at = timezone.now()
+        intent.save(update_fields=["status", "refunded_at", "metadata", "updated_at"])
+
+        write_event(
+            request=request,
+            module="PAYMENTS",
+            event_type="PAYMENT_REFUNDED",
+            reason_code="PAYMENTS_OK",
+            actor_user=actor,
+            subject_type="PAYMENT_INTENT",
+            subject_id=str(intent.payment_id),
+            metadata={
+                "payment_id": str(intent.payment_id),
+                "amount": str(refund_amount),
+                "currency": intent.currency,
+                "reason": str(reason or ""),
+                "idempotency_key": normalized_key,
+                "refunded_total": str(refunded_total),
+            },
+        )
+        publish_outbox_event(
+            request=request,
+            source_module="PAYMENTS",
+            event_type="RefundProcessed",
+            payload={
+                "payment_id": str(intent.payment_id),
+                "amount": str(refund_amount),
+                "currency": intent.currency,
+                "reason": str(reason or ""),
+                "status": intent.status,
+                "idempotency_key": normalized_key,
+                "refunded_total": str(refunded_total),
+            },
+            actor_user=actor,
+            company=company,
+            branch=branch,
+            correlation_id=correlation_id or "",
+            causation_id=causation_id or "",
+        )
+        return PaymentMutationResult(
+            payment_id=str(intent.payment_id),
+            status=intent.status,
+            amount=refund_amount,
+            idempotent=False,
+            refunded_total=refunded_total,
+        )
 
 
 def close_cash_session(*, request, actor, session_id: int, counted_amount: Decimal, notes: str = "") -> CashSession:

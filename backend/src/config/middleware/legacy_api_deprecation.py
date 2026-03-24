@@ -13,6 +13,7 @@ class LegacyApiDeprecationMiddleware:
         "/api/inventory/",
         "/api/procurement/",
         "/api/fuel/",
+        "/api/retail/",
     )
     SUNSET_AT = "Mon, 18 May 2026 00:00:00 GMT"
     SUCCESSOR_BY_PREFIX = {
@@ -24,6 +25,7 @@ class LegacyApiDeprecationMiddleware:
         "/api/inventory/": "/api/backend/inventory/",
         "/api/procurement/": "/api/backend/procurement/",
         "/api/fuel/": "/api/backend/fuel/",
+        "/api/retail/": "/api/backend/retail/",
     }
 
     def __init__(self, get_response):

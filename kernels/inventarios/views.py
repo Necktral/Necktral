@@ -537,6 +537,7 @@ class TaxProfileLookupView(APIView):
                 code=str(s.validated_data["code"]).strip().upper(),
                 name=str(s.validated_data["name"]).strip(),
                 tax_treatment=s.validated_data["tax_treatment"],
+                rate=s.validated_data["rate"],
             )
         except IntegrityError:
             return Response(

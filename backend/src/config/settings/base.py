@@ -228,6 +228,7 @@ INSTALLED_APPS = [
     "apps.modulos.hr.apps.HrConfig",  # <-- NUEVO
     "apps.modulos.accounting.apps.AccountingConfig",
     "apps.modulos.payments.apps.PaymentsConfig",
+    "apps.modulos.ventas_retail.apps.VentasRetailConfig",
     "apps.modulos.cec.apps.CecConfig",
     "apps.modulos.integration.apps.IntegrationConfig",
     "apps.modulos.reports.apps.ReportsConfig",

@@ -39,6 +39,7 @@ describe('router routes', () => {
       UI_ROUTE_PATHS.inventoryKardex,
       UI_ROUTE_PATHS.fuelDashboard,
       UI_ROUTE_PATHS.fuelHealth,
+      UI_ROUTE_PATHS.retailPos,
       UI_ROUTE_PATHS.synchronizationEnrollment,
       UI_ROUTE_PATHS.synchronizationDevices,
     ];
@@ -77,6 +78,10 @@ describe('router routes', () => {
       {
         legacy: LEGACY_ROUTE_PATHS.fuelHealth,
         canonical: UI_ROUTE_PATHS.fuelHealth,
+      },
+      {
+        legacy: LEGACY_ROUTE_PATHS.retailPos,
+        canonical: UI_ROUTE_PATHS.retailPos,
       },
       {
         legacy: LEGACY_ROUTE_PATHS.inventoryDashboard,
@@ -145,6 +150,12 @@ describe('router routes', () => {
     const route = findChild(UI_ROUTE_PATHS.inventoryDashboard);
     expect(route).toBeDefined();
     expect(route?.meta?.requiredPermissions).toEqual(['inventory.balance.read']);
+  });
+
+  it('protege retail pos con permiso retail.pos.use', () => {
+    const route = findChild(UI_ROUTE_PATHS.retailPos);
+    expect(route).toBeDefined();
+    expect(route?.meta?.requiredPermissions).toEqual(['retail.pos.use']);
   });
 
   it('protege alta de item master con permisos read + create', () => {
