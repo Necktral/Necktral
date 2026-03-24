@@ -6,13 +6,14 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.modulos.common.permissions import rbac_permission
+from apps.modulos.common.permissions import rbac_permission_any
 from config.error_envelope import build_error_envelope
 
 from .contracts import build_envelope
-from .serializers import DashboardDrilldownIn, WorkspaceQueryIn
+from .serializers import DashboardDrilldownIn, DashboardEmbedTokenIn, WorkspaceQueryIn
 from .services import (
     ReportDomainError,
+    create_dashboard_embed_token,
     drilldown_dashboard,
     get_dashboard_workspace,
     list_dashboard_catalog,
@@ -39,7 +40,7 @@ def _error_response(request, *, message: str, http_status: int, code: str, detai
 
 
 class DashboardCatalogView(APIView):
-    permission_classes = [rbac_permission("dashboard.workspace.read")]
+    permission_classes = [rbac_permission_any(["report.dashboard.read", "dashboard.workspace.read"])]
 
     def get(self, request):
         try:
@@ -65,7 +66,7 @@ class DashboardCatalogView(APIView):
 
 
 class DashboardWorkspaceDetailView(APIView):
-    permission_classes = [rbac_permission("dashboard.workspace.read")]
+    permission_classes = [rbac_permission_any(["report.dashboard.read", "dashboard.workspace.read"])]
 
     def get(self, request, workspace_code: str):
         try:
@@ -97,7 +98,7 @@ class DashboardWorkspaceDetailView(APIView):
 
 
 class DashboardWorkspaceQueryView(APIView):
-    permission_classes = [rbac_permission("dashboard.widget.read")]
+    permission_classes = [rbac_permission_any(["report.dataset.read", "dashboard.widget.read"])]
 
     def post(self, request, workspace_code: str):
         s = WorkspaceQueryIn(data=request.data)
@@ -135,7 +136,7 @@ class DashboardWorkspaceQueryView(APIView):
 
 
 class DashboardDrilldownView(APIView):
-    permission_classes = [rbac_permission("dashboard.drilldown.read")]
+    permission_classes = [rbac_permission_any(["report.dataset.read", "dashboard.drilldown.read"])]
 
     def post(self, request):
         s = DashboardDrilldownIn(data=request.data)
@@ -168,5 +169,39 @@ class DashboardDrilldownView(APIView):
                 "cache_hit": False,
                 "cache_ttl_seconds": 0,
             },
+        )
+        return Response(body, status=status.HTTP_200_OK)
+
+
+class DashboardEmbedTokenView(APIView):
+    permission_classes = [rbac_permission_any(["report.dashboard.read", "dashboard.workspace.read"])]
+
+    def post(self, request):
+        s = DashboardEmbedTokenIn(data=request.data)
+        s.is_valid(raise_exception=True)
+        try:
+            payload = create_dashboard_embed_token(
+                request=request,
+                actor=request.user,
+                validated=s.validated_data,
+            )
+        except ReportDomainError as exc:
+            return _error_response(
+                request,
+                message=exc.message,
+                http_status=int(exc.http_status),
+                code=exc.code,
+                details=dict(exc.details or {}),
+            )
+        body = build_envelope(
+            request=request,
+            report_code="DASHBOARD_EMBED_TOKEN",
+            summary={
+                "workspace_code": payload.get("workspace_code"),
+                "ttl_seconds": payload.get("ttl_seconds"),
+            },
+            results=payload,
+            pagination={},
+            meta_extra={"cache_hit": False, "cache_ttl_seconds": 0},
         )
         return Response(body, status=status.HTTP_200_OK)

@@ -17,6 +17,9 @@ class ReportDefinitionCreateIn(serializers.Serializer):
     schema_version = serializers.IntegerField(required=False, default=1, min_value=1)
     contract_version = serializers.IntegerField(required=False, default=1, min_value=1)
     is_active = serializers.BooleanField(required=False, default=True)
+    dataset_key = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
+    domain_owner = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
+    semantic_version = serializers.CharField(max_length=32, required=False, allow_blank=True, default="")
 
 
 class ReportRunCreateIn(serializers.Serializer):

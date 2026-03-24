@@ -41,6 +41,27 @@ class ReportDefinition(models.Model):
         DEPRECATED = "DEPRECATED"
         DISABLED = "DISABLED"
 
+    class CertificationStatus(models.TextChoices):
+        DRAFT = "DRAFT"
+        CERTIFIED = "CERTIFIED"
+        DEPRECATED = "DEPRECATED"
+        RETIRED = "RETIRED"
+
+    class ScopeLevel(models.TextChoices):
+        COMPANY = "COMPANY"
+        BRANCH = "BRANCH"
+        INTERCOMPANY = "INTERCOMPANY"
+
+    class FreshnessMode(models.TextChoices):
+        LIVE = "live"
+        NEAR_REAL_TIME = "near_real_time"
+        SNAPSHOT = "snapshot"
+
+    class MaterializationPolicy(models.TextChoices):
+        LIVE_ONLY = "live_only"
+        CACHE_FIRST = "cache_first"
+        SNAPSHOT_REQUIRED = "snapshot_required"
+
     """
     Contrato:
     - code es estable y es el identificador público (no se recicla).
@@ -63,6 +84,13 @@ class ReportDefinition(models.Model):
     filter_contract = models.JSONField(default=dict, blank=True)
     output_schema = models.JSONField(default=dict, blank=True)
     freshness_class = models.CharField(max_length=32, default="live")
+    freshness_mode = models.CharField(max_length=24, choices=FreshnessMode.choices, default=FreshnessMode.LIVE)
+    materialization_policy = models.CharField(
+        max_length=24,
+        choices=MaterializationPolicy.choices,
+        default=MaterializationPolicy.CACHE_FIRST,
+    )
+    scope_level = models.CharField(max_length=16, choices=ScopeLevel.choices, default=ScopeLevel.BRANCH)
     reproducibility_mode = models.CharField(
         max_length=16,
         choices=ReproducibilityMode.choices,
@@ -82,6 +110,17 @@ class ReportDefinition(models.Model):
     max_pending_jobs = models.PositiveIntegerField(default=20)
     dataset_version = models.CharField(max_length=64, default="", blank=True)
     formula_version = models.CharField(max_length=64, default="", blank=True)
+    semantic_version = models.CharField(max_length=32, default="1.0.0")
+    dataset_key = models.CharField(max_length=128, default="", blank=True)
+    domain_owner = models.CharField(max_length=64, default="REPORTS")
+    certification_status = models.CharField(
+        max_length=16,
+        choices=CertificationStatus.choices,
+        default=CertificationStatus.CERTIFIED,
+    )
+    required_permissions = models.JSONField(default=list, blank=True)
+    export_capabilities = models.JSONField(default=dict, blank=True)
+    semantic_metric_keys = models.JSONField(default=list, blank=True)
     version = models.CharField(max_length=32, default="1.0.0")
     schema_version = models.PositiveIntegerField(default=1)
     contract_version = models.PositiveIntegerField(default=1)
@@ -155,6 +194,7 @@ class ReportRun(models.Model):
     dataset_version = models.CharField(max_length=64, default="", blank=True)
     formula_version = models.CharField(max_length=64, default="", blank=True)
     freshness = models.JSONField(default=dict, blank=True)
+    lineage = models.JSONField(default=dict, blank=True)
     warnings = models.JSONField(default=list, blank=True)
     duration_ms = models.PositiveIntegerField(default=0)
     row_count = models.PositiveIntegerField(default=0)
@@ -335,6 +375,39 @@ class DatasetVersion(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["company", "dataset_code", "dataset_version"], name="uniq_dataset_version_per_company"),
+        ]
+
+
+class ReportMetricDefinition(models.Model):
+    class MetricStatus(models.TextChoices):
+        ACTIVE = "ACTIVE"
+        DEPRECATED = "DEPRECATED"
+        RETIRED = "RETIRED"
+
+    metric_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    company = models.ForeignKey(OrgUnit, on_delete=models.CASCADE, related_name="report_metric_definitions")
+    metric_key = models.CharField(max_length=128)
+    name = models.CharField(max_length=160)
+    description = models.CharField(max_length=500, default="", blank=True)
+    domain_owner = models.CharField(max_length=64, default="REPORTS")
+    dataset_key = models.CharField(max_length=128, default="", blank=True)
+    expression = models.TextField(default="", blank=True)
+    expression_hash = models.CharField(max_length=64, default="", blank=True)
+    unit = models.CharField(max_length=24, default="", blank=True)
+    semantic_version = models.CharField(max_length=32, default="1.0.0")
+    formula_version = models.CharField(max_length=64, default="", blank=True)
+    status = models.CharField(max_length=16, choices=MetricStatus.choices, default=MetricStatus.ACTIVE)
+    is_certified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["company", "metric_key"], name="uniq_report_metric_per_company"),
+        ]
+        indexes = [
+            models.Index(fields=["company", "domain_owner"], name="ix_report_metric_domain"),
+            models.Index(fields=["company", "dataset_key"], name="ix_report_metric_dataset"),
         ]
 
 

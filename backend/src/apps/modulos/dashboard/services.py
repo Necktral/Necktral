@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any
+from urllib.parse import quote_plus
 
 from django.conf import settings
 from django.core.cache import cache
+from django.core import signing
+from django.utils import timezone
 
 from apps.modulos.audit.writer import write_event
 from apps.modulos.iam.models import OrgUnit
@@ -18,6 +22,11 @@ from .registry import WidgetSpec, WorkspaceSpec, catalog_payload, get_widget, ge
 
 DASHBOARD_CACHE_TTL_SECONDS = 45
 DASHBOARD_SLICE_CACHE_TTL_SECONDS = 120
+
+KERNEL_PERMISSION_ALIASES: dict[str, tuple[str, ...]] = {
+    "report.dashboard.read": ("report.dashboard.read", "dashboard.workspace.read"),
+    "report.dataset.read": ("report.dataset.read", "dashboard.widget.read"),
+}
 
 
 def _get_request_id(request) -> str:
@@ -54,6 +63,22 @@ def _require_permission(*, user, company, branch, permission_code: str) -> None:
         )
 
 
+def _require_any_permission(*, user, company, branch, permission_codes: tuple[str, ...] | list[str]) -> str:
+    perms = _effective_perms(user=user, company=company, branch=branch)
+    if "*" in perms:
+        return "*"
+    normalized = tuple(str(code).strip() for code in permission_codes if str(code).strip())
+    for code in normalized:
+        if code in perms:
+            return code
+    raise ReportDomainError(
+        code="REPORT_FORBIDDEN",
+        message="forbidden",
+        http_status=403,
+        details={"required_permissions_any": list(normalized)},
+    )
+
+
 def _assert_dashboard_v3_enabled() -> None:
     if not bool(getattr(settings, "FF_DASHBOARD_V3_GLOBAL", False)):
         raise ReportDomainError(
@@ -83,7 +108,7 @@ def _ensure_definition(*, request, actor, company, report_code: str) -> None:
         return
     create_definition(
         request=request,
-        actor=actor,
+        actor=None,
         company=company,
         code=report_code,
         name=report_code,
@@ -197,11 +222,11 @@ def _resolve_company_targets(*, request, actor, workspace: WorkspaceSpec, compan
                     )
 
         # Filtro adicional: el usuario debe tener permiso dashboard.widget.read en el company target.
-        _require_permission(
+        _require_any_permission(
             user=actor,
             company=company,
             branch=target_branch,
-            permission_code="dashboard.widget.read",
+            permission_codes=KERNEL_PERMISSION_ALIASES["report.dataset.read"],
         )
         targets.append((company, target_branch))
     return targets, intercompany_requested
@@ -298,7 +323,7 @@ def _query_widget(
 def list_dashboard_catalog(*, request, actor) -> list[dict[str, object]]:
     company = getattr(request, "company", None)
     branch = getattr(request, "branch", None)
-    _require_permission(user=actor, company=company, branch=branch, permission_code="dashboard.workspace.read")
+    _require_any_permission(user=actor, company=company, branch=branch, permission_codes=KERNEL_PERMISSION_ALIASES["report.dashboard.read"])
     _assert_dashboard_v3_enabled()
     return catalog_payload()
 
@@ -306,7 +331,7 @@ def list_dashboard_catalog(*, request, actor) -> list[dict[str, object]]:
 def get_dashboard_workspace(*, request, actor, workspace_code: str) -> dict[str, object]:
     company = getattr(request, "company", None)
     branch = getattr(request, "branch", None)
-    _require_permission(user=actor, company=company, branch=branch, permission_code="dashboard.workspace.read")
+    _require_any_permission(user=actor, company=company, branch=branch, permission_codes=KERNEL_PERMISSION_ALIASES["report.dashboard.read"])
     _assert_dashboard_v3_enabled()
     workspace = _resolve_workspace_or_404(workspace_code)
     payload = workspace_payload(workspace.code)
@@ -329,8 +354,8 @@ def get_dashboard_workspace(*, request, actor, workspace_code: str) -> dict[str,
 def query_dashboard_workspace(*, request, actor, workspace_code: str, validated: dict[str, Any]):
     company = getattr(request, "company", None)
     branch = getattr(request, "branch", None)
-    _require_permission(user=actor, company=company, branch=branch, permission_code="dashboard.workspace.read")
-    _require_permission(user=actor, company=company, branch=branch, permission_code="dashboard.widget.read")
+    _require_any_permission(user=actor, company=company, branch=branch, permission_codes=KERNEL_PERMISSION_ALIASES["report.dashboard.read"])
+    _require_any_permission(user=actor, company=company, branch=branch, permission_codes=KERNEL_PERMISSION_ALIASES["report.dataset.read"])
     _assert_dashboard_v3_enabled()
 
     workspace = _resolve_workspace_or_404(workspace_code)
@@ -420,9 +445,14 @@ def query_dashboard_workspace(*, request, actor, workspace_code: str, validated:
 def drilldown_dashboard(*, request, actor, validated: dict[str, Any]):
     company = getattr(request, "company", None)
     branch = getattr(request, "branch", None)
-    _require_permission(user=actor, company=company, branch=branch, permission_code="dashboard.workspace.read")
-    _require_permission(user=actor, company=company, branch=branch, permission_code="dashboard.widget.read")
-    _require_permission(user=actor, company=company, branch=branch, permission_code="dashboard.drilldown.read")
+    _require_any_permission(user=actor, company=company, branch=branch, permission_codes=KERNEL_PERMISSION_ALIASES["report.dashboard.read"])
+    _require_any_permission(user=actor, company=company, branch=branch, permission_codes=KERNEL_PERMISSION_ALIASES["report.dataset.read"])
+    _require_any_permission(
+        user=actor,
+        company=company,
+        branch=branch,
+        permission_codes=("dashboard.drilldown.read",),
+    )
     _assert_dashboard_v3_enabled()
 
     workspace_code = str(validated.get("workspace_code") or "")
@@ -499,4 +529,88 @@ def drilldown_dashboard(*, request, actor, validated: dict[str, Any]):
         "summary": summary,
         "results": results,
         "warnings": [],
+    }
+
+
+def create_dashboard_embed_token(*, request, actor, validated: dict[str, Any]) -> dict[str, Any]:
+    company = getattr(request, "company", None)
+    branch = getattr(request, "branch", None)
+    _require_any_permission(
+        user=actor,
+        company=company,
+        branch=branch,
+        permission_codes=KERNEL_PERMISSION_ALIASES["report.dashboard.read"],
+    )
+    _assert_dashboard_v3_enabled()
+
+    workspace_code = str(validated.get("workspace_code") or "")
+    workspace = _resolve_workspace_or_404(workspace_code)
+    targets, intercompany_requested = _resolve_company_targets(
+        request=request,
+        actor=actor,
+        workspace=workspace,
+        company_ids=list(validated.get("company_ids") or []),
+        branch_id=validated.get("branch_id"),
+    )
+
+    default_ttl = int(getattr(settings, "DASH_EMBED_TOKEN_TTL_SECONDS", 600) or 600)
+    ttl_seconds = int(validated.get("ttl_seconds") or default_ttl)
+    ttl_seconds = max(60, min(ttl_seconds, 3600))
+    issued_at = timezone.now()
+    expires_at = issued_at + timedelta(seconds=ttl_seconds)
+
+    payload = {
+        "iss": "necktral.dashboard",
+        "sub": str(getattr(actor, "id", "")),
+        "workspace_code": workspace.code,
+        "scope": {
+            "company_id": int(company.id) if company is not None else None,
+            "branch_id": int(branch.id) if branch is not None else None,
+        },
+        "targets": [
+            {
+                "company_id": int(target_company.id),
+                "branch_id": int(target_branch.id) if target_branch is not None else None,
+            }
+            for target_company, target_branch in targets
+        ],
+        "theme": str(validated.get("theme") or ""),
+        "locale": str(validated.get("locale") or ""),
+        "intercompany_requested": bool(intercompany_requested),
+        "iat": int(issued_at.timestamp()),
+        "exp": int(expires_at.timestamp()),
+        "request_id": _get_request_id(request),
+    }
+
+    signing_key = str(getattr(settings, "DASH_EMBED_SIGNING_KEY", "") or getattr(settings, "JWT_SIGNING_KEY", ""))
+    token = signing.dumps(payload, key=signing_key, salt="dashboard.embed.v1", compress=True)
+    base_url = str(getattr(settings, "DASH_EMBED_BASE_URL", "") or "").strip().rstrip("/")
+    embed_url = f"{base_url}/?token={quote_plus(token)}" if base_url else ""
+
+    write_event(
+        request=request,
+        event_type="DASHBOARD_EMBED_TOKEN_ISSUED",
+        reason_code="REPORTS_OK",
+        actor_user=actor,
+        subject_type="DASHBOARD_WORKSPACE",
+        subject_id=workspace.code,
+        metadata={
+            "workspace_code": workspace.code,
+            "ttl_seconds": ttl_seconds,
+            "intercompany_requested": bool(intercompany_requested),
+            "company_id": str(getattr(company, "id", "")),
+        },
+        module="DASHBOARD",
+    )
+
+    return {
+        "workspace_code": workspace.code,
+        "token_type": "signed-json",
+        "token": token,
+        "issued_at": issued_at.isoformat(),
+        "expires_at": expires_at.isoformat(),
+        "ttl_seconds": ttl_seconds,
+        "embed_url": embed_url,
+        "scope": payload["scope"],
+        "targets": payload["targets"],
     }

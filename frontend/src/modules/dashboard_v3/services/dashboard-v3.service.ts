@@ -2,6 +2,8 @@ import { api } from 'src/boot/axios';
 
 import type {
   DashboardCatalogResponse,
+  DashboardEmbedTokenPayload,
+  DashboardEmbedTokenResponse,
   DashboardDrilldownResponse,
   DashboardQueryParams,
   DashboardQueryResponse,
@@ -43,5 +45,12 @@ export async function drilldownDashboard(payload: {
   branch_id?: number | null;
 }): Promise<DashboardDrilldownResponse> {
   const { data } = await api.post<DashboardDrilldownResponse>('/backend/dashboard/drilldown/', payload);
+  return data;
+}
+
+export async function fetchDashboardEmbedToken(
+  payload: DashboardEmbedTokenPayload,
+): Promise<DashboardEmbedTokenResponse> {
+  const { data } = await api.post<DashboardEmbedTokenResponse>('/backend/dashboard/embed-token/', payload);
   return data;
 }

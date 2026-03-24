@@ -132,6 +132,14 @@ export default route(function () {
       if (!ok) return { path: '/403' };
     }
 
+    const requiredAny = to.meta?.requiredAnyPermissions as string[] | undefined;
+    if (requiredAny && requiredAny.length > 0) {
+      const companyId = ctx.activeCompanyId;
+      if (!companyId) return { path: '/select-context' };
+      const okAny = requiredAny.some((p) => acl.hasPermission(companyId, p));
+      if (!okAny) return { path: '/403' };
+    }
+
     return true;
   });
 

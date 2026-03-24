@@ -86,6 +86,8 @@ def test_reports_end_to_end_definitions_runs_exports_read_audit_and_sources():
     for code in ["AUDIT_EVENTS_BY_SCOPE", "OBS_ENDPOINT_ERRORS_SUMMARY", "TRACE_ENTITY_TIMELINE"]:
         resp = client.post(f"{REPORTS_BASE}/definitions/", {"code": code, "name": code}, format="json")
         assert resp.status_code == 201
+        assert resp.data["dataset_key"]
+        assert resp.data["certification_status"] in {"CERTIFIED", "DRAFT", "DEPRECATED", "RETIRED"}
 
     legacy_health = client.get("/api/reports/health/")
     assert legacy_health.status_code == 404
@@ -127,6 +129,9 @@ def test_reports_end_to_end_definitions_runs_exports_read_audit_and_sources():
     allowed_read = client.get(f"{REPORTS_BASE}/runs/{execution_id}/?reason=post_mortem")
     assert allowed_read.status_code == 200
     assert allowed_read.data["execution_id"] == execution_id
+    assert allowed_read.data["lineage"]["actor_user_id"] == user.id
+    assert allowed_read.data["result"]["envelope_version"] == 2
+    assert "dataset_key" in allowed_read.data["result"]
 
     read_audit_list = client.get(f"{REPORTS_BASE}/read-audit/")
     assert read_audit_list.status_code == 200

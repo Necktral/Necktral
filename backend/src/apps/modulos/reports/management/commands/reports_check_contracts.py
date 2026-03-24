@@ -24,6 +24,15 @@ class Command(BaseCommand):
                 errors.append(
                     f"[{row.company_id}] {row.code}: reproducibility mismatch db={row.reproducibility_mode} spec={spec.reproducibility_mode}"
                 )
+            expected_dataset_key = str(spec.dataset_code or row.code)
+            if str(row.dataset_key or "") != expected_dataset_key:
+                errors.append(
+                    f"[{row.company_id}] {row.code}: dataset_key mismatch db={row.dataset_key} spec={expected_dataset_key}"
+                )
+            if not str(row.domain_owner or "").strip():
+                errors.append(f"[{row.company_id}] {row.code}: missing domain_owner")
+            if not str(row.semantic_version or "").strip():
+                errors.append(f"[{row.company_id}] {row.code}: missing semantic_version")
             if int(row.schema_version) <= 0 or int(row.contract_version) <= 0:
                 errors.append(f"[{row.company_id}] {row.code}: invalid schema/contract version")
 
@@ -32,4 +41,3 @@ class Command(BaseCommand):
                 self.stderr.write(err)
             raise CommandError(f"reports contract check failed ({len(errors)} errors)")
         self.stdout.write(self.style.SUCCESS("reports contract check passed"))
-

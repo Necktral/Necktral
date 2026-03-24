@@ -239,6 +239,32 @@ WIDGET_REGISTRY: dict[str, WidgetSpec] = {
 
 
 WORKSPACE_REGISTRY: dict[str, WorkspaceSpec] = {
+    "executive_v1": WorkspaceSpec(
+        code="executive_v1",
+        title="Executive v1",
+        description="Workspace ejecutivo certificado (ingresos, margen, caja y riesgo operativo).",
+        widget_codes=(
+            "exec_revenue_velocity",
+            "exec_margin_watch",
+            "exec_cash_health",
+            "exec_inventory_turn",
+            "exec_fuel_operations",
+        ),
+        intercompany_enabled=True,
+    ),
+    "operations_fuel_accounting_v1": WorkspaceSpec(
+        code="operations_fuel_accounting_v1",
+        title="Operations Fuel + Accounting v1",
+        description="Control operativo de fuel y contabilidad con foco en excepciones y conciliación.",
+        widget_codes=(
+            "ops_fuel_alerts",
+            "fin_posting_backlog",
+            "fin_revenue_vs_cash",
+            "exec_fuel_operations",
+            "exec_margin_watch",
+        ),
+        intercompany_enabled=False,
+    ),
     "executive_cross_domain": WorkspaceSpec(
         code="executive_cross_domain",
         title="Executive Cross Domain",

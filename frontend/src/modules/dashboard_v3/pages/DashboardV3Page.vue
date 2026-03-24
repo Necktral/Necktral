@@ -28,7 +28,7 @@
       </AppPageHeader>
 
       <q-banner v-if="!canRead" dense rounded class="q-mt-md">
-        No tienes permiso <b>dashboard.workspace.read</b> para usar analítica avanzada.
+        No tienes permiso <b>report.dashboard.read</b> o <b>dashboard.workspace.read</b> para usar analítica avanzada.
       </q-banner>
 
       <q-banner v-else-if="dashboard.error" dense rounded class="q-mt-md bg-red-1 text-negative">
@@ -221,7 +221,7 @@ const branchLabel = computed(
 const canRead = computed(() => {
   const companyId = ctx.activeCompanyId;
   if (!companyId) return false;
-  return acl.hasPermission(companyId, 'dashboard.workspace.read');
+  return acl.hasPermission(companyId, 'report.dashboard.read') || acl.hasPermission(companyId, 'dashboard.workspace.read');
 });
 
 const workspaceReady = computed(() => !!dashboard.workspace);

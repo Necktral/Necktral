@@ -3,6 +3,7 @@
 - Fecha: 2026-03-19
 - Estado: Aceptado
 - Alcance: `backend/src/apps/modulos/accounting/*`, `frontend/src/modules/accounting/dashboard/*`
+- Nota de evolución: extendido por `ADR-010-reporting-kernel-dashboard-engine-v1.md` para alcance transversal enterprise.
 
 ## Contexto
 
@@ -31,4 +32,3 @@ El modulo contable crecio con una capa HTTP sobrecargada y con logica de reporte
 
 - Guardas CI (`qa/accounting_http_contract_guard.py`, `qa/architecture_boundaries_guard.py`).
 - Tests de contrato y paridad canonic/legacy en `backend/src/tests/test_accounting_reporting_dashboard_contract_v2.py`.
-

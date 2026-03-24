@@ -122,3 +122,55 @@ def rbac_permission(required_permission: str):
             return True
 
     return _RBACPermission
+
+
+def rbac_permission_any(required_permissions: list[str] | tuple[str, ...]):
+    """
+    Permite autorización OR sobre múltiples permisos equivalentes.
+
+    Uso:
+        permission_classes = [rbac_permission_any(["reports.run.read", "report.dataset.read"])]
+    """
+
+    normalized = tuple(str(code).strip() for code in required_permissions if str(code).strip())
+    if not normalized:
+        raise ValueError("required_permissions cannot be empty")
+
+    class _RBACPermissionAny(BasePermission):
+        message = "No tienes permisos para realizar esta acción."
+
+        def has_permission(self, request, view) -> bool:
+            # Auditoría: dejar explícito el set permitido.
+            _set_on_request_and_raw(request, "required_permission", "|".join(normalized))
+
+            user = getattr(request, "user", None)
+            if user is None or not getattr(user, "is_authenticated", False):
+                return False
+
+            company = getattr(request, "company", None)
+            branch = getattr(request, "branch", None)
+            effective_scope = {
+                "company_id": getattr(company, "id", None),
+                "branch_id": getattr(branch, "id", None),
+            }
+            if company is None:
+                _set_on_request_and_raw(request, "required_scope", effective_scope)
+                return False
+
+            include_global = bool(getattr(settings, "RBAC_INCLUDE_GLOBAL_USERROLES", True))
+            perms = get_effective_permissions_for_scope(
+                user,
+                company=company,
+                branch=branch,
+                include_global=include_global,
+            )
+            if "*" in perms:
+                return True
+            for code in normalized:
+                if code in perms:
+                    return True
+
+            _set_on_request_and_raw(request, "required_scope", effective_scope)
+            return False
+
+    return _RBACPermissionAny

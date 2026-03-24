@@ -20,6 +20,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Prepare .env for Docker Compose
+        run: |
+          cp .env.example .env
+
       - name: Run repo comment audit (PR)
         if: github.event_name == 'pull_request'
         run: |
@@ -29,10 +33,6 @@ jobs:
         run: |
           docker version
           docker compose version
-
-      - name: Prepare .env for Docker Compose
-        run: |
-          cp .env.example .env
 
       - name: Setup backend stack (fresh)
         run: |
@@ -58,6 +58,11 @@ jobs:
               echo "### Repo comment audit";
               cat qa/reports/repo_comment_audit.md;
             fi
+            if [ -f qa/reports/repo_comment_audit.json ]; then
+              echo "";
+              echo "### Repo comment audit (classification)";
+              python3 -c 'import json; from pathlib import Path; d = json.loads(Path("qa/reports/repo_comment_audit.json").read_text(encoding="utf-8")); status = str(d.get("status", "UNKNOWN")); mode = str(d.get("sync_origin_mode", "strict")); reason = str(d.get("sync_origin_reason_code", "UNKNOWN")); classification = ("warning de contexto PR detached (no bloqueante por sí solo)" if reason.startswith("PR_DETACHED_") else ("fallo bloqueante real" if status == "FAIL" else "sin warning contextual PR")); print(f"- status: `{status}`"); print(f"- sync_origin_mode: `{mode}`"); print(f"- sync_origin_reason_code: `{reason}`"); print(f"- clasificación: **{classification}**")'
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload preflight reports
@@ -71,13 +76,21 @@ jobs:
       - name: Backend logs (on failure)
         if: failure()
         run: |
-          docker compose ps
-          docker compose logs --no-color --timestamps backend db | tail -n 400
+          if [ -f .env ]; then
+            docker compose ps || true
+            docker compose logs --no-color --timestamps backend db | tail -n 400 || true
+          else
+            echo "[qa-ci] .env missing; skipping docker diagnostics."
+          fi
 
       - name: Cleanup
         if: always()
         run: |
-          docker compose down -v --remove-orphans
+          if [ -f .env ]; then
+            docker compose down -v --remove-orphans || true
+          else
+            echo "[qa-ci] .env missing; skipping docker compose down."
+          fi
 
   frontend-budget:
     runs-on: ubuntu-latest
@@ -87,6 +100,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Prepare .env for Docker Compose
+        run: |
+          cp .env.example .env
 
       - name: Docker info
         run: |
@@ -124,7 +141,11 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker compose down -v --remove-orphans
+          if [ -f .env ]; then
+            docker compose down -v --remove-orphans || true
+          else
+            echo "[qa-ci] .env missing; skipping docker compose down."
+          fi
 
   backend-tests:
     runs-on: ubuntu-latest
@@ -173,13 +194,21 @@ jobs:
       - name: Backend logs (on failure)
         if: failure()
         run: |
-          docker compose ps
-          docker compose logs --no-color --timestamps backend db | tail -n 400
+          if [ -f .env ]; then
+            docker compose ps || true
+            docker compose logs --no-color --timestamps backend db | tail -n 400 || true
+          else
+            echo "[qa-ci] .env missing; skipping docker diagnostics."
+          fi
 
       - name: Cleanup
         if: always()
         run: |
-          docker compose down -v --remove-orphans
+          if [ -f .env ]; then
+            docker compose down -v --remove-orphans || true
+          else
+            echo "[qa-ci] .env missing; skipping docker compose down."
+          fi
 
   audit-integrity:
     runs-on: ubuntu-latest
@@ -226,10 +255,18 @@ jobs:
       - name: Backend logs (on failure)
         if: failure()
         run: |
-          docker compose ps
-          docker compose logs --no-color --timestamps backend db | tail -n 400
+          if [ -f .env ]; then
+            docker compose ps || true
+            docker compose logs --no-color --timestamps backend db | tail -n 400 || true
+          else
+            echo "[qa-ci] .env missing; skipping docker diagnostics."
+          fi
 
       - name: Cleanup
         if: always()
         run: |
-          docker compose down -v --remove-orphans
+          if [ -f .env ]; then
+            docker compose down -v --remove-orphans || true
+          else
+            echo "[qa-ci] .env missing; skipping docker compose down."
+          fi

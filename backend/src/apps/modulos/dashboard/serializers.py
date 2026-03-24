@@ -51,3 +51,12 @@ class DashboardDrilldownIn(serializers.Serializer):
         if len(drill_path) > 12:
             raise serializers.ValidationError({"drill_path": ["max 12 segments"]})
         return attrs
+
+
+class DashboardEmbedTokenIn(serializers.Serializer):
+    workspace_code = serializers.CharField(max_length=64)
+    company_ids = serializers.ListField(child=serializers.IntegerField(min_value=1), required=False, default=list)
+    branch_id = serializers.IntegerField(required=False, allow_null=True, min_value=1)
+    theme = serializers.CharField(max_length=24, required=False, allow_blank=True, default="")
+    locale = serializers.CharField(max_length=16, required=False, allow_blank=True, default="")
+    ttl_seconds = serializers.IntegerField(required=False, min_value=60, max_value=3600)

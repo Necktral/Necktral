@@ -206,3 +206,52 @@ def test_domain_report_specs_cover_all_modules_and_kernels():
     for domain in critical_domains:
         assert f"DOMAIN_{domain}_OVERVIEW_V1" in REPORT_SPECS
         assert f"DOMAIN_{domain}_ALERTS_V1" in REPORT_SPECS
+
+
+@pytest.mark.django_db
+def test_dashboard_kernel_permissions_and_embed_token_contract():
+    _, company, branch = _mk_org_tree("dash-kernel")
+    user = _mk_user(label="dash-kernel")
+    UserMembership.objects.create(user=user, org_unit=company, is_active=True)
+    UserMembership.objects.create(user=user, org_unit=branch, is_active=True)
+
+    perms = [
+        "report.dashboard.read",
+        "report.dataset.read",
+        "dashboard.drilldown.read",
+        "reports.audit.read",
+        "reports.observability.read",
+        "reports.trace.read",
+        "reports.control.read",
+        "reports.financial.read",
+        "reports.security.read",
+    ]
+    for code in perms:
+        _grant_local_permission(user=user, company=company, branch=branch, permission_code=code)
+
+    client = _login_client(user=user, password="Pass12345!", company=company, branch=branch)
+
+    catalog = client.get(f"{DASHBOARD_BASE}/catalog/")
+    assert catalog.status_code == 200
+    codes = {row["workspace_code"] for row in catalog.data["results"]}
+    assert "executive_v1" in codes
+    assert "operations_fuel_accounting_v1" in codes
+
+    query = client.post(
+        f"{DASHBOARD_BASE}/workspaces/executive_v1/query/",
+        {"widget_code": "exec_margin_watch"},
+        format="json",
+    )
+    assert query.status_code == 200
+    assert query.data["summary"]["workspace_code"] == "executive_v1"
+
+    embed = client.post(
+        f"{DASHBOARD_BASE}/embed-token/",
+        {"workspace_code": "executive_v1", "ttl_seconds": 300},
+        format="json",
+    )
+    assert embed.status_code == 200
+    assert embed.data["meta"]["report_code"] == "DASHBOARD_EMBED_TOKEN"
+    assert embed.data["results"]["workspace_code"] == "executive_v1"
+    assert embed.data["results"]["token"]
+    assert int(embed.data["results"]["ttl_seconds"]) == 300

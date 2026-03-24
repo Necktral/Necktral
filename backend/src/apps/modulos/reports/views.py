@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.modulos.common.pagination import get_limit_offset, paginate_queryset
-from apps.modulos.common.permissions import rbac_permission
+from apps.modulos.common.permissions import rbac_permission_any
 
 from .models import ReportDefinition, ReportExport, ReportReadAudit, ReportRun
 from .serializers import ReportDefinitionCreateIn, ReportExportCreateIn, ReportRunCreateIn
@@ -53,8 +53,8 @@ class HealthView(APIView):
 class ReportDefinitionListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == "GET":
-            return [rbac_permission("reports.definition.read")()]
-        return [rbac_permission("reports.definition.create")()]
+            return [rbac_permission_any(["report.catalog.read", "reports.definition.read", "reports.view"])()]
+        return [rbac_permission_any(["report.definition.manage", "reports.definition.create"])()]
 
     def get(self, request):
         company = request.company
@@ -86,14 +86,25 @@ class ReportDefinitionListCreateView(APIView):
                 "report_family": r.report_family,
                 "name": r.name,
                 "description": r.description,
+                "dataset_key": r.dataset_key,
+                "domain_owner": r.domain_owner,
+                "scope_level": r.scope_level,
                 "truth_level": r.truth_level,
                 "source_types": r.source_types,
+                "freshness_mode": r.freshness_mode,
+                "materialization_policy": r.materialization_policy,
+                "certification_status": r.certification_status,
+                "required_permissions": r.required_permissions,
+                "semantic_metric_keys": r.semantic_metric_keys,
                 "reproducibility_mode": r.reproducibility_mode,
                 "sensitivity_level": r.sensitivity_level,
                 "classification": r.classification,
                 "schema_version": r.schema_version,
                 "contract_version": r.contract_version,
                 "version": r.version,
+                "semantic_version": r.semantic_version,
+                "formula_version": r.formula_version,
+                "dataset_version": r.dataset_version,
                 "status": r.status,
                 "is_active": bool(r.is_active),
             }
@@ -113,6 +124,9 @@ class ReportDefinitionListCreateView(APIView):
                 code=v["code"],
                 name=v["name"],
                 description=v.get("description", "") or "",
+                dataset_key=v.get("dataset_key", "") or "",
+                domain_owner=v.get("domain_owner", "") or "",
+                semantic_version=v.get("semantic_version", "") or "",
                 schema_version=v.get("schema_version") or 1,
                 contract_version=v.get("contract_version") or 1,
                 is_active=bool(v.get("is_active", True)),
@@ -130,10 +144,19 @@ class ReportDefinitionListCreateView(APIView):
             {
                 "report_id": str(row.report_id),
                 "report_code": row.code,
+                "dataset_key": row.dataset_key,
+                "domain_owner": row.domain_owner,
+                "scope_level": row.scope_level,
                 "report_family": row.report_family,
                 "truth_level": row.truth_level,
                 "reproducibility_mode": row.reproducibility_mode,
+                "freshness_mode": row.freshness_mode,
+                "materialization_policy": row.materialization_policy,
+                "certification_status": row.certification_status,
+                "required_permissions": row.required_permissions,
+                "semantic_metric_keys": row.semantic_metric_keys,
                 "version": row.version,
+                "semantic_version": row.semantic_version,
                 "schema_version": row.schema_version,
                 "contract_version": row.contract_version,
                 "sensitivity_level": row.sensitivity_level,
@@ -145,8 +168,8 @@ class ReportDefinitionListCreateView(APIView):
 class ReportRunListCreateView(APIView):
     def get_permissions(self):
         if self.request.method == "GET":
-            return [rbac_permission("reports.run.read")()]
-        return [rbac_permission("reports.run.create")()]
+            return [rbac_permission_any(["report.dataset.read", "reports.run.read", "reports.view"])()]
+        return [rbac_permission_any(["report.dataset.read", "reports.run.create"])()]
 
     def get(self, request):
         company = request.company
@@ -172,6 +195,7 @@ class ReportRunListCreateView(APIView):
                 "truth_level": r.truth_level,
                 "effective_scope": r.effective_scope,
                 "freshness": r.freshness,
+                "lineage": r.lineage,
                 "warnings": r.warnings,
                 "duration_ms": r.duration_ms,
                 "row_count": r.row_count,
@@ -215,11 +239,13 @@ class ReportRunListCreateView(APIView):
             {
                 "execution_id": str(run.run_id),
                 "report_code": run.definition.code,
+                "dataset_key": run.definition.dataset_key,
                 "report_version": run.report_version,
                 "status": run.status,
                 "truth_level": run.truth_level,
                 "effective_scope": run.effective_scope,
                 "freshness": run.freshness,
+                "lineage": run.lineage,
                 "source_manifest": run.source_manifest,
                 "warnings": list(run.warnings or []) + (["DEDUPE_REUSED"] if getattr(run, "_dedupe_reused", False) else []),
                 "row_count": run.row_count,
@@ -230,7 +256,7 @@ class ReportRunListCreateView(APIView):
 
 
 class ReportRunDetailView(APIView):
-    permission_classes = [rbac_permission("reports.run.read")]
+    permission_classes = [rbac_permission_any(["report.dataset.read", "reports.run.read", "reports.view"])]
 
     def get(self, request, run_id: str):
         company = request.company
@@ -276,6 +302,7 @@ class ReportRunDetailView(APIView):
                 "source_manifest": row.source_manifest,
                 "output_manifest_hash": row.output_manifest_hash,
                 "freshness": row.freshness,
+                "lineage": row.lineage,
                 "warnings": row.warnings,
                 "row_count": row.row_count,
                 "duration_ms": row.duration_ms,
@@ -289,7 +316,7 @@ class ReportRunDetailView(APIView):
 
 
 class ReportExportCreateView(APIView):
-    permission_classes = [rbac_permission("reports.export")]
+    permission_classes = [rbac_permission_any(["report.dataset.export", "reports.export"])]
 
     def post(self, request):
         s = ReportExportCreateIn(data=request.data)
@@ -322,6 +349,7 @@ class ReportExportCreateView(APIView):
                 "execution_id": str(row.execution.run_id),
                 "status": row.status,
                 "format": row.format,
+                "content_hash": row.content_hash,
                 "retention_until": row.retention_until,
             },
             status=status.HTTP_201_CREATED,
@@ -329,7 +357,7 @@ class ReportExportCreateView(APIView):
 
 
 class ReportExportDetailView(APIView):
-    permission_classes = [rbac_permission("reports.export")]
+    permission_classes = [rbac_permission_any(["report.dataset.export", "reports.export"])]
 
     def get(self, request, export_id: str):
         row = ReportExport.objects.filter(company=request.company, export_id=export_id).select_related("execution").first()
@@ -352,6 +380,7 @@ class ReportExportDetailView(APIView):
             "template_version": row.template_version,
             "watermark_text": row.watermark_text,
             "storage_ref": row.storage_ref,
+            "content_hash": row.content_hash,
             "retention_until": row.retention_until,
             "requested_at": row.requested_at,
             "exported_at": row.exported_at,
@@ -364,7 +393,7 @@ class ReportExportDetailView(APIView):
 
 
 class ReportReadAuditListView(APIView):
-    permission_classes = [rbac_permission("reports.audit.read")]
+    permission_classes = [rbac_permission_any(["report.dataset.read", "reports.audit.read"])]
 
     def get(self, request):
         qs = ReportReadAudit.objects.filter(company=request.company).select_related("execution", "actor_user").order_by("-occurred_at", "-id")
@@ -395,7 +424,7 @@ class ReportReadAuditListView(APIView):
 
 
 class ReportSourceListView(APIView):
-    permission_classes = [rbac_permission("reports.definition.read")]
+    permission_classes = [rbac_permission_any(["report.catalog.read", "reports.definition.read", "reports.view"])]
 
     def get(self, request):
         qs = list_visible_sources(company=request.company)
@@ -422,7 +451,7 @@ class ReportSourceListView(APIView):
 
 
 class ReportRunExportCompatView(APIView):
-    permission_classes = [rbac_permission("reports.export")]
+    permission_classes = [rbac_permission_any(["report.dataset.export", "reports.export"])]
 
     def get(self, request, run_id: str):
         run = ReportRun.objects.filter(company=request.company, run_id=run_id).first()
@@ -451,7 +480,7 @@ class ReportRunExportCompatView(APIView):
 
 
 class ReportRunCancelView(APIView):
-    permission_classes = [rbac_permission("reports.run.create")]
+    permission_classes = [rbac_permission_any(["report.dataset.read", "reports.run.create"])]
 
     def post(self, request, run_id: str):
         try:
@@ -475,7 +504,7 @@ class ReportRunCancelView(APIView):
 
 
 class ReportRunRetryView(APIView):
-    permission_classes = [rbac_permission("reports.run.create")]
+    permission_classes = [rbac_permission_any(["report.dataset.read", "reports.run.create"])]
 
     def post(self, request, run_id: str):
         priority_raw = request.data.get("priority")

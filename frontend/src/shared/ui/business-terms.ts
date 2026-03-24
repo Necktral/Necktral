@@ -15,6 +15,7 @@ export const BUSINESS_LABELS = {
 export const UI_ROUTE_PATHS = {
   dashboard: '/dashboard',
   analyticsV3: '/analitica/v3',
+  analyticsElite: '/analitica/elite',
   accountingDashboard: '/contabilidad/tablero',
   inventoryDashboard: '/inventario',
   inventoryItems: '/inventario/items',

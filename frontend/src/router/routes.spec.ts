@@ -28,6 +28,7 @@ describe('router routes', () => {
       UI_ROUTE_PATHS.organizationCompanyProfile,
       UI_ROUTE_PATHS.organizationBranches,
       UI_ROUTE_PATHS.analyticsV3,
+      UI_ROUTE_PATHS.analyticsElite,
       UI_ROUTE_PATHS.accountingDashboard,
       UI_ROUTE_PATHS.inventoryDashboard,
       UI_ROUTE_PATHS.inventoryItems,
@@ -140,10 +141,16 @@ describe('router routes', () => {
     expect(route?.meta?.requiredPermissions).toEqual(['accounting.dashboard.read']);
   });
 
-  it('protege analítica avanzada con permiso dashboard.workspace.read', () => {
+  it('protege analítica avanzada con permisos kernel+legacy (any)', () => {
     const route = findChild(UI_ROUTE_PATHS.analyticsV3);
     expect(route).toBeDefined();
-    expect(route?.meta?.requiredPermissions).toEqual(['dashboard.workspace.read']);
+    expect(route?.meta?.requiredAnyPermissions).toEqual(['report.dashboard.read', 'dashboard.workspace.read']);
+  });
+
+  it('protege analytics engine con permisos kernel+legacy (any)', () => {
+    const route = findChild(UI_ROUTE_PATHS.analyticsElite);
+    expect(route).toBeDefined();
+    expect(route?.meta?.requiredAnyPermissions).toEqual(['report.dashboard.read', 'dashboard.workspace.read']);
   });
 
   it('protege inventario tablero con permiso inventory.balance.read', () => {

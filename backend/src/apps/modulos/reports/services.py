@@ -22,12 +22,14 @@ from .models import (
     DatasetCache,
     ReportDefinition,
     ReportExport,
+    ReportMetricDefinition,
     ReportReadAudit,
     ReportRun,
     ReproducibilityLedger,
     SourceRegistry,
 )
 from .registry import REPORT_REGISTRY, REPORT_SPECS, ReportResult, ReportSpec
+from .semantic_metrics import metric_expression_hash, semantic_metric_keys_for_dataset, SEMANTIC_METRIC_REGISTRY
 
 
 @dataclass(frozen=True)
@@ -45,6 +47,14 @@ FAMILY_READ_PERMISSION: dict[str, str] = {
     "CONTROL": "reports.control.read",
     "FIN": "reports.financial.read",
     "SEC": "reports.security.read",
+}
+
+KERNEL_PERMISSION_ALIASES: dict[str, tuple[str, ...]] = {
+    "report.catalog.read": ("report.catalog.read", "reports.definition.read", "reports.view"),
+    "report.dataset.read": ("report.dataset.read", "reports.run.read", "reports.run.create", "reports.view", "dashboard.widget.read"),
+    "report.dataset.export": ("report.dataset.export", "reports.export"),
+    "report.definition.manage": ("report.definition.manage", "reports.definition.create", "reports.definition.update"),
+    "report.dashboard.read": ("report.dashboard.read", "dashboard.workspace.read"),
 }
 
 
@@ -124,6 +134,22 @@ def _require_permission(*, user, company, branch, permission_code: str) -> None:
             http_status=403,
             details={"required_permission": permission_code},
         )
+
+
+def _require_any_permission(*, user, company, branch, permission_codes: tuple[str, ...] | list[str]) -> str:
+    perms = _effective_perms(user=user, company=company, branch=branch)
+    if "*" in perms:
+        return "*"
+    normalized = tuple(str(code).strip() for code in permission_codes if str(code).strip())
+    for code in normalized:
+        if code in perms:
+            return code
+    raise ReportDomainError(
+        code="REPORT_FORBIDDEN",
+        message="forbidden",
+        http_status=403,
+        details={"required_permissions_any": list(normalized)},
+    )
 
 
 def _ensure_company_scope(*, request, company, branch=None) -> None:
@@ -365,6 +391,150 @@ def _seed_sources(*, company) -> None:
         )
 
 
+def _scope_level_from_scope(scope: dict[str, Any]) -> str:
+    data_scope = dict(scope.get("data_scope") or {})
+    if bool(data_scope.get("intercompany")):
+        return ReportDefinition.ScopeLevel.INTERCOMPANY
+    branch_id = scope.get("branch_id")
+    return ReportDefinition.ScopeLevel.BRANCH if branch_id else ReportDefinition.ScopeLevel.COMPANY
+
+
+def _freshness_mode_from_reproducibility(mode: str) -> str:
+    if mode == ReportDefinition.ReproducibilityMode.LIVE:
+        return ReportDefinition.FreshnessMode.LIVE
+    if mode == ReportDefinition.ReproducibilityMode.SNAPSHOT:
+        return ReportDefinition.FreshnessMode.SNAPSHOT
+    return ReportDefinition.FreshnessMode.NEAR_REAL_TIME
+
+
+def _materialization_policy_from_reproducibility(mode: str) -> str:
+    if mode == ReportDefinition.ReproducibilityMode.LIVE:
+        return ReportDefinition.MaterializationPolicy.LIVE_ONLY
+    if mode == ReportDefinition.ReproducibilityMode.CERTIFIED:
+        return ReportDefinition.MaterializationPolicy.SNAPSHOT_REQUIRED
+    return ReportDefinition.MaterializationPolicy.CACHE_FIRST
+
+
+def _sync_semantic_metrics_for_dataset(*, company, dataset_key: str, domain_owner: str) -> None:
+    keys = semantic_metric_keys_for_dataset(dataset_key)
+    for metric_key in keys:
+        metric_spec = SEMANTIC_METRIC_REGISTRY.get(metric_key)
+        if metric_spec is None:
+            continue
+        ReportMetricDefinition.objects.update_or_create(
+            company=company,
+            metric_key=metric_spec.metric_key,
+            defaults={
+                "name": metric_spec.name,
+                "description": metric_spec.description,
+                "domain_owner": domain_owner,
+                "dataset_key": dataset_key,
+                "expression": metric_spec.expression,
+                "expression_hash": metric_expression_hash(metric_spec.expression),
+                "unit": metric_spec.unit,
+                "semantic_version": metric_spec.semantic_version,
+                "formula_version": metric_spec.formula_version,
+                "status": ReportMetricDefinition.MetricStatus.ACTIVE,
+                "is_certified": bool(metric_spec.certified),
+            },
+        )
+
+
+def _infer_dimensions_measures(*, rows: list[dict[str, Any]], parameters: dict[str, Any]) -> tuple[list[str], list[str]]:
+    group_by = [str(x) for x in list(parameters.get("group_by") or []) if str(x)]
+    metrics = [str(x) for x in list(parameters.get("metrics") or []) if str(x)]
+    if group_by or metrics:
+        return group_by, metrics
+    if not rows:
+        return [], []
+    sample = rows[0]
+    dimensions: list[str] = []
+    measures: list[str] = []
+    for key, value in sample.items():
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            measures.append(str(key))
+        else:
+            dimensions.append(str(key))
+    return dimensions, measures
+
+
+def _compute_totals(*, rows: list[dict[str, Any]], measures: list[str]) -> dict[str, float]:
+    if not rows or not measures:
+        return {}
+    totals: dict[str, float] = {}
+    for name in measures:
+        total = 0.0
+        has_numeric = False
+        for row in rows:
+            value = row.get(name)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                total += float(value)
+                has_numeric = True
+        if has_numeric:
+            totals[name] = round(total, 6)
+    return totals
+
+
+def _build_lineage_payload(*, run: ReportRun, request, actor, cache_hit: bool, consumer: str = "") -> dict[str, Any]:
+    request_path = str(getattr(request, "path", "") or "")
+    request_method = str(getattr(request, "method", "") or "")
+    return {
+        "actor_user_id": getattr(actor, "id", None),
+        "request_id": _get_request_id(request),
+        "request_path": request_path,
+        "request_method": request_method,
+        "consumer": consumer or ("dashboard_engine" if "/dashboard/" in request_path else "reports_api"),
+        "cache_hit": bool(cache_hit),
+        "source_manifest_hash": str(run.source_manifest_hash or ""),
+        "output_manifest_hash": str(run.output_manifest_hash or ""),
+        "generated_at": timezone.now().isoformat(),
+    }
+
+
+def _normalize_result_payload(
+    *,
+    run: ReportRun,
+    payload: dict[str, Any],
+    definition: ReportDefinition,
+    parameters: dict[str, Any],
+) -> dict[str, Any]:
+    rows = list(payload.get("rows") or [])
+    dimensions, measures = _infer_dimensions_measures(rows=rows, parameters=parameters)
+    lineage = dict(run.lineage or {})
+    return {
+        # Compat v1
+        "schema_version": int(payload.get("schema_version") or 1),
+        "meta": dict(payload.get("meta") or {}),
+        "rows": rows,
+        "warnings": list(payload.get("warnings") or []),
+        # Canonical dataset envelope v2
+        "envelope_version": 2,
+        "dataset_key": str(definition.dataset_key or definition.code),
+        "semantic_version": str(definition.semantic_version or definition.version or "1.0.0"),
+        "formula_version": str(definition.formula_version or ""),
+        "metadata": {
+            "title": definition.name,
+            "description": definition.description,
+            "scope": dict(run.effective_scope or {}),
+            "filters": dict(parameters.get("filters") or {}),
+            "generated_at": timezone.now().isoformat(),
+            "freshness_mode": str(definition.freshness_mode or definition.freshness_class),
+            "materialization_policy": str(definition.materialization_policy),
+            "certification_status": str(definition.certification_status),
+        },
+        "dimensions": dimensions,
+        "measures": measures,
+        "totals": _compute_totals(rows=rows, measures=measures),
+        "lineage": lineage,
+        "render_hints": {
+            "default_visual": "table",
+            "default_group_by": dimensions[:3],
+            "default_metrics": measures[:4],
+        },
+        "export_capabilities": dict(definition.export_capabilities or definition.export_policy or {}),
+    }
+
+
 def create_definition(
     *,
     request,
@@ -373,11 +543,21 @@ def create_definition(
     code: str,
     name: str,
     description: str = "",
+    dataset_key: str = "",
+    domain_owner: str = "",
+    semantic_version: str = "",
     schema_version: int = 1,
     contract_version: int = 1,
     is_active: bool = True,
 ) -> ReportDefinition:
     _ensure_company_scope(request=request, company=company)
+    if actor is not None and getattr(actor, "is_authenticated", False):
+        _require_any_permission(
+            user=actor,
+            company=company,
+            branch=getattr(request, "branch", None),
+            permission_codes=KERNEL_PERMISSION_ALIASES["report.definition.manage"],
+        )
     spec = REPORT_SPECS.get(code)
     if spec is None:
         raise ReportDomainError(
@@ -392,21 +572,36 @@ def create_definition(
         "name": name,
         "description": description or "",
         "owner_domain": "REPORTS",
+        "domain_owner": str(domain_owner or (code.split("_", 1)[0] if "_" in code else "REPORTS")).upper(),
         "status": ReportDefinition.DefinitionStatus.ACTIVE,
+        "certification_status": ReportDefinition.CertificationStatus.CERTIFIED,
         "report_family": spec.family,
         "truth_level": spec.truth_level,
+        "scope_level": _scope_level_from_scope(_scope_payload(company=company, branch=getattr(request, "branch", None), request=request)),
         "source_types": list(spec.source_types),
+        "dataset_key": str(dataset_key or spec.dataset_code or code),
         "reproducibility_mode": spec.reproducibility_mode,
+        "freshness_mode": _freshness_mode_from_reproducibility(spec.reproducibility_mode),
+        "materialization_policy": _materialization_policy_from_reproducibility(spec.reproducibility_mode),
         "sensitivity_level": spec.sensitivity_level,
         "contains_pii": bool(spec.contains_pii),
         "reason_required": bool(spec.reason_required),
         "freshness_class": "live",
         "export_policy": {"allowed_formats": list(spec.export_formats)},
+        "export_capabilities": {
+            "formats": list(spec.export_formats),
+            "supports_async_snapshot": spec.reproducibility_mode in {"SNAPSHOT", "CERTIFIED"},
+        },
+        "required_permissions": [*KERNEL_PERMISSION_ALIASES["report.dataset.read"], *([_family_permission(spec)] if _family_permission(spec) else [])],
+        "semantic_metric_keys": semantic_metric_keys_for_dataset(str(spec.dataset_code or code)),
         "retention_policy": "short_term",
         "classification": "internal",
         "supports_async_snapshot": spec.reproducibility_mode in {"SNAPSHOT", "CERTIFIED"},
         "supports_future_modules": True,
         "version": spec.report_version,
+        "semantic_version": str(semantic_version or spec.report_version),
+        "dataset_version": str(spec.dataset_version or ""),
+        "formula_version": str(spec.formula_version or ""),
         "schema_version": int(schema_version or 1),
         "contract_version": int(contract_version or 1),
         "is_active": bool(is_active),
@@ -419,16 +614,46 @@ def create_definition(
             row.is_active = bool(is_active)
             row.schema_version = int(schema_version or row.schema_version)
             row.contract_version = int(contract_version or row.contract_version)
+            row.domain_owner = defaults["domain_owner"]
+            row.dataset_key = defaults["dataset_key"]
+            row.semantic_version = defaults["semantic_version"]
+            row.formula_version = defaults["formula_version"]
+            row.dataset_version = defaults["dataset_version"]
+            row.scope_level = defaults["scope_level"]
+            row.freshness_mode = defaults["freshness_mode"]
+            row.materialization_policy = defaults["materialization_policy"]
+            row.certification_status = defaults["certification_status"]
+            row.required_permissions = defaults["required_permissions"]
+            row.export_capabilities = defaults["export_capabilities"]
+            row.semantic_metric_keys = defaults["semantic_metric_keys"]
             row.save(
                 update_fields=[
                     "name",
                     "description",
                     "is_active",
+                    "domain_owner",
+                    "dataset_key",
+                    "semantic_version",
+                    "formula_version",
+                    "dataset_version",
+                    "scope_level",
+                    "freshness_mode",
+                    "materialization_policy",
+                    "certification_status",
+                    "required_permissions",
+                    "export_capabilities",
+                    "semantic_metric_keys",
                     "schema_version",
                     "contract_version",
                     "updated_at",
                 ]
             )
+
+        _sync_semantic_metrics_for_dataset(
+            company=company,
+            dataset_key=str(row.dataset_key or ""),
+            domain_owner=str(row.domain_owner or "REPORTS"),
+        )
 
         write_event(
             request=request,
@@ -647,6 +872,7 @@ def _execute_run(*, run: ReportRun, request, actor, use_cache: bool = True) -> R
     warnings: list[str] = []
     cached_payload: dict[str, Any] | None = None
     source_manifest_hash = ""
+    cache_hit = False
     try:
         if use_cache:
             cache_row = _load_cache(
@@ -659,6 +885,7 @@ def _execute_run(*, run: ReportRun, request, actor, use_cache: bool = True) -> R
                 cached_payload = dict(cache_row.payload or {})
                 warnings.append("CACHE_HIT")
                 source_manifest_hash = str(cache_row.source_manifest_hash or "")
+                cache_hit = True
 
         if cached_payload is None:
             result: ReportResult = REPORT_REGISTRY[definition.code](
@@ -688,19 +915,32 @@ def _execute_run(*, run: ReportRun, request, actor, use_cache: bool = True) -> R
                 payload=payload,
             )
 
+        normalized_payload = _normalize_result_payload(
+            run=run,
+            payload=cached_payload,
+            definition=definition,
+            parameters=params,
+        )
         output_manifest_hash = _hash_hex(cached_payload)
         duration_ms = int((timezone.now() - start_ts).total_seconds() * 1000)
         run.status = ReportRun.Status.SUCCEEDED
-        run.result = cached_payload
+        run.result = normalized_payload
         run.source_manifest = json.loads(
             _canon_json((cached_payload.get("meta") or {}).get("source_manifest") or _source_manifest(spec=spec))
         )
         run.source_manifest_hash = source_manifest_hash or _hash_hex(run.source_manifest)
         run.output_manifest_hash = output_manifest_hash
         run.duration_ms = duration_ms
-        run.row_count = len(list(cached_payload.get("rows") or []))
-        run.warnings = list(cached_payload.get("warnings") or [])
+        run.row_count = len(list(normalized_payload.get("rows") or []))
+        run.warnings = list(normalized_payload.get("warnings") or [])
         run.freshness = _build_freshness(definition=definition)
+        run.lineage = _build_lineage_payload(
+            run=run,
+            request=request,
+            actor=actor,
+            cache_hit=cache_hit,
+            consumer=str((params or {}).get("consumer_surface") or ""),
+        )
         run.finished_at = timezone.now()
         run.save(
             update_fields=[
@@ -713,6 +953,7 @@ def _execute_run(*, run: ReportRun, request, actor, use_cache: bool = True) -> R
                 "row_count",
                 "warnings",
                 "freshness",
+                "lineage",
                 "finished_at",
             ]
         )
@@ -778,9 +1019,20 @@ def run_report(
         raise ReportDomainError(code="REPORT_UNSUPPORTED_SOURCE", message="runtime not registered", http_status=422)
 
     spec = REPORT_SPECS[code]
+    _require_any_permission(
+        user=actor,
+        company=company,
+        branch=branch,
+        permission_codes=KERNEL_PERMISSION_ALIASES["report.dataset.read"],
+    )
     family_perm = _family_permission(spec)
     if family_perm:
-        _require_permission(user=actor, company=company, branch=branch, permission_code=family_perm)
+        _require_any_permission(
+            user=actor,
+            company=company,
+            branch=branch,
+            permission_codes=(family_perm,),
+        )
 
     merged_params = dict(params or {})
     _assert_v3_analytics_params_enabled(merged_params)
@@ -791,6 +1043,16 @@ def run_report(
     dedupe_key = _create_queue_dedupe_key(definition=definition, scope=scope, params_hash=params_hash, as_of=as_of)
 
     with transaction.atomic():
+        lineage_seed = {
+            "actor_user_id": getattr(actor, "id", None),
+            "request_id": req_id,
+            "request_path": str(getattr(request, "path", "") or ""),
+            "request_method": str(getattr(request, "method", "") or ""),
+            "consumer": "dashboard_engine" if "/dashboard/" in str(getattr(request, "path", "") or "") else "reports_api",
+            "workspace_code": str(merged_params.get("workspace_code") or ""),
+            "widget_code": str(merged_params.get("widget_code") or ""),
+            "created_at": timezone.now().isoformat(),
+        }
         if run_async:
             existing = (
                 ReportRun.objects.filter(
@@ -838,6 +1100,7 @@ def run_report(
                 dedupe_key=dedupe_key,
                 queue_name="reports",
                 parameters=merged_params,
+                lineage=lineage_seed,
             )
             return run
 
@@ -867,6 +1130,7 @@ def run_report(
             dedupe_key=dedupe_key,
             queue_name="reports",
             parameters=merged_params,
+            lineage=lineage_seed,
         )
     return _execute_run(run=run, request=request, actor=actor, use_cache=bool(use_cache))
 
@@ -1010,6 +1274,12 @@ def create_export(
     approved_by_user_id: int | None = None,
 ) -> ReportExport:
     _ensure_company_scope(request=request, company=company)
+    _require_any_permission(
+        user=actor,
+        company=company,
+        branch=getattr(request, "branch", None),
+        permission_codes=KERNEL_PERMISSION_ALIASES["report.dataset.export"],
+    )
     run = ReportRun.objects.filter(company=company, run_id=execution_id).select_related("definition").first()
     if run is None:
         raise ReportDomainError(code="REPORT_NOT_FOUND", message="execution not found", http_status=404)

@@ -133,3 +133,29 @@ export type DashboardDrilldownResponse = DashboardEnvelope<
   },
   DashboardDrilldownResult
 >;
+
+export type DashboardEmbedTokenPayload = {
+  workspace_code: string;
+  company_ids?: number[];
+  branch_id?: number | null;
+  theme?: string;
+  locale?: string;
+  ttl_seconds?: number;
+};
+
+export type DashboardEmbedTokenResult = {
+  workspace_code: string;
+  token_type: string;
+  token: string;
+  issued_at: string;
+  expires_at: string;
+  ttl_seconds: number;
+  embed_url: string;
+  scope: DashboardScope;
+  targets: Array<{ company_id: number; branch_id: number | null }>;
+};
+
+export type DashboardEmbedTokenResponse = DashboardEnvelope<
+  { workspace_code: string; ttl_seconds: number },
+  DashboardEmbedTokenResult
+>;

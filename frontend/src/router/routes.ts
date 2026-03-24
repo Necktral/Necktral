@@ -77,7 +77,17 @@ const routes: RouteRecordRaw[] = [
         meta: {
           requiresAuth: true,
           requiresContext: true,
-          requiredPermissions: ['dashboard.workspace.read'],
+          requiredAnyPermissions: ['report.dashboard.read', 'dashboard.workspace.read'],
+        },
+      },
+      {
+        path: childPath(UI_ROUTE_PATHS.analyticsElite),
+        name: 'analitica-elite',
+        component: () => import('src/modules/dashboard_v3/pages/AnalyticsEmbedPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+          requiredAnyPermissions: ['report.dashboard.read', 'dashboard.workspace.read'],
         },
       },
       {

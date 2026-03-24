@@ -112,6 +112,13 @@
           <q-item-section>Analítica avanzada</q-item-section>
         </q-item>
 
+        <q-item clickable :to="routes.analyticsElite" :disable="!canDashboardV3Read">
+          <q-item-section avatar>
+            <q-icon name="insights" />
+          </q-item-section>
+          <q-item-section>Analytics engine</q-item-section>
+        </q-item>
+
         <q-item clickable :to="routes.selectContext">
           <q-item-section avatar>
             <q-icon name="business" />
@@ -313,7 +320,7 @@ const canAccountingDashboardRead = computed(() => {
 const canDashboardV3Read = computed(() => {
   const companyId = ctx.activeCompanyId;
   if (!companyId) return false;
-  return acl.hasPermission(companyId, 'dashboard.workspace.read');
+  return acl.hasPermission(companyId, 'report.dashboard.read') || acl.hasPermission(companyId, 'dashboard.workspace.read');
 });
 
 const canInventoryRead = computed(() => {

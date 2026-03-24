@@ -1,23 +1,24 @@
-# Arquitectura Reporting vs Dashboard (Contabilidad)
+# Arquitectura Reporting Kernel vs Dashboard Engine (Enterprise v1)
 
 ## Objetivo
 
-Separar contrato formal de reportes contables del contrato ejecutivo de dashboard para evitar acoplamiento semantico y tecnico.
+Separar fuente de verdad analítica (`reporting_kernel`) de la experiencia interactiva (`dashboard_engine`) para evitar acoplamiento semántico/técnico y habilitar escalamiento enterprise.
 
 ## Capas backend
 
-### Reporting formal
+### Reporting kernel
 
-- Namespace: `apps.modulos.accounting.reports`
-- Rutas: `/api/backend/accounting/reports/*`
-- Responsabilidad: detalle formal, reconciliacion operacional formal, payload estable para export/auditoria.
+- Namespace: `apps.modulos.reports`
+- Rutas: `/api/backend/reports/*`
+- Responsabilidad: datasets certificados, contratos reproducibles, trazabilidad, export y gobierno semántico.
 
-### Dashboard ejecutivo
+### Dashboard engine
 
-- Namespace: `apps.modulos.accounting.dashboard`
-- Rutas: `/api/backend/accounting/dashboard/*`
-- Responsabilidad: agregados KPI, tendencias y salud operacional para consumo UI.
-- Cache KPI: key por `metric + company + branch + filtros`.
+- Namespace: `apps.modulos.dashboard`
+- Rutas: `/api/backend/dashboard/*`
+- Responsabilidad: workspaces/widgets, interacción (cross-filter, drill-down, drill-through), consumo del kernel.
+- Cache: key por `workspace + company/branch + query`.
+- Integración Dash: `POST /api/backend/dashboard/embed-token/` para sesión embebida con token efímero.
 
 ### Capa HTTP
 
@@ -25,35 +26,42 @@ Separar contrato formal de reportes contables del contrato ejecutivo de dashboar
 - `apps.modulos.accounting.api.views_dashboard`
 - Solo auth/permisos, parseo, invocacion de servicios y envelope.
 
-## Contrato API (v2 canonico)
+## Contrato API (dataset envelope v2)
 
 ```json
 {
-  "meta": {
-    "contract_version": "2.0.0",
-    "report_code": "TRIAL_BALANCE"
+  "schema_version": 1,
+  "rows": [],
+  "warnings": [],
+  "envelope_version": 2,
+  "dataset_key": "accounting.overview",
+  "semantic_version": "1.0.0",
+  "metadata": {
+    "scope": { "company_id": 1, "branch_id": 10 },
+    "freshness_mode": "near_real_time",
+    "materialization_policy": "cache_first",
+    "certification_status": "CERTIFIED"
   },
-  "summary": {},
-  "results": [],
-  "pagination": {}
+  "dimensions": [],
+  "measures": [],
+  "totals": {},
+  "lineage": {},
+  "render_hints": {},
+  "export_capabilities": {}
 }
 ```
 
 ## Frontend
 
-- Modulo dashboard contable:
-  - `frontend/src/modules/accounting/dashboard/pages`
-  - `frontend/src/modules/accounting/dashboard/components`
-  - `frontend/src/modules/accounting/dashboard/services`
-  - `frontend/src/modules/accounting/dashboard/stores`
-  - `frontend/src/modules/accounting/dashboard/types`
-- Ruta UI:
-  - `/contabilidad/tablero`
-- ACL:
-  - `accounting.dashboard.read`
+- Quasar = control-plane (ACL, contexto, navegación).
+- Dashboard v3 = superficie interactiva certificada.
+- Ruta embed engine:
+  - `/analitica/elite`
+- ACL transición:
+  - nuevo: `report.dashboard.read`
+  - legacy: `dashboard.workspace.read`
 
 ## Compatibilidad legacy
 
-- Alias temporal: `/api/accounting/*`
-- Headers de deprecacion activos hasta `2026-05-18`.
-
+- API legacy se mantiene con deprecación controlada.
+- RBAC dual `report.*` + `reports.* / dashboard.*` por 2 releases antes del retiro legacy.

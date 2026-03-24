@@ -157,6 +157,8 @@ def _get_git_sync(repo_root: Path, *, fetch: bool) -> dict[str, Any]:
         _safe_run(["git", "fetch", "--all", "--prune"], cwd=repo_root)
 
     branch = _run(["git", "branch", "--show-current"], cwd=repo_root)
+    head_is_detached = not bool(branch)
+    ci_event = (os.environ.get("GITHUB_EVENT_NAME") or "").strip() or "local"
     branch_source = "git"
     if not branch:
         env_branch = (os.environ.get("GITHUB_HEAD_REF") or os.environ.get("GITHUB_REF_NAME") or "").strip()
@@ -186,18 +188,51 @@ def _get_git_sync(repo_root: Path, *, fetch: bool) -> dict[str, Any]:
         behind_origin = int(right)
 
     sync_origin = bool(origin_exists and not porcelain and ahead_origin == 0 and behind_origin == 0)
-    if not origin_ref:
-        origin_status = "WARN"
-        origin_detail = "Rama local no resoluble (HEAD detached sin referencia de rama)."
-    elif not origin_exists:
-        origin_status = "WARN"
-        origin_detail = f"No existe referencia remota para `{origin_ref}`."
-    elif sync_origin:
-        origin_status = "PASS"
-        origin_detail = "Rama local en sync con remoto y árbol limpio."
+    sync_origin_mode = "strict"
+    if ci_event == "pull_request" and head_is_detached:
+        sync_origin_mode = "pr_detached_tolerant"
+
+    origin_reason_code = "ORIGIN_SYNC_OK"
+    if sync_origin_mode == "strict":
+        if not origin_ref:
+            origin_status = "WARN"
+            origin_reason_code = "ORIGIN_REF_UNRESOLVED"
+            origin_detail = "Rama local no resoluble (HEAD detached sin referencia de rama)."
+        elif not origin_exists:
+            origin_status = "WARN"
+            origin_reason_code = "ORIGIN_REF_MISSING"
+            origin_detail = f"No existe referencia remota para `{origin_ref}`."
+        elif sync_origin:
+            origin_status = "PASS"
+            origin_reason_code = "ORIGIN_SYNC_OK"
+            origin_detail = "Rama local en sync con remoto y árbol limpio."
+        else:
+            origin_status = "FAIL"
+            origin_reason_code = "ORIGIN_OUT_OF_SYNC_OR_DIRTY"
+            origin_detail = "Rama local no está en sync con remoto o árbol no está limpio."
     else:
-        origin_status = "FAIL"
-        origin_detail = "Rama local no está en sync con remoto o árbol no está limpio."
+        if not origin_ref:
+            origin_status = "WARN"
+            origin_reason_code = "PR_DETACHED_ORIGIN_REF_UNRESOLVED"
+            origin_detail = "Contexto PR en HEAD detached sin referencia de rama resoluble."
+        elif not origin_exists:
+            origin_status = "WARN"
+            origin_reason_code = "PR_DETACHED_ORIGIN_REF_MISSING"
+            origin_detail = f"Contexto PR detached: no existe referencia remota para `{origin_ref}`."
+        elif sync_origin:
+            origin_status = "PASS"
+            origin_reason_code = "ORIGIN_SYNC_OK"
+            origin_detail = "Rama local en sync con remoto y árbol limpio."
+        else:
+            origin_status = "WARN"
+            if porcelain:
+                origin_reason_code = "PR_DETACHED_WORKTREE_DIRTY"
+                origin_detail = "Contexto PR detached con árbol no limpio; revisar checkout del runner."
+            else:
+                origin_reason_code = "PR_DETACHED_MERGE_REF_NOT_SYNC"
+                origin_detail = (
+                    "Contexto PR detached (merge ref): comparación directa con rama remota no determinística."
+                )
 
     rc_upstream, _, _ = _safe_run(["git", "show-ref", "--verify", "refs/remotes/upstream/master"], cwd=repo_root)
     upstream_exists = rc_upstream == 0
@@ -209,6 +244,10 @@ def _get_git_sync(repo_root: Path, *, fetch: bool) -> dict[str, Any]:
         behind_upstream = int(right)
 
     return {
+        "ci_event": ci_event,
+        "head_is_detached": head_is_detached,
+        "sync_origin_mode": sync_origin_mode,
+        "sync_origin_reason_code": origin_reason_code,
         "branch": branch,
         "branch_source": branch_source,
         "head": head,
@@ -222,6 +261,7 @@ def _get_git_sync(repo_root: Path, *, fetch: bool) -> dict[str, Any]:
             "behind": behind_origin,
             "sync_origin": sync_origin,
             "status": origin_status,
+            "reason_code": origin_reason_code,
             "detail": origin_detail,
         },
         "upstream_master": {
@@ -396,6 +436,9 @@ def _render_markdown(payload: dict[str, Any]) -> str:
 
     git_sync = payload["git_sync"]
     lines.append("## Sync Git")
+    lines.append(f"- Evento CI: `{git_sync.get('ci_event', 'local')}`")
+    lines.append(f"- sync_origin_mode: `{git_sync.get('sync_origin_mode', 'strict')}`")
+    lines.append(f"- sync_origin_reason_code: `{git_sync.get('sync_origin_reason_code', 'UNKNOWN')}`")
     lines.append(f"- Rama: `{git_sync['branch']}`")
     lines.append(f"- Fuente de rama: `{git_sync['branch_source']}`")
     lines.append(f"- HEAD: `{git_sync['head_short']}` ({git_sync['head_date']})")
@@ -405,6 +448,13 @@ def _render_markdown(payload: dict[str, Any]) -> str:
         f"- sync_origin: **{origin['status']}** (ahead={origin['ahead']}, behind={origin['behind']}, ref={origin['ref']})"
     )
     lines.append(f"- detalle sync_origin: {origin['detail']}")
+    reason_code = str(git_sync.get("sync_origin_reason_code", ""))
+    if reason_code.startswith("PR_DETACHED_"):
+        lines.append("- Clasificación: warning de contexto PR detached (no bloqueo estructural).")
+    elif origin["status"] == "FAIL":
+        lines.append("- Clasificación: fallo bloqueante real de sync Git.")
+    else:
+        lines.append("- Clasificación: sin warning contextual de sync Git.")
     upstream = git_sync["upstream_master"]
     if upstream["exists"]:
         lines.append(
@@ -519,6 +569,9 @@ def main() -> int:
     payload = {
         "generated_at": dt.datetime.now(tz=dt.timezone.utc).isoformat(),
         "status": status,
+        "ci_event": git_sync.get("ci_event", "local"),
+        "sync_origin_mode": git_sync.get("sync_origin_mode", "strict"),
+        "sync_origin_reason_code": git_sync.get("sync_origin_reason_code", "UNKNOWN"),
         "git_sync": git_sync,
         "metrics": {
             "file_count": len(file_rows),
@@ -550,7 +603,13 @@ def main() -> int:
 
     print(f"[qa] repo comment audit JSON: {json_output}")
     print(f"[qa] repo comment audit MD: {md_output}")
-    print(f"[qa] status={status} sync_origin={git_sync['origin']['status']} policy={policy['status']}")
+    print(
+        "[qa] status="
+        f"{status} sync_origin={git_sync['origin']['status']} "
+        f"mode={git_sync.get('sync_origin_mode', 'strict')} "
+        f"reason={git_sync.get('sync_origin_reason_code', 'UNKNOWN')} "
+        f"policy={policy['status']}"
+    )
 
     if status == "FAIL":
         return 1
