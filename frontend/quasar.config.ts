@@ -88,7 +88,7 @@ export default defineConfig((/* ctx */) => {
           if (id.includes('/node_modules/echarts/') || id.includes('/node_modules/zrender/')) {
             return 'analytics-echarts';
           }
-          if (id.includes('/node_modules/ag-grid-community/') || id.includes('/node_modules/ag-grid-vue3/')) {
+          if (id.includes('/src/modules/dashboard_v3/chunks/analytics-aggrid-runtime.ts')) {
             return 'analytics-aggrid';
           }
           if (

@@ -1,29 +1,25 @@
 <template>
-  <div ref="gridEl" class="ag-theme-quartz dashboard-grid" />
+  <q-table
+    class="dashboard-grid"
+    flat
+    bordered
+    dense
+    :rows="tableRows"
+    :columns="tableColumns"
+    row-key="__row_id"
+    :pagination="pagination"
+    :rows-per-page-options="[10, 25, 50, 100]"
+  />
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue';
+
 import {
-  ClientSideRowModelModule,
-  ModuleRegistry,
-  createGrid,
-  type ColDef,
-  type GridApi,
-  type GridOptions,
-} from 'ag-grid-community';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-
-import 'ag-grid-community/styles/ag-grid.min.css';
-import 'ag-grid-community/styles/ag-theme-quartz-no-font.min.css';
-
-const globalScope = globalThis as typeof globalThis & {
-  __dashboardV3AgGridModulesRegistered?: boolean;
-};
-
-if (!globalScope.__dashboardV3AgGridModulesRegistered) {
-  ModuleRegistry.registerModules([ClientSideRowModelModule]);
-  globalScope.__dashboardV3AgGridModulesRegistered = true;
-}
+  dashboardGridHeaderLabel,
+  dashboardGridValueIncludes,
+  formatDashboardGridValue,
+} from '../chunks/analytics-aggrid-runtime';
 
 const props = withDefaults(
   defineProps<{
@@ -35,88 +31,77 @@ const props = withDefaults(
   },
 );
 
-const api = ref<GridApi | null>(null);
-const gridEl = ref<HTMLDivElement | null>(null);
-
-const defaultColDef: ColDef = {
-  sortable: true,
-  filter: false,
-  resizable: true,
-  minWidth: 120,
-  flex: 1,
-};
-
-function normalizeValue(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value.toLocaleLowerCase();
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return `${value}`.toLocaleLowerCase();
-  }
-  if (value instanceof Date) return value.toISOString().toLocaleLowerCase();
-  return '';
-}
+type GridRow = Record<string, unknown>;
 
 const normalizedQuickFilter = computed(() => (props.quickFilter ?? '').trim().toLocaleLowerCase());
 
-const filteredRows = computed<Array<Record<string, unknown>>>(() => {
+const filteredRows = computed<GridRow[]>(() => {
   const query = normalizedQuickFilter.value;
   if (!query) return props.rows;
-  return props.rows.filter((row) => Object.values(row).some((value) => normalizeValue(value).includes(query)));
+  return props.rows.filter((row) =>
+    Object.values(row).some((value) => dashboardGridValueIncludes(value, query)),
+  );
 });
 
-const columnDefs = computed<ColDef[]>(() => {
-  const first = filteredRows.value[0] ?? props.rows[0] ?? {};
-  return Object.keys(first).map((key) => ({
+const tableColumns = computed(() =>
+  Object.keys(filteredRows.value[0] ?? props.rows[0] ?? {}).map((key) => ({
+    name: key,
     field: key,
-    headerName: key.replace(/_/g, ' ').toUpperCase(),
-  }));
-});
-
-function currentGridOptions(): GridOptions {
-  return {
-    rowData: filteredRows.value,
-    columnDefs: columnDefs.value,
-    defaultColDef,
-    suppressCellFocus: true,
-    animateRows: false,
-  };
-}
-
-watch(
-  columnDefs,
-  (value) => {
-    if (!api.value) return;
-    api.value.setGridOption('columnDefs', value);
-  },
-  { deep: true },
+    label: dashboardGridHeaderLabel(key),
+    sortable: true,
+    align: 'left' as const,
+    format: (value: unknown) => formatDashboardGridValue(value),
+  })),
 );
 
-watch(
-  filteredRows,
-  (value) => {
-    if (!api.value) return;
-    api.value.setGridOption('rowData', value);
-  },
-  { deep: false },
+const tableRows = computed(() =>
+  filteredRows.value.map((row, index) => ({
+    ...row,
+    __row_id: `${index}`,
+  })),
 );
 
-onMounted(() => {
-  if (!gridEl.value) return;
-  api.value = createGrid(gridEl.value, currentGridOptions());
+const pagination = ref({
+  page: 1,
+  rowsPerPage: 25,
+  sortBy: '',
+  descending: false,
 });
 
-onBeforeUnmount(() => {
-  api.value?.destroy();
-  api.value = null;
-});
+const activeColumnCount = computed(() => tableColumns.value.length);
+
+watch(
+  activeColumnCount,
+  () => {
+    pagination.value.page = 1;
+  },
+  { flush: 'sync' },
+);
+
+const currentRowCount = computed(() => tableRows.value.length);
+
+watch(
+  currentRowCount,
+  () => {
+    if (pagination.value.page < 1) {
+      pagination.value.page = 1;
+    }
+  },
+  { flush: 'sync' },
+);
+
 </script>
 
 <style scoped>
 .dashboard-grid {
   width: 100%;
-  height: 420px;
+  min-height: 420px;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-md);
   overflow: hidden;
+}
+
+:deep(.q-table__middle) {
+  max-height: 420px;
 }
 </style>
