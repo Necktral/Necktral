@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.14.0",
-    "@quasar/app-vite": "^2.4.1",
+    "@quasar/app-vite": "^2.5.2",
     "@types/node": "^20.5.9",
     "@types/qrcode": "^1.5.5",
     "@vue/eslint-config-prettier": "^10.1.0",
@@ -48,6 +48,10 @@
     "vitest": "^4.0.18",
     "vue-eslint-parser": "^10.2.0",
     "vue-tsc": "^3.0.7"
+  },
+  "overrides": {
+    "flatted": "3.4.2",
+    "serialize-javascript": "^7.0.0"
   },
   "engines": {
     "node": "^28 || ^26 || ^24 || ^22 || ^20",
