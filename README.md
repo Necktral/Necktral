@@ -227,6 +227,7 @@ Artefactos generados:
 - `qa/reports/coverage.txt`
 - `qa/reports/audit_integrity.json`
 - `qa/reports/reporting_r8_gate.json`
+- `qa/reports/reporting_r8_gate_guard.json`
 - `qa/reports/reporting_contract_guard.json`
 
 Guard contractual versionado de reporting (U2):
@@ -282,7 +283,7 @@ Base path: `/api/fuel/`
 
 - API canónica reporting: `/api/reporting/*`
 - Dashboard gateway: `/api/backend/dashboard/*`
-- Métricas operativas consolidadas: `/api/metrics/` (incluye bloques `reporting` y `dashboard`)
+- Métricas operativas consolidadas: `/api/metrics/` (incluye `reporting.dataset_slo`, `reporting.failure_classes_last_window` y `dashboard.workspace_redeem_rate`)
 - Endpoints legacy contables `/api/accounting/reports/*` emiten headers `Deprecation`, `Sunset` y `Link` hacia `/api/reporting/catalog/`
 
 - `GET /api/fuel/health/` — Healthcheck del módulo (público)

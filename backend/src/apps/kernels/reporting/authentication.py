@@ -93,6 +93,9 @@ class ReportingEmbedJWTAuthentication(BaseAuthentication):
         setattr(request, "reporting_effective_permissions", perm_codes)
         setattr(request, "rbac_effective_permissions_override", perm_codes)
         setattr(request, "reporting_consumer_type", "DASHBOARD")
+        workspace_key = str(token.get("workspace_key") or "").strip().lower()
+        if workspace_key:
+            setattr(request, "reporting_consumer_ref", f"workspace:{workspace_key}")
 
         return (user, token)
 

@@ -62,6 +62,13 @@ def test_metrics_endpoint_includes_reporting_and_dashboard_blocks():
     assert response.status_code == 200
     assert "reporting" in response.data
     assert "dashboard" in response.data
+    reporting = dict(response.data["reporting"] or {})
+    dashboard = dict(response.data["dashboard"] or {})
+    assert "failure_classes_last_window" in reporting
+    assert "dataset_slo" in reporting
+    assert "runs_by_consumer_type" in reporting
+    assert "top_consumers" in reporting
+    assert "workspace_redeem_rate" in dashboard
     assert "legacy_api_counts" in response.data
 
 

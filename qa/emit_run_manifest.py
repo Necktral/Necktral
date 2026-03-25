@@ -17,11 +17,13 @@ ARTIFACTS = [
     ("makemigrations_check.txt", "gate1"),
     ("mypy_delta.json", "gate1"),
     ("mypy_delta.txt", "gate1"),
+    ("reporting_contract_guard.json", "gate1"),
     ("pytest.xml", "gate2"),
     ("coverage.xml", "gate2"),
     ("coverage.txt", "gate2"),
     ("audit_integrity.json", "gate3"),
     ("reporting_r8_gate.json", "gate3"),
+    ("reporting_r8_gate_guard.json", "gate3"),
     ("reporting_observability_snapshot.json", "gate3"),
     ("qa-ci-run.log", "setup"),
 ]

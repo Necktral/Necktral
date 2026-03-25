@@ -4,7 +4,7 @@
 	qa-operational-hygiene qa-operational-gate qa-operational-pilot-stage1 qa-operational-pilot-stage2 qa-operational-pilot-stage3 qa-operational-pilot-rollback qa-operational-all \
 	qa-operational-go-live \
 	qa-ci-up qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci \
-	qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-verify-static-gate qa-reporting-registry-guard qa-reporting-registry-guard-host qa-reporting-contract-version-guard qa-pythonpath-bootstrap-guard qa-makemigrations-check qa-backend-mypy-baseline-refresh qa-backend-tests qa-static-scan qa-namespace-guard qa-analytics-contract-guard qa-frontend-ci qa-audit-integrity qa-reporting-r8-gate \
+	qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-verify-static-gate qa-reporting-registry-guard qa-reporting-registry-guard-host qa-reporting-contract-version-guard qa-pythonpath-bootstrap-guard qa-makemigrations-check qa-backend-mypy-baseline-refresh qa-backend-tests qa-static-scan qa-namespace-guard qa-analytics-contract-guard qa-frontend-ci qa-audit-integrity qa-reporting-r8-gate qa-verify-reporting-r8-gate-artifact \
 	docker-clean docker-clean-all
 
 BASE_URL ?= http://localhost:8000/api
@@ -164,6 +164,9 @@ qa-audit-integrity:
 qa-reporting-r8-gate:
 	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/backend && python manage.py export_reporting_observability_snapshot --window-hours $(REPORTING_R8_GATE_WINDOW_HOURS) --output /app/$(QA_REPORTS_DIR)/reporting_observability_snapshot.json && python manage.py reporting_r8_gate --window-hours $(REPORTING_R8_GATE_WINDOW_HOURS) --warn-until $(REPORTING_R8_GATE_WARN_UNTIL) --hard-fail-from $(REPORTING_R8_GATE_HARD_FAIL_FROM) --snapshot-p95-max-ms $(REPORTING_R8_GATE_SNAPSHOT_P95_MAX_MS) --near-realtime-p95-max-ms $(REPORTING_R8_GATE_NEAR_RT_P95_MAX_MS) --error-rate-max-pct $(REPORTING_R8_GATE_ERROR_RATE_MAX_PCT) --output /app/$(QA_REPORTS_DIR)/reporting_r8_gate.json"
 
+qa-verify-reporting-r8-gate-artifact:
+	python3 qa/verify_reporting_r8_gate_artifact.py --artifact "$(QA_REPORTS_DIR)/reporting_r8_gate.json" --output "$(QA_REPORTS_DIR)/reporting_r8_gate_guard.json"
+
 qa-frontend-ci:
 	docker compose --profile qa run --rm frontend_ci
 
@@ -174,7 +177,7 @@ qa-ci-gate1: qa-ci-up qa-namespace-guard qa-analytics-contract-guard qa-reportin
 qa-ci-gate2: qa-ci-up qa-backend-tests
 
 # Gate 3: integridad de auditoría (reporte)
-qa-ci-gate3: qa-ci-up qa-audit-integrity qa-reporting-r8-gate
+qa-ci-gate3: qa-ci-up qa-audit-integrity qa-reporting-r8-gate qa-verify-reporting-r8-gate-artifact
 
 # Runner completo Gates 1–3
 qa-ci:
