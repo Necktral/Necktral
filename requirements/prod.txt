@@ -1,4 +1,4 @@
 # Producción = base + gunicorn (DB driver ya viene en base.txt: psycopg[binary])
 -r base.txt
 
-gunicorn==23.0.0
+gunicorn==25.2.0
