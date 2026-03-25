@@ -108,6 +108,7 @@ def test_dashboard_embed_token_redeem_and_reporting_access():
     run_row = ReportRun.objects.filter(run_id=run.data["run_id"]).first()
     assert run_row is not None
     assert run_row.consumer_type == "DASHBOARD"
+    assert run_row.consumer_ref == "workspace:operations"
 
 
 @pytest.mark.django_db

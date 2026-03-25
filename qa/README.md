@@ -135,11 +135,13 @@ Gate adicional de R8 (incluido en `qa-ci-gate3`) para `reporting/dashboard`:
 
 ```bash
 make qa-reporting-r8-gate
+make qa-verify-reporting-r8-gate-artifact
 ```
 
 Artefacto generado:
 
 - `qa/reports/reporting_r8_gate.json`
+- `qa/reports/reporting_r8_gate_guard.json`
 
 Política de enforcement:
 
@@ -151,6 +153,23 @@ Thresholds por defecto:
 - `snapshot p95 <= 800ms`
 - `near-realtime/cache p95 <= 1500ms`
 - `error_rate < 0.5%`
+
+Taxonomía normalizada de `failure_class`:
+
+- `none`
+- `quality_breach`
+- `latency_regression`
+- `app_error`
+- `infra_error`
+
+Prioridad de clasificación cuando coexisten brechas:
+
+- `infra_error > app_error > latency_regression > quality_breach`
+
+Contrato adicional del artefacto `reporting_r8_gate.json`:
+
+- `trigger_metric` obligatorio cuando `failure_class != none`.
+- `breaches` estructurado por dataset/policy/métrica cuando aplica.
 
 ### Aislamiento de base de datos de tests (anti-colisión)
 

@@ -35,11 +35,13 @@ cleanup_reports() {
     "${REPORTS_DIR}/makemigrations_check.txt" \
     "${REPORTS_DIR}/mypy_delta.json" \
     "${REPORTS_DIR}/mypy_delta.txt" \
+    "${REPORTS_DIR}/reporting_contract_guard.json" \
     "${REPORTS_DIR}/pytest.xml" \
     "${REPORTS_DIR}/coverage.xml" \
     "${REPORTS_DIR}/coverage.txt" \
     "${REPORTS_DIR}/audit_integrity.json" \
     "${REPORTS_DIR}/reporting_r8_gate.json" \
+    "${REPORTS_DIR}/reporting_r8_gate_guard.json" \
     "${REPORTS_DIR}/reporting_observability_snapshot.json" \
     "${REPORTS_DIR}/run_manifest.json"
 }
@@ -97,6 +99,7 @@ if [[ "${run_status}" == "passed" ]]; then
   if make_cmd qa-namespace-guard \
     && make_cmd qa-analytics-contract-guard \
     && make_cmd qa-reporting-registry-guard \
+    && make_cmd qa-reporting-contract-version-guard \
     && make_cmd qa-pythonpath-bootstrap-guard \
     && make_cmd qa-static-scan \
     && make_cmd qa-backend-bandit \
@@ -125,7 +128,8 @@ fi
 
 if [[ "${run_status}" == "passed" ]]; then
   if make_cmd qa-audit-integrity \
-    && make_cmd qa-reporting-r8-gate; then
+    && make_cmd qa-reporting-r8-gate \
+    && make_cmd qa-verify-reporting-r8-gate-artifact; then
     gate3_status="passed"
   else
     gate3_status="failed"

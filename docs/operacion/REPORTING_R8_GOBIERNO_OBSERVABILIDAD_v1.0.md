@@ -53,7 +53,7 @@ Calendario:
 ## Triage rápido
 
 1. Abrir `qa/reports/reporting_r8_gate.json`.
-2. Revisar `failure_class` y `reasons`.
+2. Revisar `failure_class`, `trigger_metric` y `breaches`.
 3. Si hay `latency_regression`:
    - validar `ReportSnapshot` hit-rate,
    - revisar runs con `materialization=LIVE_EXECUTION` inesperado,
@@ -62,9 +62,24 @@ Calendario:
    - identificar `dataset_key` con `quality_status=FAIL`,
    - revisar `quality_checks_json` en `ReportRun`,
    - corregir adapter/contrato y repetir gate.
-5. Si hay `error_rate_regression`:
+5. Si hay `app_error`:
    - revisar runs `FAILED` por `dataset_key`,
    - correlacionar con logs de backend y grants dashboard.
+6. Si hay `infra_error`:
+   - revisar stack de métricas/DB y reintentar generación del artefacto,
+   - tratar como bloqueo de infraestructura en ventana hard-fail.
+
+Taxonomía canónica de `failure_class`:
+
+- `none`
+- `quality_breach`
+- `latency_regression`
+- `app_error`
+- `infra_error`
+
+Prioridad de clasificación:
+
+- `infra_error > app_error > latency_regression > quality_breach`
 
 ## Criterio de salida
 

@@ -35,12 +35,22 @@ def build_dashboard_observability(*, window_hours: int = 24) -> dict[str, Any]:
     }
 
     top_workspace_rows = []
+    workspace_redeem_rate = []
     for workspace_key, total in list(issued_by_workspace.items())[:10]:
+        redeemed_count = int(redeemed_by_workspace.get(workspace_key, 0))
         top_workspace_rows.append(
             {
                 "workspace_key": workspace_key,
                 "issued": int(total),
-                "redeemed": int(redeemed_by_workspace.get(workspace_key, 0)),
+                "redeemed": redeemed_count,
+            }
+        )
+        workspace_redeem_rate.append(
+            {
+                "workspace_key": workspace_key,
+                "issued": int(total),
+                "redeemed": redeemed_count,
+                "redeem_rate_pct": round((redeemed_count / int(total) * 100.0), 2) if int(total) > 0 else 0.0,
             }
         )
 
@@ -57,6 +67,7 @@ def build_dashboard_observability(*, window_hours: int = 24) -> dict[str, Any]:
         "embed_expired": expired,
         "embed_redeem_rate_pct": redeemed_rate_pct,
         "top_workspaces": top_workspace_rows,
+        "workspace_redeem_rate": workspace_redeem_rate,
         "dash_runs_total": runs_total,
         "top_dash_datasets": [
             {"dataset_key": str(row["dataset_key"]), "runs": int(row["total"] or 0)}

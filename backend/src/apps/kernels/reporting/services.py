@@ -68,6 +68,9 @@ def run_dataset_from_request(
     force_refresh: bool = False,
 ) -> tuple[dict[str, Any], str]:
     _ = get_dataset_spec(dataset_key)  # fail fast con DatasetNotFoundError
+    effective_consumer_ref = str(consumer_ref or "").strip()
+    if not effective_consumer_ref:
+        effective_consumer_ref = str(getattr(request, "reporting_consumer_ref", "") or "").strip()
     cleaned_filters = {
         key: value
         for key, value in (filters or {}).items()
@@ -78,7 +81,7 @@ def run_dataset_from_request(
         request=request,
         filters=cleaned_filters,
         consumer_type=str(getattr(request, "reporting_consumer_type", "API") or "API"),
-        consumer_ref=consumer_ref,
+        consumer_ref=effective_consumer_ref,
         enforce_kernel_permission=enforce_kernel_permission,
         force_refresh=force_refresh,
     )
