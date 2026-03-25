@@ -9,7 +9,7 @@ freezegun==1.5.5
 Faker==39.0.0
 
 ruff==0.14.10
-bandit==1.8.6
+bandit==1.9.4
 
 # Server (para load/QA en dev)
 gunicorn==23.0.0
