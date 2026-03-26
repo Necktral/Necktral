@@ -57,11 +57,9 @@ urlpatterns = [
     path("api/cec/", include("apps.modulos.cec.urls")),
     # Integration Backbone
     path("api/integration/", include("apps.modulos.integration.urls")),
-    # Backend v2 canonical (fuel vertical)
+    # Fuel aliases kept during transition; /api/fuel/ is the external canonical path.
     path("api/backend/estacion-servicios/", include("apps.modulos.estacion_servicios.urls")),
-    # Alias canónico transicional
     path("api/backend/fuel/", include("apps.modulos.estacion_servicios.urls")),
-    # Estación de Servicios
     path("api/fuel/", include("apps.modulos.estacion_servicios.urls")),
 ]
 
@@ -72,5 +70,5 @@ urlpatterns += [
 ]
 
 urlpatterns += [
-    path("api/billing/", include("apps.kernels.facturacion.urls_legacy")),
+    path("api/legacy/billing/", include("apps.kernels.facturacion.urls_legacy")),
 ]
