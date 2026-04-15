@@ -194,6 +194,17 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: childPath(UI_ROUTE_PATHS.inventory),
+        name: 'inventarios',
+        component: () => import('pages/InventoryPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresContext: true,
+          requiredPermissions: ['inventory.balance.read'],
+          requiredModules: ['inventory'],
+        },
+      },
+      {
         path: childPath(UI_ROUTE_PATHS.analytics),
         name: 'analytics',
         component: () => import('pages/AnalyticsPage.vue'),

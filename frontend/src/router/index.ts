@@ -109,6 +109,13 @@ export default route(function () {
       if (!ok) return { path: '/403' };
     }
 
+    const requiredModules = to.meta?.requiredModules as string[] | undefined;
+    if (requiredModules && requiredModules.length > 0) {
+      const allowedModules = new Set(sessionBootstrap.payload?.allowed_modules ?? []);
+      const ok = requiredModules.every((m) => allowedModules.has(m));
+      if (!ok) return { path: '/403' };
+    }
+
     return true;
   });
 

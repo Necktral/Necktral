@@ -41,6 +41,7 @@ describe('router routes', () => {
       UI_ROUTE_PATHS.fuelHealth,
       UI_ROUTE_PATHS.retailPosTerminal,
       UI_ROUTE_PATHS.retailPosCockpit,
+      UI_ROUTE_PATHS.inventory,
       UI_ROUTE_PATHS.synchronizationEnrollment,
       UI_ROUTE_PATHS.synchronizationDevices,
     ];
@@ -113,5 +114,14 @@ describe('router routes', () => {
       expect(target.query).toEqual({ modo: 'compacto' });
       expect(target.hash).toBe('#bloque');
     }
+  });
+
+  it('defines inventory canonical route with ACL + allowed module gate', () => {
+    const route = findChild(UI_ROUTE_PATHS.inventory);
+    expect(route).toBeDefined();
+    expect(route?.meta?.requiresAuth).toBe(true);
+    expect(route?.meta?.requiresContext).toBe(true);
+    expect(route?.meta?.requiredPermissions).toEqual(['inventory.balance.read']);
+    expect(route?.meta?.requiredModules).toEqual(['inventory']);
   });
 });
