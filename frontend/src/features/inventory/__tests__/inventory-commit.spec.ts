@@ -38,7 +38,7 @@ describe('inventory-commit offline fallback', () => {
   });
 
   it('encola offline cuando no hay internet', async () => {
-    const onlineCommit = vi.fn(async () => {
+    const onlineCommit = vi.fn(() => {
       throw new Error('network down');
     });
     const out = await commitInventoryWithOfflineFallback({
@@ -58,7 +58,7 @@ describe('inventory-commit offline fallback', () => {
   });
 
   it('deduplica cuando se reenvia el mismo idempotency_key', async () => {
-    const onlineCommit = vi.fn(async () => {
+    const onlineCommit = vi.fn(() => {
       throw new Error('network down');
     });
     const payload = basePayload({ idempotency_key: 'inventory-issue-stable-2' });
@@ -88,7 +88,7 @@ describe('inventory-commit offline fallback', () => {
   it('propaga error no retryable y no encola', async () => {
     const error = new Error('insufficient stock') as Error & { response?: { status?: number } };
     error.response = { status: 400 };
-    const onlineCommit = vi.fn(async () => {
+    const onlineCommit = vi.fn(() => {
       throw error;
     });
 

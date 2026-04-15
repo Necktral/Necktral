@@ -166,6 +166,9 @@ Reglas:
 
 - En esta fase: base `online-first + retry` con habilitacion offline por modulo.
 - Inventarios (Slice 4.1): `capture/commit` offline (`receive/issue`) con cola local + sincronizacion diferida por `/api/sync/batch/`.
+- Semantica oficial de estado offline inventarios:
+- `PENDING` = captura local aceptada (sin confirmacion canónica).
+- `APPLIED` = confirmacion final de servidor (unica verdad operativa).
 - Lectura (`read`) de inventarios se mantiene online-first.
 - Reintento seguro con idempotencia y recuperacion de sesion/contexto.
 - Estados recuperables obligatorios: sesion expirada, contexto invalido, permiso denegado y timeout/red intermitente.

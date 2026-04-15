@@ -181,6 +181,9 @@
             Pendientes: {{ offlineStats.pending }} · Reintento: {{ offlineStats.failed_retryable }} ·
             Final: {{ offlineStats.failed_final }}
           </div>
+          <div class="text-caption text-grey-7">
+            `PENDING` = captura local. `APPLIED` = confirmación final del servidor.
+          </div>
         </div>
         <div class="col-auto">
           <q-btn
@@ -393,7 +396,7 @@ async function loadCatalog(): Promise<void> {
   }
 }
 
-async function onItemFilter(value: string, update: (callbackFn: () => void) => void) {
+function onItemFilter(value: string, update: (callbackFn: () => void) => void) {
   update(() => {
     void listInventoryItems({ q: value, limit: 20 }).then((rows) => {
       items.value = rows;

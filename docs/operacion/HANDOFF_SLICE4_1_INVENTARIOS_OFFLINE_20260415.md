@@ -55,6 +55,20 @@ Aditivos frontend:
 - Se agrega panel de sincronizacion con estados, procesamiento manual y accion de retry para `FAILED_FINAL`.
 - Sincronizador automatico: trigger en `online`, apertura de modulo e intervalo corto.
 - Logica de fallback encapsulada en `inventory-commit.ts` para mantener el contenedor limpio y testeable.
+- Mensajeria UX explicita: `PENDING` no es confirmacion final; `APPLIED` confirma servidor.
+
+4. **Hardening operativo de cola**
+- Se congelan transiciones de estado permitidas en la cola offline.
+- Se agrega recuperacion segura de cola corrupta con snapshot de diagnostico.
+- Se valida compatibilidad de version local del esquema de cola (fail-closed para versiones futuras desconocidas).
+
+5. **Guard E2E privada inventarios offline**
+- Nuevo guard deterministico (`pytest`) que valida:
+  - login -> bootstrap/session -> shell_mode
+  - gating modulo/ACL
+  - replay via `/api/sync/batch/` con comando `INVENTORY.MOVEMENT.RECEIVE`
+  - convergencia final a `APPLIED`
+  - denegacion cuando falta permiso base inventarios
 
 4. **Storage y arquitectura**
 - Nueva key de storage `INVENTORY_OFFLINE_QUEUE`.
@@ -65,13 +79,17 @@ Aditivos frontend:
 Frontend ejecutado:
 
 1. `npm --prefix frontend run typecheck` -> PASS.
-2. `npm --prefix frontend run test -- src/features/inventory/__tests__/inventory-commit.spec.ts src/services/__tests__/inventory-offline-queue.spec.ts src/services/__tests__/inventory-offline-sync.spec.ts src/router/routes.spec.ts src/features/inventory/__tests__/inventory-shell.spec.ts` -> PASS.
+2. `npm --prefix frontend run lint` -> PASS.
+3. `npm --prefix frontend run test -- src/features/inventory/__tests__/inventory-commit.spec.ts src/services/__tests__/inventory-offline-queue.spec.ts src/services/__tests__/inventory-offline-sync.spec.ts src/router/routes.spec.ts src/features/inventory/__tests__/inventory-shell.spec.ts` -> PASS.
+4. `make qa-inventory-offline-private-e2e-guard` -> PASS.
 
 Cobertura agregada:
 
 1. Cola offline inventarios: dedupe, drain aplicado, retryable, final + retry manual, mapping sync v2.
 2. Ejecutor sync inventarios: mapeo APPLIED/DUPLICATE/REJECTED y clasificación de fallos de transporte.
 3. Orquestador de commit: online success, fallback offline, dedupe por idempotency y propagacion correcta de error no retryable.
+4. Hardening de estados: transiciones permitidas y recovery ante corrupcion local.
+5. E2E privada: flujo canónico offline->sync->APPLIED con verificacion de gating.
 
 ## F) Riesgos remanentes y siguiente paso
 

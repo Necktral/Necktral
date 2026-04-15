@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildInventoryOfflineDedupeKey,
+  canInventoryOfflineTransition,
   clearInventoryOfflineQueue,
   drainInventoryOfflineQueue,
   enqueueInventoryOfflineCommand,
@@ -10,11 +11,20 @@ import {
   retryFinalInventoryOfflineCommand,
   toInventorySyncV2Command,
 } from 'src/services/inventory-offline-queue';
+import { STORAGE_KEYS } from 'src/core/storage/keys';
 
 describe('inventory-offline-queue', () => {
   beforeEach(() => {
     localStorage.clear();
     clearInventoryOfflineQueue();
+  });
+
+  it('expone transiciones validas de la maquina de estados', () => {
+    expect(canInventoryOfflineTransition('PENDING', 'SYNCING')).toBe(true);
+    expect(canInventoryOfflineTransition('SYNCING', 'APPLIED')).toBe(true);
+    expect(canInventoryOfflineTransition('FAILED_FINAL', 'PENDING')).toBe(true);
+    expect(canInventoryOfflineTransition('PENDING', 'APPLIED')).toBe(false);
+    expect(canInventoryOfflineTransition('APPLIED', 'PENDING')).toBe(false);
   });
 
   it('evita duplicados por dedupe_key activo', () => {
@@ -111,7 +121,7 @@ describe('inventory-offline-queue', () => {
       },
     });
 
-    const executor = vi.fn(async () => ({ applied: true as const }));
+    const executor = vi.fn(() => Promise.resolve({ applied: true as const }));
     const result = await drainInventoryOfflineQueue({ executor, maxCommands: 5 });
 
     expect(result.succeeded).toBe(1);
@@ -147,7 +157,7 @@ describe('inventory-offline-queue', () => {
     });
 
     const result = await drainInventoryOfflineQueue({
-      executor: async () => ({ applied: false, reason: 'SYNC_INTERNAL_ERROR', retryable: true }),
+      executor: () => Promise.resolve({ applied: false, reason: 'SYNC_INTERNAL_ERROR', retryable: true }),
       maxCommands: 5,
     });
 
@@ -181,7 +191,7 @@ describe('inventory-offline-queue', () => {
     });
 
     await drainInventoryOfflineQueue({
-      executor: async () => ({ applied: false, reason: 'SYNC_INTERNAL_ERROR', retryable: true }),
+      executor: () => Promise.resolve({ applied: false, reason: 'SYNC_INTERNAL_ERROR', retryable: true }),
       maxCommands: 5,
     });
 
@@ -192,7 +202,7 @@ describe('inventory-offline-queue', () => {
     expect(Number.isFinite(afterFailTs)).toBe(true);
 
     await drainInventoryOfflineQueue({
-      executor: async () => ({ applied: true }),
+      executor: () => Promise.resolve({ applied: true }),
       maxCommands: 5,
       nowMs: afterFailTs + 1000,
     });
@@ -223,7 +233,8 @@ describe('inventory-offline-queue', () => {
     }).command;
 
     const result = await drainInventoryOfflineQueue({
-      executor: async () => ({ applied: false, reason: 'INVENTORY_INSUFFICIENT_STOCK', retryable: false }),
+      executor: () =>
+        Promise.resolve({ applied: false, reason: 'INVENTORY_INSUFFICIENT_STOCK', retryable: false }),
       maxCommands: 5,
     });
 
@@ -233,5 +244,28 @@ describe('inventory-offline-queue', () => {
 
     const retried = retryFinalInventoryOfflineCommand(command.id);
     expect(retried?.status).toBe('PENDING');
+  });
+
+  it('recupera cola corrupta sin romper y guarda snapshot de recovery', () => {
+    localStorage.setItem(STORAGE_KEYS.INVENTORY_OFFLINE_QUEUE, '{mal-json');
+    expect(listInventoryOfflineCommands()).toEqual([]);
+
+    const recoveryRaw = localStorage.getItem(STORAGE_KEYS.INVENTORY_OFFLINE_QUEUE_RECOVERY);
+    expect(typeof recoveryRaw).toBe('string');
+    const recovery = JSON.parse(recoveryRaw || '{}') as { reason?: string; raw?: string };
+    expect(recovery.reason).toBe('QUEUE_JSON_PARSE_ERROR');
+    expect(recovery.raw).toContain('{mal-json');
+  });
+
+  it('resetea cola con version futura desconocida y conserva snapshot de recovery', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.INVENTORY_OFFLINE_QUEUE,
+      JSON.stringify({ version: 999, commands: [{ id: 'x' }] }),
+    );
+    expect(listInventoryOfflineCommands()).toEqual([]);
+
+    const recoveryRaw = localStorage.getItem(STORAGE_KEYS.INVENTORY_OFFLINE_QUEUE_RECOVERY);
+    const recovery = JSON.parse(recoveryRaw || '{}') as { reason?: string };
+    expect(recovery.reason).toBe('UNSUPPORTED_QUEUE_VERSION_999');
   });
 });

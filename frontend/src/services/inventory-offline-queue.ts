@@ -4,6 +4,7 @@ const INVENTORY_OFFLINE_QUEUE_VERSION = 1;
 const INVENTORY_OFFLINE_MAX_ATTEMPTS = 8;
 const INVENTORY_OFFLINE_DONE_KEEP = 100;
 const INVENTORY_OFFLINE_BACKOFF_CAP_MS = 15 * 60 * 1000;
+const INVENTORY_OFFLINE_RECOVERY_MAX_CHARS = 4000;
 
 export type InventoryOfflineCommandKind = 'RECEIVE' | 'ISSUE';
 
@@ -13,6 +14,17 @@ export type InventoryOfflineCommandStatus =
   | 'APPLIED'
   | 'FAILED_RETRYABLE'
   | 'FAILED_FINAL';
+
+const INVENTORY_OFFLINE_ALLOWED_TRANSITIONS: Record<
+  InventoryOfflineCommandStatus,
+  readonly InventoryOfflineCommandStatus[]
+> = {
+  PENDING: ['SYNCING'],
+  SYNCING: ['APPLIED', 'FAILED_RETRYABLE', 'FAILED_FINAL'],
+  FAILED_RETRYABLE: ['SYNCING'],
+  FAILED_FINAL: ['PENDING'],
+  APPLIED: [],
+};
 
 export type InventoryOfflineCommandPayload = {
   warehouse_id: number;
@@ -117,6 +129,29 @@ function safeString(value: unknown, fallback = ''): string {
   return fallback;
 }
 
+function canTransitionStatus(
+  from: InventoryOfflineCommandStatus,
+  to: InventoryOfflineCommandStatus,
+): boolean {
+  if (from === to) return true;
+  return INVENTORY_OFFLINE_ALLOWED_TRANSITIONS[from].includes(to);
+}
+
+function storeQueueRecoverySnapshot(raw: string, reason: string): void {
+  try {
+    localStorage.setItem(
+      STORAGE_KEYS.INVENTORY_OFFLINE_QUEUE_RECOVERY,
+      JSON.stringify({
+        reason,
+        captured_at: nowIso(),
+        raw: raw.slice(0, INVENTORY_OFFLINE_RECOVERY_MAX_CHARS),
+      }),
+    );
+  } catch {
+    // Non-blocking: la cola debe seguir operativa aunque falle la evidencia de recovery.
+  }
+}
+
 function cloneCommand(raw: InventoryOfflineCommand): InventoryOfflineCommand {
   return {
     ...raw,
@@ -154,8 +189,11 @@ function normalizeCommand(raw: unknown): InventoryOfflineCommand | null {
   if (!id || !commandId || !dedupeKey || !Number.isFinite(companyId) || !Number.isFinite(branchId)) return null;
 
   const payloadRaw = (row.payload ?? {}) as Record<string, unknown>;
+  const warehouseId = Number(payloadRaw.warehouse_id);
+  const itemId = Number(payloadRaw.item_id);
+  const qty = safeString(payloadRaw.qty).trim();
   const idempotency = safeString(payloadRaw.idempotency_key).trim();
-  if (!idempotency) return null;
+  if (!idempotency || !qty || !Number.isFinite(warehouseId) || !Number.isFinite(itemId)) return null;
 
   return {
     id,
@@ -167,9 +205,9 @@ function normalizeCommand(raw: unknown): InventoryOfflineCommand | null {
     branch_id: branchId,
     dedupe_key: dedupeKey,
     payload: {
-      warehouse_id: Number(payloadRaw.warehouse_id),
-      item_id: Number(payloadRaw.item_id),
-      qty: safeString(payloadRaw.qty),
+      warehouse_id: warehouseId,
+      item_id: itemId,
+      qty,
       idempotency_key: idempotency,
       ...(payloadRaw.note !== undefined ? { note: safeString(payloadRaw.note) } : {}),
       ...(payloadRaw.unit_cost !== undefined ? { unit_cost: safeString(payloadRaw.unit_cost) } : {}),
@@ -191,15 +229,23 @@ function readQueueState(): InventoryOfflineQueueState {
 
   try {
     const parsed = JSON.parse(raw) as { version?: number; commands?: unknown[] };
+    const persistedVersion = Number(parsed.version) || INVENTORY_OFFLINE_QUEUE_VERSION;
+    if (persistedVersion > INVENTORY_OFFLINE_QUEUE_VERSION) {
+      storeQueueRecoverySnapshot(raw, `UNSUPPORTED_QUEUE_VERSION_${persistedVersion}`);
+      localStorage.removeItem(STORAGE_KEYS.INVENTORY_OFFLINE_QUEUE);
+      return { version: INVENTORY_OFFLINE_QUEUE_VERSION, commands: [] };
+    }
     const commands = Array.isArray(parsed.commands)
       ? parsed.commands.map(normalizeCommand).filter((v): v is InventoryOfflineCommand => Boolean(v))
       : [];
 
     return {
-      version: Number(parsed.version) || INVENTORY_OFFLINE_QUEUE_VERSION,
+      version: INVENTORY_OFFLINE_QUEUE_VERSION,
       commands,
     };
   } catch {
+    storeQueueRecoverySnapshot(raw, 'QUEUE_JSON_PARSE_ERROR');
+    localStorage.removeItem(STORAGE_KEYS.INVENTORY_OFFLINE_QUEUE);
     return { version: INVENTORY_OFFLINE_QUEUE_VERSION, commands: [] };
   }
 }
@@ -251,6 +297,7 @@ export function listInventoryOfflineCommands(): InventoryOfflineCommand[] {
 
 export function clearInventoryOfflineQueue(): void {
   localStorage.removeItem(STORAGE_KEYS.INVENTORY_OFFLINE_QUEUE);
+  localStorage.removeItem(STORAGE_KEYS.INVENTORY_OFFLINE_QUEUE_RECOVERY);
 }
 
 export function getInventoryOfflineQueueStats(nowMs = Date.now()): InventoryOfflineQueueStats {
@@ -358,6 +405,7 @@ export function retryFinalInventoryOfflineCommand(commandId: string): InventoryO
   updateQueue((state) => {
     const commands = state.commands.map((row): InventoryOfflineCommand => {
       if (row.id !== id || row.status !== 'FAILED_FINAL') return row;
+      if (!canTransitionStatus(row.status, 'PENDING')) return row;
       const next: InventoryOfflineCommand = {
         ...row,
         status: 'PENDING',
@@ -407,6 +455,13 @@ export function toInventorySyncV2Command(command: InventoryOfflineCommand): {
   };
 }
 
+export function canInventoryOfflineTransition(
+  from: InventoryOfflineCommandStatus,
+  to: InventoryOfflineCommandStatus,
+): boolean {
+  return canTransitionStatus(from, to);
+}
+
 export async function drainInventoryOfflineQueue(options: InventoryOfflineDrainOptions): Promise<InventoryOfflineDrainResult> {
   const nowMs = Number(options.nowMs || Date.now());
   const maxCommands = Math.max(1, Number(options.maxCommands || 20));
@@ -426,11 +481,13 @@ export async function drainInventoryOfflineQueue(options: InventoryOfflineDrainO
     updateQueue((state) => {
       const commands = state.commands.map((cmd): InventoryOfflineCommand =>
         cmd.id === row.id
-          ? {
-              ...cmd,
-              status: 'SYNCING',
-              updated_at: nowIso(),
-            }
+          ? canTransitionStatus(cmd.status, 'SYNCING')
+            ? {
+                ...cmd,
+                status: 'SYNCING',
+                updated_at: nowIso(),
+              }
+            : cmd
           : cmd,
       );
       return { ...state, commands };
@@ -443,15 +500,17 @@ export async function drainInventoryOfflineQueue(options: InventoryOfflineDrainO
         updateQueue((state) => {
           const commands = state.commands.map((cmd): InventoryOfflineCommand =>
             cmd.id === row.id
-              ? {
-                  ...cmd,
-                  status: 'APPLIED',
-                  updated_at: nowIso(),
-                  processed_at: nowIso(),
-                  next_retry_at: null,
-                  last_error: '',
-                  last_reason: '',
-                }
+              ? canTransitionStatus(cmd.status, 'APPLIED')
+                ? {
+                    ...cmd,
+                    status: 'APPLIED',
+                    updated_at: nowIso(),
+                    processed_at: nowIso(),
+                    next_retry_at: null,
+                    last_error: '',
+                    last_reason: '',
+                  }
+                : cmd
               : cmd,
           );
           return { ...state, commands };
@@ -464,16 +523,18 @@ export async function drainInventoryOfflineQueue(options: InventoryOfflineDrainO
         updateQueue((state) => {
           const commands = state.commands.map((cmd): InventoryOfflineCommand =>
             cmd.id === row.id
-              ? {
-                  ...cmd,
-                  status: canRetry ? 'FAILED_RETRYABLE' : 'FAILED_FINAL',
-                  attempts: nextAttempts,
-                  updated_at: nowIso(),
-                  last_attempt_at: nowIso(),
-                  last_error: String(out.reason || 'SYNC_REJECTED').slice(0, 255),
-                  last_reason: String(out.reason || 'SYNC_REJECTED').slice(0, 64),
-                  next_retry_at: canRetry ? nowIso(Date.now() + nextBackoffMs(nextAttempts)) : null,
-                }
+              ? canTransitionStatus(cmd.status, canRetry ? 'FAILED_RETRYABLE' : 'FAILED_FINAL')
+                ? {
+                    ...cmd,
+                    status: canRetry ? 'FAILED_RETRYABLE' : 'FAILED_FINAL',
+                    attempts: nextAttempts,
+                    updated_at: nowIso(),
+                    last_attempt_at: nowIso(),
+                    last_error: String(out.reason || 'SYNC_REJECTED').slice(0, 255),
+                    last_reason: String(out.reason || 'SYNC_REJECTED').slice(0, 64),
+                    next_retry_at: canRetry ? nowIso(Date.now() + nextBackoffMs(nextAttempts)) : null,
+                  }
+                : cmd
               : cmd,
           );
           return { ...state, commands };
@@ -493,16 +554,18 @@ export async function drainInventoryOfflineQueue(options: InventoryOfflineDrainO
       updateQueue((state) => {
         const commands = state.commands.map((cmd): InventoryOfflineCommand =>
           cmd.id === row.id
-            ? {
-                ...cmd,
-                status: canRetry ? 'FAILED_RETRYABLE' : 'FAILED_FINAL',
-                attempts: nextAttempts,
-                updated_at: nowIso(),
-                last_attempt_at: nowIso(),
-                last_error: message.slice(0, 255),
-                last_reason: 'EXECUTOR_ERROR',
-                next_retry_at: canRetry ? nowIso(Date.now() + nextBackoffMs(nextAttempts)) : null,
-              }
+            ? canTransitionStatus(cmd.status, canRetry ? 'FAILED_RETRYABLE' : 'FAILED_FINAL')
+              ? {
+                  ...cmd,
+                  status: canRetry ? 'FAILED_RETRYABLE' : 'FAILED_FINAL',
+                  attempts: nextAttempts,
+                  updated_at: nowIso(),
+                  last_attempt_at: nowIso(),
+                  last_error: message.slice(0, 255),
+                  last_reason: 'EXECUTOR_ERROR',
+                  next_retry_at: canRetry ? nowIso(Date.now() + nextBackoffMs(nextAttempts)) : null,
+                }
+              : cmd
             : cmd,
         );
         return { ...state, commands };
