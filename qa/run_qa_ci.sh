@@ -58,6 +58,7 @@ cleanup_reports() {
     "${REPORTS_DIR}/coverage.xml" \
     "${REPORTS_DIR}/coverage.txt" \
     "${REPORTS_DIR}/sync_contract_guard.txt" \
+    "${REPORTS_DIR}/inventory_offline_private_e2e_guard.txt" \
     "${REPORTS_DIR}/retail_pos_backend_contract_guard.txt" \
     "${REPORTS_DIR}/sync_pos_contract_guard.txt" \
     "${REPORTS_DIR}/frontend_pos_queue_contract_guard.txt" \
@@ -161,6 +162,7 @@ fi
 if [[ "${run_status}" == "passed" ]]; then
   if make_cmd qa-backend-tests \
     && make_cmd qa-sync-contract-guard \
+    && make_cmd qa-inventory-offline-private-e2e-guard \
     && make_cmd qa-retail-pos-backend-contract-guard \
     && make_cmd qa-retail-pos-sync-contract-guard \
     && make_cmd qa-retail-pos-frontend-queue-contract-guard \

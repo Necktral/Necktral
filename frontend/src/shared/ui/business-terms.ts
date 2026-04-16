@@ -6,6 +6,7 @@ export const BUSINESS_LABELS = {
   identityAndAccess: 'Identidad y Acceso',
   fuel: 'Combustible',
   retailPos: 'Retail POS',
+  inventory: 'Inventarios',
   analytics: 'Analytics',
   synchronization: 'Sincronizacion',
 } as const;
@@ -22,6 +23,7 @@ export const UI_ROUTE_PATHS = {
   fuelHealth: '/combustible/salud',
   retailPosTerminal: '/retail/pos/terminal',
   retailPosCockpit: '/retail/pos/cockpit',
+  inventory: '/inventarios',
   analytics: '/analytics',
   auditLog: '/audit/bitacora',
   synchronizationEnrollment: '/sincronizacion/enrolamiento',

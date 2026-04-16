@@ -134,6 +134,7 @@ Esta matriz se aplica por interseccion: `allowed_modules` (bootstrap) + permiso 
 | `audit` | `audit.read` | `desktop` |
 | `fuel` | `fuel.shift.read` | `desktop`, `mobile` |
 | `retail_pos` | `retail.pos.ticket.read` | `desktop`, `mobile` |
+| `inventory` | `inventory.balance.read` | `desktop`, `mobile` |
 | `analytics`/`reporting` | `report.dashboard.read` | `desktop` |
 | `synchronization` | `sync.device.enroll` o `sync.device.revoke` | `desktop`, `mobile` |
 
@@ -142,6 +143,13 @@ Reglas:
 - `shell_mode` lo define servidor en bootstrap; frontend no compite con una politica paralela.
 - La visibilidad de menu no reemplaza autorizacion backend; las rutas siguen protegidas por ACL.
 - La activacion de inventarios/facturacion/estacion se agrega en esta matriz al habilitar cada slice funcional.
+
+### Slice 4 Inventarios: acciones canonicas
+
+- `read`: `GET /api/inventory/warehouses/`, `GET /api/inventory/items/`, `GET /api/inventory/balances/`, `GET /api/inventory/movements/`.
+- `capture`: payload de movimiento (`type`, `qty`, `unit_cost` cuando aplica, `note`).
+- `commit`: `POST /api/inventory/movements/receive/` o `POST /api/inventory/movements/issue/` con `idempotency_key` generado en cliente.
+- `adjust` y `transfer`: fuera de alcance funcional del Slice 4 en SPA.
 
 ## Contratos tecnicos UX/API (aditivos, no-breaking)
 
@@ -156,8 +164,12 @@ Reglas:
 
 ## Politica de conectividad movil
 
-- En esta fase: `online-first + retry`.
-- Sin offline amplio.
+- En esta fase: base `online-first + retry` con habilitacion offline por modulo.
+- Inventarios (Slice 4.1): `capture/commit` offline (`receive/issue`) con cola local + sincronizacion diferida por `/api/sync/batch/`.
+- Semantica oficial de estado offline inventarios:
+- `PENDING` = captura local aceptada (sin confirmacion canónica).
+- `APPLIED` = confirmacion final de servidor (unica verdad operativa).
+- Lectura (`read`) de inventarios se mantiene online-first.
 - Reintento seguro con idempotencia y recuperacion de sesion/contexto.
 - Estados recuperables obligatorios: sesion expirada, contexto invalido, permiso denegado y timeout/red intermitente.
 

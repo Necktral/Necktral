@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -8,6 +9,8 @@ from rest_framework.test import APIClient
 
 from apps.modulos.audit.models import AuditEvent
 from apps.modulos.iam.models import OrgUnit, UserMembership
+from apps.kernels.inventarios.services import post_issue, post_receive
+from apps.kernels.inventarios.models import InventoryItem, Warehouse
 
 User = get_user_model()
 
@@ -95,3 +98,112 @@ def test_inventory_item_create_denied_is_audited():
         event_type="AUTH_ACCESS_DENIED",
         metadata__required_permission="inventory.item.create",
     ).exists()
+
+
+@pytest.mark.django_db
+def test_inventory_read_endpoints_require_authentication():
+    client = APIClient()
+    assert client.get("/api/inventory/warehouses/").status_code == 401
+    assert client.get("/api/inventory/items/").status_code == 401
+    assert client.get("/api/inventory/movements/?warehouse_id=1&item_id=1").status_code == 401
+
+
+@pytest.mark.django_db
+def test_inventory_read_endpoints_without_permissions_return_403():
+    company, branch = _mk_org()
+    client = _client_with_membership_only(company=company, branch=branch)
+
+    assert client.get("/api/inventory/warehouses/").status_code == 403
+    assert client.get("/api/inventory/items/").status_code == 403
+    assert client.get("/api/inventory/movements/?warehouse_id=1&item_id=1").status_code == 403
+
+
+@pytest.mark.django_db
+def test_inventory_warehouses_list_is_scoped_to_active_branch():
+    company, branch_a = _mk_org()
+    branch_b = OrgUnit.objects.create(unit_type=OrgUnit.UnitType.BRANCH, name="B2", parent=company)
+
+    Warehouse.objects.create(company=company, branch=branch_a, name="Main A", code="A", is_active=True)
+    Warehouse.objects.create(company=company, branch=branch_b, name="Main B", code="B", is_active=True)
+
+    client = _client_with_perms(
+        company=company,
+        branch=branch_a,
+        perm_codes=["inventory.balance.read"],
+    )
+    response = client.get("/api/inventory/warehouses/")
+    assert response.status_code == 200
+    assert len(response.data) == 1
+    assert response.data[0]["name"] == "Main A"
+
+
+@pytest.mark.django_db
+def test_inventory_items_list_supports_q_and_limit_with_max_cap():
+    company, branch = _mk_org()
+    InventoryItem.objects.create(company=company, sku="DIESEL-A", name="Diesel A", uom="LITER", is_active=True)
+    InventoryItem.objects.create(company=company, sku="DIESEL-B", name="Diesel B", uom="LITER", is_active=True)
+    InventoryItem.objects.create(company=company, sku="KEROSENE", name="Kerosene", uom="LITER", is_active=True)
+
+    client = _client_with_perms(
+        company=company,
+        branch=branch,
+        perm_codes=["inventory.item.read"],
+    )
+
+    filtered = client.get("/api/inventory/items/?q=diesel&limit=1")
+    assert filtered.status_code == 200
+    assert len(filtered.data) == 1
+    assert "DIESEL" in filtered.data[0]["sku"]
+
+    capped = client.get("/api/inventory/items/?limit=99")
+    assert capped.status_code == 200
+    assert len(capped.data) == 3
+
+
+@pytest.mark.django_db
+def test_inventory_movements_history_desc_order_and_limit():
+    company, branch = _mk_org()
+    user = User.objects.create_user(username=f"user_{uuid.uuid4().hex[:8]}", email="m@test.com", password="pass12345")
+    UserMembership.objects.create(user=user, org_unit=company, is_active=True)
+    UserMembership.objects.create(user=user, org_unit=branch, is_active=True)
+
+    wh = Warehouse.objects.create(company=company, branch=branch, name="Main", code="M", is_active=True)
+    item = InventoryItem.objects.create(company=company, sku=f"SKU-{uuid.uuid4().hex[:6]}", name="Diesel", uom="LITER")
+
+    req = type("Req", (), {"company": company, "branch": branch, "META": {}, "path": "/", "method": "POST"})()
+    post_receive(
+        request=req,
+        actor=user,
+        warehouse_id=wh.id,
+        item_id=item.id,
+        qty=Decimal("10.0000"),
+        unit_cost=Decimal("1.000000"),
+        idempotency_key=f"recv-{uuid.uuid4().hex}",
+    )
+    post_issue(
+        request=req,
+        actor=user,
+        warehouse_id=wh.id,
+        item_id=item.id,
+        qty=Decimal("2.0000"),
+        idempotency_key=f"iss-{uuid.uuid4().hex}",
+    )
+    post_issue(
+        request=req,
+        actor=user,
+        warehouse_id=wh.id,
+        item_id=item.id,
+        qty=Decimal("1.0000"),
+        idempotency_key=f"iss-{uuid.uuid4().hex}",
+    )
+
+    client = _client_with_perms(
+        company=company,
+        branch=branch,
+        perm_codes=["inventory.balance.read"],
+    )
+    response = client.get(f"/api/inventory/movements/?warehouse_id={wh.id}&item_id={item.id}&limit=2")
+    assert response.status_code == 200
+    assert len(response.data) == 2
+    ids = [row["id"] for row in response.data]
+    assert ids == sorted(ids, reverse=True)

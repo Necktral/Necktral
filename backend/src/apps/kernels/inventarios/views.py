@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
@@ -8,8 +9,11 @@ from rest_framework.views import APIView
 from apps.modulos.common.permissions import rbac_permission
 from apps.modulos.iam.models import OrgUnit
 
-from .models import InventoryItem, StockBalance, Warehouse
+from .models import InventoryItem, StockBalance, StockMovement, Warehouse
 from .serializers import (
+    InventoryItemsQuerySerializer,
+    InventoryMovementOut,
+    InventoryMovementsQuerySerializer,
     InventoryItemOut,
     ItemCreateSerializer,
     MovementAdjustSerializer,
@@ -17,6 +21,7 @@ from .serializers import (
     MovementReceiveSerializer,
     TransferSerializer,
     WarehouseCreateSerializer,
+    WarehouseOut,
 )
 from .services import create_item, post_adjust, post_issue, post_receive, post_transfer
 
@@ -42,7 +47,19 @@ class HealthView(APIView):
 
 
 class WarehouseCreateView(APIView):
-    permission_classes = [rbac_permission("inventory.warehouse.create")]
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [rbac_permission("inventory.balance.read")()]
+        return [rbac_permission("inventory.warehouse.create")()]
+
+    def get(self, request):
+        company: OrgUnit = request.company
+        branch: OrgUnit | None = getattr(request, "branch", None)
+        if not branch:
+            return Response({"detail": "X-Branch-Id requerido"}, status=status.HTTP_400_BAD_REQUEST)
+
+        rows = Warehouse.objects.filter(company=company, branch=branch, is_active=True).order_by("name", "id")
+        return Response(WarehouseOut(rows, many=True).data, status=status.HTTP_200_OK)
 
     def post(self, request):
         company: OrgUnit = request.company
@@ -65,7 +82,25 @@ class WarehouseCreateView(APIView):
 
 
 class ItemCreateView(APIView):
-    permission_classes = [rbac_permission("inventory.item.create")]
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [rbac_permission("inventory.item.read")()]
+        return [rbac_permission("inventory.item.create")()]
+
+    def get(self, request):
+        company: OrgUnit = request.company
+        query = InventoryItemsQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        params = query.validated_data
+
+        rows = InventoryItem.objects.filter(company=company, is_active=True)
+        q = str(params.get("q") or "").strip()
+        if q:
+            rows = rows.filter(Q(sku__icontains=q) | Q(name__icontains=q))
+
+        limit = min(int(params.get("limit") or 20), 50)
+        rows = rows.order_by("name", "id")[:limit]
+        return Response(InventoryItemOut(rows, many=True).data, status=status.HTTP_200_OK)
 
     def post(self, request):
         company: OrgUnit = request.company
@@ -189,6 +224,36 @@ class TransferView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(out, status=status.HTTP_201_CREATED)
+
+
+class MovementsHistoryView(APIView):
+    permission_classes = [rbac_permission("inventory.balance.read")]
+
+    def get(self, request):
+        company: OrgUnit = request.company
+        branch: OrgUnit | None = getattr(request, "branch", None)
+        if not branch:
+            return Response({"detail": "X-Branch-Id requerido"}, status=status.HTTP_400_BAD_REQUEST)
+
+        query = InventoryMovementsQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        params = query.validated_data
+
+        wh = get_object_or_404(
+            Warehouse,
+            id=int(params["warehouse_id"]),
+            company=company,
+            branch=branch,
+            is_active=True,
+        )
+        item = get_object_or_404(InventoryItem, id=int(params["item_id"]), company=company, is_active=True)
+        limit = min(int(params.get("limit") or 20), 50)
+
+        rows = (
+            StockMovement.objects.filter(company=company, branch=branch, warehouse=wh, item=item)
+            .order_by("-created_at", "-id")[:limit]
+        )
+        return Response(InventoryMovementOut(rows, many=True).data, status=status.HTTP_200_OK)
 
 
 class BalanceView(APIView):

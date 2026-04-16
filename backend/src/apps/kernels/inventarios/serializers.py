@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from .models import InventoryItem, UoM, Warehouse
+from .models import InventoryItem, StockMovement, UoM, Warehouse
 
 
 class WarehouseCreateSerializer(serializers.Serializer):
@@ -51,6 +51,17 @@ class TransferSerializer(serializers.Serializer):
     note = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
 
+class InventoryItemsQuerySerializer(serializers.Serializer):
+    q = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    limit = serializers.IntegerField(required=False, min_value=1, default=20)
+
+
+class InventoryMovementsQuerySerializer(serializers.Serializer):
+    warehouse_id = serializers.IntegerField(required=True)
+    item_id = serializers.IntegerField(required=True)
+    limit = serializers.IntegerField(required=False, min_value=1, default=20)
+
+
 class WarehouseOut(serializers.ModelSerializer):
     class Meta:
         model = Warehouse
@@ -61,3 +72,17 @@ class InventoryItemOut(serializers.ModelSerializer):
     class Meta:
         model = InventoryItem
         fields = ["id", "sku", "name", "uom", "is_active", "created_at"]
+
+
+class InventoryMovementOut(serializers.ModelSerializer):
+    class Meta:
+        model = StockMovement
+        fields = [
+            "id",
+            "movement_type",
+            "qty_delta",
+            "unit_cost",
+            "total_cost",
+            "note",
+            "created_at",
+        ]

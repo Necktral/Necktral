@@ -7,6 +7,7 @@ from .views import (
     BalanceView,
     HealthView,
     IssueView,
+    MovementsHistoryView,
     ItemCreateView,
     ReceiveView,
     TransferView,
@@ -21,6 +22,7 @@ urlpatterns = [
     path("movements/receive/", ReceiveView.as_view()),
     path("movements/issue/", IssueView.as_view()),
     path("movements/adjust/", AdjustView.as_view()),
+    path("movements/", MovementsHistoryView.as_view()),
     path("transfers/", TransferView.as_view()),
     path("balances/", BalanceView.as_view()),
 ]

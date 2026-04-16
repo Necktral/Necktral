@@ -176,6 +176,14 @@
           <q-item-section>Cockpit operativo</q-item-section>
         </q-item>
 
+        <q-separator spaced v-if="canInventoryAccess" />
+
+        <q-item-label header v-if="canInventoryAccess">{{ labels.inventory }}</q-item-label>
+        <q-item clickable :to="routes.inventory" :disable="!canInventoryAccess">
+          <q-item-section avatar><q-icon name="inventory_2" /></q-item-section>
+          <q-item-section>Operacion de inventario</q-item-section>
+        </q-item>
+
         <template v-if="!isMobileShell && canAnalyticsRead">
           <q-separator spaced />
 
@@ -211,6 +219,7 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { BUSINESS_LABELS, UI_ROUTE_PATHS } from 'src/shared/ui/business-terms';
+import { canAccessInventoryModule } from 'src/features/inventory/inventory-shell';
 import { useAuthStore } from 'src/stores/auth.store';
 import { useAclStore } from 'src/stores/acl.store';
 import { useContextStore } from 'src/stores/context.store';
@@ -301,6 +310,13 @@ const canFuelRead = computed(() => {
 
 const canRetailPosRead = computed(() => {
   return hasModuleEnabled('retail_pos') && hasCompanyPermission('retail.pos.ticket.read');
+});
+
+const canInventoryAccess = computed(() => {
+  return canAccessInventoryModule({
+    allowedModules: sessionBootstrap.payload?.allowed_modules ?? [],
+    hasBasePermission: hasCompanyPermission('inventory.balance.read'),
+  });
 });
 
 const canAnalyticsRead = computed(() => {

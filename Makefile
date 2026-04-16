@@ -5,7 +5,7 @@
 	qa-operational-go-live qa-product-lifecycle-full-cycle \
 	qa-ci-up qa-ci-fresh qa-ci-ci qa-backend-wait qa-ci-gate1 qa-ci-gate2 qa-ci-gate3 qa-ci qa-run-profile \
 	qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-verify-static-gate qa-reporting-registry-guard qa-reporting-registry-guard-host qa-reporting-contract-version-guard qa-reporting-contract-version-guard-host qa-pythonpath-bootstrap-guard qa-backend-package-check qa-architecture-dependency-guard qa-route-contract-guard qa-readme-section-guard qa-pr-blast-radius-guard qa-codex-governance-guard qa-makemigrations-check qa-migration-safety-guard qa-migration-rehearsal qa-action-pin-guard qa-github-required-checks-guard qa-runner-hygiene-guard qa-security-audits qa-validate-security-exceptions qa-security-findings-enforce qa-export-u6-release-evidence qa-github-master-ruleset-verify qa-github-master-ruleset-apply qa-backend-mypy-baseline-refresh qa-backend-tests qa-coverage-by-domain-guard qa-static-scan qa-namespace-guard qa-kernel-compat-strict qa-analytics-contract-guard qa-frontend-ci qa-audit-integrity qa-reporting-r8-gate qa-verify-reporting-r8-gate-artifact \
-		qa-sync-contract-guard qa-retail-pos-backend-contract-guard qa-retail-pos-sync-contract-guard qa-retail-pos-frontend-queue-contract-guard qa-retail-pos-edge-simulator-guard qa-retail-pos-edge-e2e-guard qa-retail-pos-pilot-smoke qa-retail-pos-pilot-rollback qa-sync-pos-validation qa-reports-dir-writable \
+		qa-sync-contract-guard qa-inventory-offline-private-e2e-guard qa-retail-pos-backend-contract-guard qa-retail-pos-sync-contract-guard qa-retail-pos-frontend-queue-contract-guard qa-retail-pos-edge-simulator-guard qa-retail-pos-edge-e2e-guard qa-retail-pos-pilot-smoke qa-retail-pos-pilot-rollback qa-sync-pos-validation qa-reports-dir-writable \
 		fix-workspace-perms docker-clean docker-clean-all
 
 BASE_URL ?= http://localhost:8000/api
@@ -229,6 +229,9 @@ qa-auth-mobile-cookie-tests: qa-ci-up
 qa-sync-contract-guard:
 	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/backend && export DJANGO_SETTINGS_MODULE=config.settings.test PYTEST_DB_SLOT='$(QA_PYTEST_DB_SLOT)' PYTEST_DB_BASE_NAME='$(QA_PYTEST_DB_BASE_NAME)'; pytest -q src/tests/test_sync_v2_contract.py | tee /app/$(QA_REPORTS_DIR)/sync_contract_guard.txt"
 
+qa-inventory-offline-private-e2e-guard:
+	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/backend && export DJANGO_SETTINGS_MODULE=config.settings.test PYTEST_DB_SLOT='$(QA_PYTEST_DB_SLOT)' PYTEST_DB_BASE_NAME='$(QA_PYTEST_DB_BASE_NAME)'; pytest -q src/tests/test_inventory_offline_sync_e2e.py | tee /app/$(QA_REPORTS_DIR)/inventory_offline_private_e2e_guard.txt"
+
 qa-retail-pos-backend-contract-guard:
 	docker compose exec -T backend bash -lc "mkdir -p /app/$(QA_REPORTS_DIR) && cd /app/backend && export DJANGO_SETTINGS_MODULE=config.settings.test PYTEST_DB_SLOT='$(QA_PYTEST_DB_SLOT)' PYTEST_DB_BASE_NAME='$(QA_PYTEST_DB_BASE_NAME)'; pytest -q src/tests/test_retail_pos_api.py | tee /app/$(QA_REPORTS_DIR)/retail_pos_backend_contract_guard.txt"
 
@@ -280,7 +283,7 @@ qa-frontend-ci:
 qa-ci-gate1: qa-ci-up qa-namespace-guard qa-analytics-contract-guard qa-route-contract-guard qa-readme-section-guard qa-pr-blast-radius-guard qa-codex-governance-guard qa-reporting-registry-guard qa-reporting-contract-version-guard qa-pythonpath-bootstrap-guard qa-backend-package-check qa-architecture-dependency-guard qa-action-pin-guard qa-github-required-checks-guard qa-runner-hygiene-guard qa-validate-security-exceptions qa-security-findings-enforce qa-static-scan qa-backend-bandit qa-backend-ruff qa-backend-mypy qa-verify-static-gate qa-makemigrations-check qa-migration-safety-guard qa-frontend-ci
 
 # Gate 2: pruebas deterministas (pytest + cobertura)
-qa-ci-gate2: qa-ci-up qa-backend-tests qa-sync-contract-guard qa-retail-pos-backend-contract-guard qa-retail-pos-sync-contract-guard qa-retail-pos-frontend-queue-contract-guard qa-retail-pos-edge-simulator-guard qa-retail-pos-edge-e2e-guard qa-coverage-by-domain-guard
+qa-ci-gate2: qa-ci-up qa-backend-tests qa-sync-contract-guard qa-inventory-offline-private-e2e-guard qa-retail-pos-backend-contract-guard qa-retail-pos-sync-contract-guard qa-retail-pos-frontend-queue-contract-guard qa-retail-pos-edge-simulator-guard qa-retail-pos-edge-e2e-guard qa-coverage-by-domain-guard
 
 # Gate 3: integridad de auditoría (reporte)
 qa-ci-gate3: qa-ci-up qa-audit-integrity qa-reporting-r8-gate qa-verify-reporting-r8-gate-artifact qa-export-u6-release-evidence
