@@ -248,6 +248,7 @@ INSTALLED_APPS = [
     "apps.modulos.accounts.apps.AccountsConfig",
     "apps.modulos.iam.apps.IamConfig",
     "apps.modulos.org.apps.OrgConfig",  # <-- NUEVO
+    "apps.modulos.parties.apps.PartiesConfig",
     "apps.modulos.hr.apps.HrConfig",  # <-- NUEVO
     "apps.kernels.accounting.apps.AccountingConfig",
     "apps.kernels.payments.apps.PaymentsConfig",
