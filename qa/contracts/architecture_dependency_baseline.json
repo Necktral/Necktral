@@ -86,6 +86,8 @@
     "modulos.org->modulos.common",
     "modulos.org->modulos.iam",
     "modulos.org->modulos.rbac",
+    "modulos.parties->modulos.audit",
+    "modulos.parties->modulos.iam",
     "modulos.rbac->modulos.audit",
     "modulos.rbac->modulos.common",
     "modulos.rbac->modulos.iam",
