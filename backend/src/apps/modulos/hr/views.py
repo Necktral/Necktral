@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -14,6 +16,7 @@ from apps.modulos.common.pagination import get_limit_offset, paginate_queryset
 from apps.modulos.common.permissions import rbac_permission
 from apps.modulos.common.throttling import MethodThrottleScopeMixin
 from apps.modulos.iam.models import OrgUnit
+from apps.modulos.parties.models import Party
 from apps.modulos.rbac.models import RoleAssignment
 
 from .models import Employee, EmploymentAssignment, JobPosition
@@ -30,11 +33,13 @@ from .serializers import (
 )
 from .services import (
     end_assignment,
+    link_employee_to_party,
     provision_user_for_employee,
     reconcile_employee_roles,
     revoke_employee_access,
     reset_temp_password_for_employee,
     set_position_role_maps,
+    unlink_employee_party,
 )
 
 
@@ -56,6 +61,12 @@ class EmployeeAssignmentEndView(APIView):
 
 
 User = get_user_model()
+
+
+def _django_validation_payload(exc: DjangoValidationError) -> dict:
+    if hasattr(exc, "message_dict"):
+        return exc.message_dict
+    return {"detail": list(exc.messages)}
 
 
 class PositionListCreateView(MethodThrottleScopeMixin, APIView):
@@ -193,7 +204,7 @@ class EmployeeListCreateView(MethodThrottleScopeMixin, APIView):
         base_qs = Employee.objects.filter(company=company).order_by("id")
         limit, offset = get_limit_offset(request)
         total = base_qs.count()
-        qs = base_qs.select_related("linked_user").prefetch_related(
+        qs = base_qs.select_related("linked_user", "party").prefetch_related(
             Prefetch("assignments", queryset=active_asg_qs, to_attr="active_assignments")
         )
         rows = qs[offset : offset + limit]
@@ -209,6 +220,10 @@ class EmployeeListCreateView(MethodThrottleScopeMixin, APIView):
                     "phone": e.phone or "",
                     "email": e.email or "",
                     "is_active": e.is_active,
+                    "party_id": e.party_id,
+                    "party_display_name": e.party.display_name if e.party_id and e.party else None,
+                    "party_tax_id": e.party.tax_id if e.party_id and e.party else "",
+                    "party_national_id": e.party.national_id if e.party_id and e.party else "",
                     "linked_user_id": e.linked_user_id,
                     "linked_username": (e.linked_user.username if e.linked_user_id and e.linked_user else None),
                     "has_active_assignment": bool(actives),
@@ -238,28 +253,39 @@ class EmployeeListCreateView(MethodThrottleScopeMixin, APIView):
             linked_user = User.objects.filter(id=int(v["linked_user_id"])).first()
             if not linked_user:
                 return Response({"linked_user_id": "Usuario no existe"}, status=status.HTTP_400_BAD_REQUEST)
-        emp = Employee.objects.create(
-            company=company,
-            employee_code=v.get("employee_code", ""),
-            first_name=v["first_name"],
-            last_name=v.get("last_name", ""),
-            phone=v.get("phone", ""),
-            email=v.get("email", ""),
-            is_active=bool(v.get("is_active", True)),
-            linked_user=linked_user,
-        )
-        write_event(
-            request=request,
-            module="HR",
-            event_type="HR_EMPLOYEE_CREATED",
-            reason_code="OK",
-            actor_user=request.user,
-            subject_type="EMPLOYEE",
-            subject_id=str(emp.id),
-            metadata={"employee_name": emp.first_name},
-        )
-        if emp.linked_user_id:
-            reconcile_employee_roles(employee=emp, request=request, actor=request.user)
+        party = None
+        if "party_id" in v:
+            party = Party.objects.filter(id=int(v["party_id"]), company=company).first()
+            if party is None:
+                return Response({"party_id": "Party no existe en esta company."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            with transaction.atomic():
+                emp = Employee.objects.create(
+                    company=company,
+                    employee_code=v.get("employee_code", ""),
+                    first_name=v["first_name"],
+                    last_name=v.get("last_name", ""),
+                    phone=v.get("phone", ""),
+                    email=v.get("email", ""),
+                    is_active=bool(v.get("is_active", True)),
+                    linked_user=linked_user,
+                )
+                write_event(
+                    request=request,
+                    module="HR",
+                    event_type="HR_EMPLOYEE_CREATED",
+                    reason_code="OK",
+                    actor_user=request.user,
+                    subject_type="EMPLOYEE",
+                    subject_id=str(emp.id),
+                    metadata={"employee_name": emp.first_name},
+                )
+                if party is not None:
+                    link_employee_to_party(employee=emp, party=party, request=request, actor=request.user)
+                if emp.linked_user_id:
+                    reconcile_employee_roles(employee=emp, request=request, actor=request.user)
+        except DjangoValidationError as exc:
+            return Response(_django_validation_payload(exc), status=status.HTTP_400_BAD_REQUEST)
         return Response({"id": emp.id}, status=status.HTTP_201_CREATED)
 
 
@@ -275,6 +301,7 @@ class EmployeeDetailView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         before = {
             "employee_code": emp.employee_code,
+            "party_id": emp.party_id,
             "first_name": emp.first_name,
             "last_name": emp.last_name,
             "phone": emp.phone,
@@ -284,53 +311,71 @@ class EmployeeDetailView(APIView):
         }
         v = serializer.validated_data
         old_linked_user_id = emp.linked_user_id
-        for f in ["employee_code", "first_name", "last_name", "phone", "email", "is_active"]:
-            if f in v:
-                setattr(emp, f, v[f])
-        if "linked_user_id" in v:
-            new_val = v["linked_user_id"]
-            if new_val is None:
-                emp.linked_user = None
-            else:
-                u = User.objects.filter(id=int(new_val)).first()
-                if not u:
-                    return Response({"linked_user_id": "Usuario no existe"}, status=status.HTTP_400_BAD_REQUEST)
-                emp.linked_user = u
-        emp.save()
-        after = {
-            "employee_code": emp.employee_code,
-            "first_name": emp.first_name,
-            "last_name": emp.last_name,
-            "phone": emp.phone,
-            "email": emp.email,
-            "is_active": emp.is_active,
-            "linked_user_id": emp.linked_user_id,
-        }
-        write_event(
-            request=request,
-            module="HR",
-            event_type="HR_EMPLOYEE_UPDATED",
-            reason_code="OK",
-            actor_user=request.user,
-            subject_type="EMPLOYEE",
-            subject_id=str(emp.id),
-            before_snapshot=before,
-            after_snapshot=after,
-        )
-        # si cambió el vínculo, limpiamos roles POSITION del usuario anterior dentro del scope de la company
-        if old_linked_user_id and old_linked_user_id != emp.linked_user_id:
-            branch_ids = list(
-                OrgUnit.objects.filter(parent=company, unit_type=OrgUnit.UnitType.BRANCH).values_list("id", flat=True)
-            )
-            scoped_ids = [company.id] + branch_ids
-            RoleAssignment.objects.filter(
-                user_id=old_linked_user_id,
-                org_unit_id__in=scoped_ids,
-                origin=RoleAssignment.Origin.POSITION,
-                is_active=True,
-            ).update(is_active=False)
-        if emp.linked_user_id:
-            reconcile_employee_roles(employee=emp, request=request, actor=request.user)
+        party_requested = "party_id" in v
+        party = None
+        if party_requested and v["party_id"] is not None:
+            party = Party.objects.filter(id=int(v["party_id"]), company=company).first()
+            if party is None:
+                return Response({"party_id": "Party no existe en esta company."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            with transaction.atomic():
+                for f in ["employee_code", "first_name", "last_name", "phone", "email", "is_active"]:
+                    if f in v:
+                        setattr(emp, f, v[f])
+                if "linked_user_id" in v:
+                    new_val = v["linked_user_id"]
+                    if new_val is None:
+                        emp.linked_user = None
+                    else:
+                        u = User.objects.filter(id=int(new_val)).first()
+                        if not u:
+                            return Response({"linked_user_id": "Usuario no existe"}, status=status.HTTP_400_BAD_REQUEST)
+                        emp.linked_user = u
+                emp.save()
+                after = {
+                    "employee_code": emp.employee_code,
+                    "party_id": emp.party_id,
+                    "first_name": emp.first_name,
+                    "last_name": emp.last_name,
+                    "phone": emp.phone,
+                    "email": emp.email,
+                    "is_active": emp.is_active,
+                    "linked_user_id": emp.linked_user_id,
+                }
+                write_event(
+                    request=request,
+                    module="HR",
+                    event_type="HR_EMPLOYEE_UPDATED",
+                    reason_code="OK",
+                    actor_user=request.user,
+                    subject_type="EMPLOYEE",
+                    subject_id=str(emp.id),
+                    before_snapshot=before,
+                    after_snapshot=after,
+                )
+                if party_requested:
+                    if party is None:
+                        unlink_employee_party(employee=emp, request=request, actor=request.user)
+                    else:
+                        link_employee_to_party(employee=emp, party=party, request=request, actor=request.user)
+                # si cambió el vínculo, limpiamos roles POSITION del usuario anterior dentro del scope de la company
+                if old_linked_user_id and old_linked_user_id != emp.linked_user_id:
+                    branch_ids = list(
+                        OrgUnit.objects.filter(parent=company, unit_type=OrgUnit.UnitType.BRANCH).values_list(
+                            "id", flat=True
+                        )
+                    )
+                    scoped_ids = [company.id] + branch_ids
+                    RoleAssignment.objects.filter(
+                        user_id=old_linked_user_id,
+                        org_unit_id__in=scoped_ids,
+                        origin=RoleAssignment.Origin.POSITION,
+                        is_active=True,
+                    ).update(is_active=False)
+                if emp.linked_user_id:
+                    reconcile_employee_roles(employee=emp, request=request, actor=request.user)
+        except DjangoValidationError as exc:
+            return Response(_django_validation_payload(exc), status=status.HTTP_400_BAD_REQUEST)
         return Response({"ok": True}, status=status.HTTP_200_OK)
 
 

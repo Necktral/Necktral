@@ -11,12 +11,15 @@ from dataclasses import dataclass
 from typing import Optional, Set
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 
 from apps.modulos.audit.writer import write_event
 from apps.modulos.iam.models import OrgUnit, UserMembership
+from apps.modulos.parties.models import Party, PartyRole
+from apps.modulos.parties.services import assign_party_role
 from apps.modulos.rbac.models import Role, RoleAssignment
 
 from .models import Employee, EmploymentAssignment, JobPosition, PositionRoleMap
@@ -46,6 +49,133 @@ def _ensure_membership(user, org_unit: OrgUnit) -> None:
         mem.is_active = True
         mem.left_at = None
         mem.save(update_fields=["is_active", "left_at"])
+
+
+class _HRCompanyAuditRequest:
+    """Contexto liviano para encadenar auditoria HR por company sin request."""
+
+    def __init__(self, *, request, company: OrgUnit) -> None:
+        base_req = getattr(request, "_request", request)
+        self.company = company
+        self.branch = _request_attr(request, base_req, "branch")
+        self.ctx = _request_attr(request, base_req, "ctx")
+        self.META = _request_attr(request, base_req, "META") or {}
+        self.path = _request_attr(request, base_req, "path") or ""
+        self.method = _request_attr(request, base_req, "method") or ""
+        self.request_id = _request_attr(request, base_req, "request_id") or ""
+
+
+def _request_attr(request, base_req, name: str):
+    if base_req is not None:
+        value = getattr(base_req, name, None)
+        if value is not None:
+            return value
+    if request is not None:
+        return getattr(request, name, None)
+    return None
+
+
+def _request_company(request):
+    if request is None:
+        return None
+    base_req = getattr(request, "_request", request)
+    return _request_attr(request, base_req, "company")
+
+
+def _same_company(left, right) -> bool:
+    return str(getattr(left, "id", left)) == str(getattr(right, "id", right))
+
+
+def _audit_request_for_company(*, request, company: OrgUnit):
+    request_company = _request_company(request)
+    if request_company is not None and not _same_company(request_company, company):
+        raise ValidationError({"company": "Request company no coincide con Employee.company."})
+    if request_company is not None:
+        return request
+    return _HRCompanyAuditRequest(request=request, company=company)
+
+
+def _employee_party_snapshot(employee: Employee) -> dict:
+    return {
+        "employee_id": employee.id,
+        "company_id": employee.company_id,
+        "party_id": employee.party_id,
+        "linked_user_id": employee.linked_user_id,
+    }
+
+
+def _ensure_employee_party_role(*, party: Party, request=None, actor=None) -> None:
+    active_exists = (
+        PartyRole.objects.select_for_update()
+        .filter(party=party, role=PartyRole.Role.EMPLOYEE, is_active=True)
+        .exists()
+    )
+    if not active_exists:
+        assign_party_role(party=party, role=PartyRole.Role.EMPLOYEE, request=request, actor=actor)
+
+
+def link_employee_to_party(*, employee: Employee, party: Party, request=None, actor=None) -> Employee:
+    with transaction.atomic():
+        employee = Employee.objects.select_for_update().select_related("company").get(pk=employee.pk)
+        party = Party.objects.select_for_update().get(pk=party.pk)
+        if employee.company_id != party.company_id:
+            raise ValidationError({"party": "Party debe pertenecer a la misma company del Employee."})
+
+        audit_request = _audit_request_for_company(request=request, company=employee.company)
+        before = _employee_party_snapshot(employee)
+        if employee.party_id != party.id:
+            employee.party = party
+            employee.save(update_fields=["party", "updated_at"])
+
+        _ensure_employee_party_role(party=party, request=request, actor=actor)
+
+        write_event(
+            request=audit_request,
+            module="HR",
+            event_type="HR_EMPLOYEE_PARTY_LINK_CHANGED",
+            reason_code="OK",
+            actor_user=actor,
+            subject_type="EMPLOYEE",
+            subject_id=str(employee.id),
+            before_snapshot=before,
+            after_snapshot=_employee_party_snapshot(employee),
+            metadata={
+                "company_id": str(employee.company_id),
+                "employee_id": str(employee.id),
+                "party_id": str(party.id),
+                "linked_user_id": str(employee.linked_user_id or ""),
+            },
+        )
+        return employee
+
+
+def unlink_employee_party(*, employee: Employee, request=None, actor=None) -> Employee:
+    with transaction.atomic():
+        employee = Employee.objects.select_for_update().select_related("company").get(pk=employee.pk)
+        audit_request = _audit_request_for_company(request=request, company=employee.company)
+        before = _employee_party_snapshot(employee)
+        if employee.party_id is not None:
+            employee.party = None
+            employee.save(update_fields=["party", "updated_at"])
+
+        write_event(
+            request=audit_request,
+            module="HR",
+            event_type="HR_EMPLOYEE_PARTY_LINK_CHANGED",
+            reason_code="OK",
+            actor_user=actor,
+            subject_type="EMPLOYEE",
+            subject_id=str(employee.id),
+            before_snapshot=before,
+            after_snapshot=_employee_party_snapshot(employee),
+            metadata={
+                "company_id": str(employee.company_id),
+                "employee_id": str(employee.id),
+                "previous_party_id": str(before["party_id"] or ""),
+                "linked_user_id": str(employee.linked_user_id or ""),
+            },
+        )
+        return employee
 
 
 def reconcile_employee_roles(*, employee: Employee, request=None, actor=None) -> ReconcileResult:

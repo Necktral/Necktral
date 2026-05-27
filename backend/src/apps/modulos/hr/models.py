@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -49,6 +50,13 @@ class PositionRoleMap(models.Model):
 
 class Employee(models.Model):
     company = models.ForeignKey(OrgUnit, on_delete=models.PROTECT, related_name="employees")
+    party = models.ForeignKey(
+        "parties.Party",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="employee_records",
+    )
     employee_code = models.CharField(max_length=64, blank=True, default="")
     first_name = models.CharField(max_length=120)
     last_name = models.CharField(max_length=120, blank=True, default="")
@@ -70,7 +78,17 @@ class Employee(models.Model):
         indexes = [
             models.Index(fields=["company", "is_active"]),
             models.Index(fields=["linked_user"]),
+            models.Index(fields=["company", "party"], name="hr_employee_company_party_idx"),
         ]
+
+    def clean(self):
+        super().clean()
+        if self.party_id and self.company_id and self.party.company_id != self.company_id:
+            raise ValidationError({"party": "Employee.party debe pertenecer a Employee.company."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class EmploymentAssignment(models.Model):

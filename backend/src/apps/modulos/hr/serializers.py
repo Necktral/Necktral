@@ -34,6 +34,7 @@ class PositionRoleMapUpdateSerializer(serializers.Serializer):
 
 class EmployeeCreateSerializer(serializers.Serializer):
     employee_code = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
+    party_id = serializers.IntegerField(required=False)
     first_name = serializers.CharField(max_length=120)
     last_name = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
     phone = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
@@ -44,6 +45,7 @@ class EmployeeCreateSerializer(serializers.Serializer):
 
 class EmployeeUpdateSerializer(serializers.Serializer):
     employee_code = serializers.CharField(max_length=64, required=False, allow_blank=True)
+    party_id = serializers.IntegerField(required=False, allow_null=True)
     first_name = serializers.CharField(max_length=120, required=False)
     last_name = serializers.CharField(max_length=120, required=False, allow_blank=True)
     phone = serializers.CharField(max_length=64, required=False, allow_blank=True)
