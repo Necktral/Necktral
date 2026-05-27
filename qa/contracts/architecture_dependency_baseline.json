@@ -76,6 +76,7 @@
     "modulos.hr->modulos.audit",
     "modulos.hr->modulos.common",
     "modulos.hr->modulos.iam",
+    "modulos.hr->modulos.parties",
     "modulos.hr->modulos.rbac",
     "modulos.iam->modulos.accounts",
     "modulos.iam->modulos.org",

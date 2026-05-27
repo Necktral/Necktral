@@ -450,6 +450,14 @@
       "ticket_ref": "U5-BASELINE",
       "fingerprint": "0e855c26476e08e8917ee33722f80a2796d56ac0ae19805b3955232bc34cdeea"
     },
+    "backend/src/apps/modulos/hr/migrations/0005_employee_party.py": {
+      "risk_class": "high_lock_risk",
+      "rollout_strategy": "expand_hr_employee_party_fk_and_index",
+      "rollback_strategy": "roll_forward_preferred",
+      "owner": "db-architecture",
+      "ticket_ref": "PR93-HR-PARTY-LINK",
+      "fingerprint": "10f56f3a85d82cabc97499f60a412c9f03143e09632b5d69823ade82fc915ce2"
+    },
     "backend/src/apps/modulos/iam/migrations/0001_initial.py": {
       "risk_class": "expand",
       "rollout_strategy": "baseline_existing_migration",
@@ -545,6 +553,14 @@
       "owner": "db-architecture",
       "ticket_ref": "U5-BASELINE",
       "fingerprint": "fb0edce75dec517b8c1ebf75794946eff1ee846379abebd7812a933f035616c6"
+    },
+    "backend/src/apps/modulos/parties/migrations/0001_initial.py": {
+      "risk_class": "high_lock_risk",
+      "rollout_strategy": "create_parties_tables_and_indexes",
+      "rollback_strategy": "roll_forward_preferred",
+      "owner": "db-architecture",
+      "ticket_ref": "PR93-HR-PARTY-LINK",
+      "fingerprint": "75b0bbd1c21de9db7994a9e6c47f8001cd5eba24db743394cb46a1b7e4ba9d6a"
     },
     "backend/src/apps/modulos/rbac/migrations/0001_initial.py": {
       "risk_class": "expand",
