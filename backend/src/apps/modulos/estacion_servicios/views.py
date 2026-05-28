@@ -257,13 +257,14 @@ class FuelSaleCreateView(APIView):
                 payment_method=ser.validated_data["payment_method"],
                 customer_name=ser.validated_data.get("customer_name", ""),
                 customer_ref=ser.validated_data.get("customer_ref", ""),
+                customer_party_id=ser.validated_data.get("customer_party_id"),
                 is_fiscal=ser.validated_data.get("is_fiscal", False),
                 idempotency_key=ser.validated_data.get("idempotency_key", ""),
             )
         except FuelConflictError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
 
-        sale = FuelSale.objects.select_related("dispense").get(pk=result.sale.id)
+        sale = FuelSale.objects.select_related("dispense", "customer_party").get(pk=result.sale.id)
         response_status = status.HTTP_200_OK if result.idempotent else status.HTTP_201_CREATED
         return Response(SaleOut(sale).data, status=response_status)
 
@@ -275,7 +276,12 @@ class FuelSaleDetailView(APIView):
         if request.branch is None:
             return Response({"detail": "X-Branch-Id requerido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        sale = get_object_or_404(FuelSale.objects.select_related("dispense"), pk=sale_id, company=request.company, branch=request.branch)
+        sale = get_object_or_404(
+            FuelSale.objects.select_related("dispense", "customer_party"),
+            pk=sale_id,
+            company=request.company,
+            branch=request.branch,
+        )
         return Response(SaleOut(sale).data, status=status.HTTP_200_OK)
 
 
@@ -295,7 +301,7 @@ class FuelSaleCancelView(APIView):
             reason=ser.validated_data.get("reason", ""),
         )
 
-        sale = FuelSale.objects.select_related("dispense").get(pk=sale.id)
+        sale = FuelSale.objects.select_related("dispense", "customer_party").get(pk=sale.id)
         return Response(SaleOut(sale).data, status=200)
 
 
@@ -313,7 +319,7 @@ class FuelSaleCompensateRetryView(APIView):
             actor_user=request.user,
             reason=ser.validated_data.get("reason", ""),
         )
-        sale = FuelSale.objects.select_related("dispense").get(pk=sale.id)
+        sale = FuelSale.objects.select_related("dispense", "customer_party").get(pk=sale.id)
         return Response(SaleOut(sale).data, status=200)
 
 

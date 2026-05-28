@@ -75,6 +75,7 @@
     "modulos.estacion_servicios->modulos.iam",
     "modulos.estacion_servicios->modulos.integration",
     "modulos.estacion_servicios->modulos.org",
+    "modulos.estacion_servicios->modulos.parties",
     "modulos.hr->modulos.audit",
     "modulos.hr->modulos.common",
     "modulos.hr->modulos.iam",

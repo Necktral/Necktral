@@ -434,6 +434,14 @@
       "ticket_ref": "FUEL-SALE-IDEMPOTENCY-P1",
       "fingerprint": "ffb8b65a05d7f8bc71d98d9330791a5db8ae568a57fd4b99b81c759192500074"
     },
+    "backend/src/apps/modulos/estacion_servicios/migrations/0012_fuelsale_customer_party.py": {
+      "risk_class": "high_lock_risk",
+      "rollout_strategy": "add_nullable_fuel_sale_customer_party_fk_and_index_without_backfill",
+      "rollback_strategy": "roll_forward_preferred",
+      "owner": "db-architecture",
+      "ticket_ref": "COMMERCIAL-6-3A-FUEL-CUSTOMER-PARTY",
+      "fingerprint": "861715620f5316a60b8a693dd4cb6a26bcc81147b0a749fbd0995334198a2fa6"
+    },
     "backend/src/apps/modulos/hr/migrations/0001_initial.py": {
       "risk_class": "high_lock_risk",
       "rollout_strategy": "baseline_existing_migration",

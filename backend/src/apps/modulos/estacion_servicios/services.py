@@ -23,6 +23,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.modulos.audit.writer import write_event
 from apps.modulos.integration.services import publish_outbox_event
+from apps.modulos.parties.models import Party
 
 from apps.modulos.estacion_servicios.models import (
     FuelDispense,
@@ -144,6 +145,7 @@ def _fuel_outbox_payload(*, sale: FuelSale, reason: str = "", attempt: int | Non
         "billing_doc_id": sale.billing_doc_id,
         "inventory_movement_id": sale.inventory_movement_id,
         "inventory_reversal_movement_id": sale.inventory_reversal_movement_id,
+        "customer_party_id": int(sale.customer_party_id) if sale.customer_party_id else None,
     }
     if reason:
         payload["reason"] = str(reason)
@@ -302,7 +304,7 @@ def list_sales(
     to_s: str | None = None,
 ):
     branch = _require_branch(branch)
-    qs = FuelSale.objects.filter(company=company, branch=branch).select_related("dispense")
+    qs = FuelSale.objects.filter(company=company, branch=branch).select_related("dispense", "customer_party")
     if shift_id is not None:
         qs = qs.filter(shift_id=shift_id)
     if status:
@@ -321,7 +323,7 @@ def list_sales(
 
 def get_sale(*, company, branch, sale_id: int) -> FuelSale:
     branch = _require_branch(branch)
-    return FuelSale.objects.select_related("dispense").get(pk=sale_id, company=company, branch=branch)
+    return FuelSale.objects.select_related("dispense", "customer_party").get(pk=sale_id, company=company, branch=branch)
 
 
 def _gallons_from_liters(liters: Decimal) -> Decimal:
@@ -668,6 +670,22 @@ def _idempotent_sale_existing(*, company, idempotency_key: str) -> FuelSale | No
     )
 
 
+def _load_customer_party(*, customer_party_id: int | None, company) -> Party | None:
+    if customer_party_id is None:
+        return None
+    try:
+        customer_party_pk = int(customer_party_id)
+    except (TypeError, ValueError) as exc:
+        raise ValidationError({"customer_party_id": "customer_party_id inválido."}) from exc
+    if customer_party_pk <= 0:
+        raise ValidationError({"customer_party_id": "customer_party_id inválido."})
+
+    customer_party = Party.objects.filter(id=customer_party_pk, company=company).first()
+    if customer_party is None:
+        raise ValidationError({"customer_party_id": "customer_party no existe en esta company."})
+    return customer_party
+
+
 def _assert_sale_idempotency_payload_matches(
     *,
     sale: FuelSale,
@@ -678,6 +696,7 @@ def _assert_sale_idempotency_payload_matches(
     payment_method: str,
     customer_name: str,
     customer_ref: str,
+    customer_party_id: int | None,
     is_fiscal: bool,
 ) -> None:
     expected_customer_name = customer_name or ""
@@ -692,6 +711,7 @@ def _assert_sale_idempotency_payload_matches(
         "payment_method": (str(sale.payment_method), str(payment_method)),
         "customer_name": (sale.customer_name or "", expected_customer_name),
         "customer_ref": (sale.customer_ref or "", expected_customer_ref),
+        "customer_party_id": (sale.customer_party_id, customer_party_id),
         "is_fiscal": (bool(sale.is_fiscal), bool(is_fiscal)),
     }
     for field, (actual, expected) in comparisons.items():
@@ -715,11 +735,14 @@ def create_sale_with_status(
     payment_method: str,
     customer_name: str = "",
     customer_ref: str = "",
+    customer_party_id: int | None = None,
     is_fiscal: bool = False,
     idempotency_key: str = "",
 ) -> FuelSaleCreateResult:
     branch = _require_branch(branch)
     normalized_idempotency_key = _normalize_sale_idempotency_key(idempotency_key)
+    customer_party = _load_customer_party(customer_party_id=customer_party_id, company=company)
+    normalized_customer_party_id = int(customer_party.id) if customer_party is not None else None
 
     existing = _idempotent_sale_existing(company=company, idempotency_key=normalized_idempotency_key)
     if existing is not None:
@@ -732,6 +755,7 @@ def create_sale_with_status(
             payment_method=payment_method,
             customer_name=customer_name,
             customer_ref=customer_ref,
+            customer_party_id=normalized_customer_party_id,
             is_fiscal=is_fiscal,
         )
         return FuelSaleCreateResult(sale=existing, idempotent=True)
@@ -755,6 +779,7 @@ def create_sale_with_status(
         "idempotency_key": normalized_idempotency_key,
         "customer_name": customer_name or "",
         "customer_ref": customer_ref or "",
+        "customer_party": customer_party,
         "total_amount": dispense.amount,
         "created_by": actor_user,
         "is_fiscal": bool(is_fiscal),
@@ -777,6 +802,7 @@ def create_sale_with_status(
             payment_method=payment_method,
             customer_name=customer_name,
             customer_ref=customer_ref,
+            customer_party_id=normalized_customer_party_id,
             is_fiscal=is_fiscal,
         )
         return FuelSaleCreateResult(sale=existing, idempotent=True)
@@ -817,6 +843,7 @@ def create_sale_with_status(
         currency="NIO",
         customer_name=sale.customer_name,
         customer_ref=sale.customer_ref,
+        customer_party_id=sale.customer_party_id,
         is_fiscal=bool(sale.is_fiscal),
         lines=[
             {
@@ -862,6 +889,7 @@ def create_sale_with_status(
             "amount": str(sale.total_amount),
             "sale_type": sale_type,
             "payment_method": payment_method,
+            "customer_party_id": int(sale.customer_party_id) if sale.customer_party_id else None,
             "billing_doc_id": sale.billing_doc_id,
             "inventory_movement_id": sale.inventory_movement_id,
             "flow_correlation_id": sale.flow_correlation_id,
@@ -890,6 +918,7 @@ def create_sale(
     payment_method: str,
     customer_name: str = "",
     customer_ref: str = "",
+    customer_party_id: int | None = None,
     is_fiscal: bool = False,
     idempotency_key: str = "",
 ) -> FuelSale:
@@ -904,6 +933,7 @@ def create_sale(
         payment_method=payment_method,
         customer_name=customer_name,
         customer_ref=customer_ref,
+        customer_party_id=customer_party_id,
         is_fiscal=is_fiscal,
         idempotency_key=idempotency_key,
     ).sale

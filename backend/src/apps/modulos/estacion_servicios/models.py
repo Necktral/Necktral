@@ -3,6 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -149,9 +150,16 @@ class FuelSale(models.Model):
     payment_method = models.CharField(max_length=16, choices=FuelPaymentMethod.choices)
     idempotency_key = models.CharField(max_length=96, blank=True, default="")
 
-    # “party snapshot” mínimo (sin depender aún del módulo de clientes)
+    # Snapshots legacy; customer_party es la identidad fuerte opcional.
     customer_name = models.CharField(max_length=200, blank=True, default="")
     customer_ref = models.CharField(max_length=64, blank=True, default="")  # cédula, código cliente, interno, lo que uses
+    customer_party = models.ForeignKey(
+        "parties.Party",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="fuel_sales",
+    )
 
     total_amount = models.DecimalField(max_digits=14, decimal_places=2)
 
@@ -199,6 +207,7 @@ class FuelSale(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["company", "branch", "created_at"]),
+            models.Index(fields=["company", "customer_party"], name="ix_fuel_sale_co_cust_party"),
             models.Index(fields=["status", "created_at"]),
             models.Index(fields=["status", "compensation_next_retry_at", "created_at"]),
         ]
@@ -209,6 +218,11 @@ class FuelSale(models.Model):
                 name="uq_fuel_sale_company_idempotency",
             )
         ]
+
+    def clean(self):
+        super().clean()
+        if self.customer_party_id and self.company_id and self.customer_party.company_id != self.company_id:
+            raise ValidationError({"customer_party": "customer_party debe pertenecer a FuelSale.company."})
 
 
 class FuelUoMPreference(models.Model):

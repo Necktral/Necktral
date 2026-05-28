@@ -267,9 +267,16 @@ class SaleCreateIn(serializers.Serializer):
 
     customer_name = serializers.CharField(required=False, allow_blank=True, max_length=200)
     customer_ref = serializers.CharField(required=False, allow_blank=True, max_length=64)
+    customer_party_id = serializers.IntegerField(required=False, allow_null=True)
     idempotency_key = serializers.CharField(required=False, allow_blank=True, max_length=96)
 
     is_fiscal = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        customer_party_id = attrs.get("customer_party_id")
+        if customer_party_id is not None and int(customer_party_id) <= 0:
+            raise serializers.ValidationError("customer_party_id debe ser > 0")
+        return attrs
 
 
 class SaleCancelIn(serializers.Serializer):
@@ -287,9 +294,15 @@ class SaleOut(serializers.ModelSerializer):
     inventory_movement_id = serializers.IntegerField(read_only=True)
     inventory_reversal_movement_id = serializers.IntegerField(read_only=True)
     compensation_pending = serializers.SerializerMethodField()
+    customer_party_id = serializers.IntegerField(read_only=True)
+    customer_party_display_name = serializers.SerializerMethodField()
 
     def get_compensation_pending(self, obj: FuelSale) -> bool:
         return str(obj.status) == "COMPENSATING"
+
+    def get_customer_party_display_name(self, obj: FuelSale) -> str:
+        customer_party = obj.customer_party
+        return customer_party.display_name if customer_party is not None else ""
 
     class Meta:
         model = FuelSale
@@ -300,6 +313,8 @@ class SaleOut(serializers.ModelSerializer):
             "payment_method",
             "customer_name",
             "customer_ref",
+            "customer_party_id",
+            "customer_party_display_name",
             "total_amount",
             "is_fiscal",
             "created_at",
