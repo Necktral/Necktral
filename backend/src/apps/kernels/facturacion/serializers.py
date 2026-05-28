@@ -21,6 +21,7 @@ class DocCreateSerializer(serializers.Serializer):
     currency = serializers.CharField(max_length=8, required=False, allow_blank=True)
     customer_name = serializers.CharField(max_length=160, required=False, allow_blank=True)
     customer_ref = serializers.CharField(max_length=64, required=False, allow_blank=True)
+    customer_party_id = serializers.IntegerField(required=False, allow_null=True)
     is_fiscal = serializers.BooleanField(required=False, default=False)
     idempotency_key = serializers.CharField(max_length=96, required=False, allow_blank=True)
     payment_method = serializers.ChoiceField(
@@ -29,6 +30,12 @@ class DocCreateSerializer(serializers.Serializer):
         allow_blank=True,
     )
     lines = LineInSerializer(many=True)
+
+    def validate(self, attrs):
+        customer_party_id = attrs.get("customer_party_id")
+        if customer_party_id is not None and int(customer_party_id) <= 0:
+            raise serializers.ValidationError("customer_party_id debe ser > 0")
+        return attrs
 
 
 class DocListQuerySerializer(serializers.Serializer):

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -36,6 +38,14 @@ from .services import (
     resolve_doc_contingency,
     void_doc,
 )
+
+
+def _customer_party_payload(doc: BillingDocument) -> dict[str, Any]:
+    customer_party = doc.customer_party
+    return {
+        "customer_party_id": doc.customer_party_id,
+        "customer_party_display_name": customer_party.display_name if customer_party is not None else "",
+    }
 
 
 class HealthView(APIView):
@@ -89,7 +99,7 @@ class DocListCreateView(APIView):
 
         company: OrgUnit = request.company
         branch: OrgUnit = request.branch
-        qs = BillingDocument.objects.filter(company=company, branch=branch)
+        qs = BillingDocument.objects.select_related("customer_party").filter(company=company, branch=branch)
 
         if v.get("status"):
             qs = qs.filter(status=v["status"])
@@ -126,6 +136,7 @@ class DocListCreateView(APIView):
                 "currency": doc.currency,
                 "customer_name": doc.customer_name,
                 "customer_ref": doc.customer_ref,
+                **_customer_party_payload(doc),
                 "subtotal": str(doc.subtotal),
                 "tax_total": str(doc.tax_total),
                 "total": str(doc.total),
@@ -156,6 +167,7 @@ class DocListCreateView(APIView):
                 currency=v.get("currency") or "NIO",
                 customer_name=v.get("customer_name") or "",
                 customer_ref=v.get("customer_ref") or "",
+                customer_party_id=v.get("customer_party_id"),
                 is_fiscal=bool(v.get("is_fiscal", False)),
                 lines=v["lines"],
                 idempotency_key=v.get("idempotency_key") or "",
@@ -173,7 +185,12 @@ class DocDetailView(APIView):
         company: OrgUnit = request.company
         branch: OrgUnit = request.branch
 
-        doc = get_object_or_404(BillingDocument, id=doc_id, company=company, branch=branch)
+        doc = get_object_or_404(
+            BillingDocument.objects.select_related("customer_party"),
+            id=doc_id,
+            company=company,
+            branch=branch,
+        )
         lines = []
         for ln in doc.lines.all().order_by("id"):
             lines.append(
@@ -199,6 +216,7 @@ class DocDetailView(APIView):
                 "currency": doc.currency,
                 "customer_name": doc.customer_name,
                 "customer_ref": doc.customer_ref,
+                **_customer_party_payload(doc),
                 "subtotal": str(doc.subtotal),
                 "tax_total": str(doc.tax_total),
                 "total": str(doc.total),

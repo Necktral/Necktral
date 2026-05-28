@@ -18,6 +18,7 @@
     "kernels.facturacion->modulos.common",
     "kernels.facturacion->modulos.iam",
     "kernels.facturacion->modulos.integration",
+    "kernels.facturacion->modulos.parties",
     "kernels.facturacion->modulos.rbac",
     "kernels.inventarios->kernels.accounting",
     "kernels.inventarios->modulos.audit",

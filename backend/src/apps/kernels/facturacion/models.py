@@ -3,6 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -71,6 +72,13 @@ class BillingDocument(models.Model):
     currency = models.CharField(max_length=8, default="NIO")
     customer_name = models.CharField(max_length=160, blank=True, default="")
     customer_ref = models.CharField(max_length=64, blank=True, default="")
+    customer_party = models.ForeignKey(
+        "parties.Party",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="billing_documents",
+    )
 
     subtotal = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
     tax_total = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
@@ -135,6 +143,7 @@ class BillingDocument(models.Model):
             models.Index(fields=["company", "branch", "created_at"]),
             models.Index(fields=["company", "branch", "doc_type", "status", "created_at"]),
             models.Index(fields=["company", "idempotency_key"]),
+            models.Index(fields=["company", "customer_party"], name="ix_bill_doc_co_cust_party"),
             models.Index(fields=["company", "branch", "fiscal_mode_resolved", "fiscal_status"]),
             models.Index(fields=["company", "branch", "accounting_status", "created_at"]),
         ]
@@ -146,6 +155,11 @@ class BillingDocument(models.Model):
             ),
             models.UniqueConstraint(fields=["company", "branch", "doc_type", "series", "number"], name="uniq_bill_number"),
         ]
+
+    def clean(self):
+        super().clean()
+        if self.customer_party_id and self.company_id and self.customer_party.company_id != self.company_id:
+            raise ValidationError({"customer_party": "customer_party debe pertenecer a BillingDocument.company."})
 
 
 class BillingLine(models.Model):

@@ -16,6 +16,8 @@ from apps.modulos.common.domain_errors import IntegrationError
 from apps.modulos.common.tender import TENDER_PAYMENT_METHOD_VALUES
 from apps.modulos.iam.models import OrgUnit
 from apps.modulos.integration.services import publish_outbox_event
+from apps.modulos.parties.models import Party, PartyRole
+from apps.modulos.parties.services import assign_party_role
 
 from .fiscal_adapters import get_fiscal_adapter, resolve_fiscal_runtime_config
 from .models import (
@@ -158,6 +160,7 @@ def _source_payload(*, doc: BillingDocument) -> dict:
         "source_module": str(doc.source_module or ""),
         "source_type": str(doc.source_type or ""),
         "source_id": str(doc.source_id or ""),
+        "customer_party_id": int(doc.customer_party_id) if doc.customer_party_id else None,
     }
 
 
@@ -166,6 +169,33 @@ def _normalize_payment_method(payment_method: str) -> str:
     if normalized and normalized not in TENDER_PAYMENT_METHOD_VALUES:
         raise BillingError("invalid payment_method")
     return normalized
+
+
+def _load_customer_party(*, customer_party_id: int | None, company: OrgUnit) -> Party | None:
+    if customer_party_id is None:
+        return None
+    try:
+        customer_party_pk = int(customer_party_id)
+    except (TypeError, ValueError) as exc:
+        raise BillingError("customer_party_id inválido") from exc
+    if customer_party_pk <= 0:
+        raise BillingError("customer_party_id inválido")
+
+    customer_party = Party.objects.filter(id=customer_party_pk, company=company).first()
+    if customer_party is None:
+        raise BillingError("customer_party no existe en esta company")
+    return customer_party
+
+
+def _ensure_customer_party_role(*, party: Party, request, actor) -> None:
+    party = Party.objects.select_for_update().get(pk=party.pk)
+    active_exists = (
+        PartyRole.objects.select_for_update()
+        .filter(party=party, role=PartyRole.Role.CUSTOMER, is_active=True)
+        .exists()
+    )
+    if not active_exists:
+        assign_party_role(party=party, role=PartyRole.Role.CUSTOMER, request=request, actor=actor)
 
 
 def _assert_fiscal_transition(*, current: str, target: str) -> None:
@@ -228,6 +258,7 @@ def create_draft(
     customer_ref: str,
     is_fiscal: bool,
     lines: list[dict],
+    customer_party_id: int | None = None,
     idempotency_key: str = "",
     source_module: str = "",
     source_type: str = "",
@@ -247,6 +278,7 @@ def create_draft(
 
     computed, subtotal, tax_total, total = _compute_lines_and_totals(lines_in=lines)
     normalized_payment_method = _normalize_payment_method(payment_method)
+    customer_party = _load_customer_party(customer_party_id=customer_party_id, company=company)
 
     with transaction.atomic():
         if idempotency_key:
@@ -264,6 +296,7 @@ def create_draft(
             currency=currency or "NIO",
             customer_name=customer_name or "",
             customer_ref=customer_ref or "",
+            customer_party=customer_party,
             subtotal=subtotal,
             tax_total=tax_total,
             total=total,
@@ -276,6 +309,8 @@ def create_draft(
             created_by=actor,
             fiscal_mode_resolved=FiscalMode.NOOP,
         )
+        if customer_party is not None:
+            _ensure_customer_party_role(party=customer_party, request=request, actor=actor)
 
         for c in computed:
             BillingLine.objects.create(
@@ -303,6 +338,7 @@ def create_draft(
                 "status": doc.status,
                 "series": doc.series,
                 "currency": doc.currency,
+                "customer_party_id": int(doc.customer_party_id) if doc.customer_party_id else None,
                 "subtotal": str(doc.subtotal),
                 "tax_total": str(doc.tax_total),
                 "total": str(doc.total),
