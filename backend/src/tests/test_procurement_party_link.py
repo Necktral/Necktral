@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -91,7 +92,7 @@ def _procurement_perms() -> list[str]:
     return ["procurement.doc.create", "procurement.doc.read", "procurement.doc.post", "procurement.doc.void"]
 
 
-def _client(*, company: OrgUnit, branch: OrgUnit, perm_codes: list[str] | None = None) -> tuple[APIClient, User]:
+def _client(*, company: OrgUnit, branch: OrgUnit, perm_codes: list[str] | None = None) -> tuple[APIClient, Any]:
     username = f"proc_party_{uuid.uuid4().hex[:8]}"
     user = User.objects.create_user(username=username, email=f"{username}@test.local", password="pass12345")
     UserMembership.objects.create(user=user, org_unit=company, is_active=True)

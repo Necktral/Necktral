@@ -68,6 +68,7 @@ class PurchaseDocDetailView(APIView):
         company: OrgUnit = request.company
         branch: OrgUnit = request.branch
         doc = get_object_or_404(PurchaseDocument, id=doc_id, company=company, branch=branch)
+        supplier_party = doc.supplier_party
         return Response(
             {
                 "id": int(doc.id),
@@ -79,7 +80,7 @@ class PurchaseDocDetailView(APIView):
                 "supplier_name": doc.supplier_name,
                 "supplier_ref": doc.supplier_ref,
                 "supplier_party_id": doc.supplier_party_id,
-                "supplier_party_display_name": doc.supplier_party.display_name if doc.supplier_party_id else "",
+                "supplier_party_display_name": supplier_party.display_name if supplier_party is not None else "",
                 "external_ref": doc.external_ref,
                 "subtotal": str(doc.subtotal),
                 "tax_total": str(doc.tax_total),
