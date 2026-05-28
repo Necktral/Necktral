@@ -14,6 +14,7 @@ class PurchaseDocCreateSerializer(serializers.Serializer):
     supplier_name = serializers.CharField(max_length=160, required=False, allow_blank=True, default="")
     supplier_ref = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
     external_ref = serializers.CharField(max_length=96, required=False, allow_blank=True, default="")
+    supplier_party_id = serializers.IntegerField(required=False, allow_null=True)
     subtotal = serializers.DecimalField(max_digits=18, decimal_places=2)
     tax_total = serializers.DecimalField(max_digits=18, decimal_places=2, required=False, default=Decimal("0.00"))
     total = serializers.DecimalField(max_digits=18, decimal_places=2)
@@ -28,6 +29,9 @@ class PurchaseDocCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError("total debe ser >= 0")
         if (attrs["subtotal"] + attrs["tax_total"]) != attrs["total"]:
             raise serializers.ValidationError("total debe ser subtotal + tax_total")
+        supplier_party_id = attrs.get("supplier_party_id")
+        if supplier_party_id is not None and int(supplier_party_id) <= 0:
+            raise serializers.ValidationError("supplier_party_id debe ser > 0")
         return attrs
 
 

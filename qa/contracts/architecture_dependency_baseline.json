@@ -61,6 +61,7 @@
     "modulos.compras->modulos.common",
     "modulos.compras->modulos.iam",
     "modulos.compras->modulos.integration",
+    "modulos.compras->modulos.parties",
     "modulos.compras->modulos.rbac",
     "modulos.dashboard->kernels.reporting",
     "modulos.dashboard->modulos.common",

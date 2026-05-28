@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -49,6 +50,13 @@ class PurchaseDocument(models.Model):
     supplier_name = models.CharField(max_length=160, blank=True, default="")
     supplier_ref = models.CharField(max_length=64, blank=True, default="")
     external_ref = models.CharField(max_length=96, blank=True, default="")
+    supplier_party = models.ForeignKey(
+        "parties.Party",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="purchase_documents",
+    )
 
     subtotal = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
     tax_total = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0.00"))
@@ -70,6 +78,7 @@ class PurchaseDocument(models.Model):
             models.Index(fields=["company", "branch", "created_at"], name="ix_proc_doc_c_b_ca"),
             models.Index(fields=["company", "branch", "doc_type", "status", "created_at"], name="ix_proc_doc_scope"),
             models.Index(fields=["company", "idempotency_key"], name="ix_proc_doc_idem"),
+            models.Index(fields=["company", "supplier_party"], name="ix_proc_doc_co_supp_party"),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -82,3 +91,8 @@ class PurchaseDocument(models.Model):
                 name="uniq_proc_number",
             ),
         ]
+
+    def clean(self):
+        super().clean()
+        if self.supplier_party_id and self.company_id and self.supplier_party.company_id != self.company_id:
+            raise ValidationError({"supplier_party": "supplier_party debe pertenecer a PurchaseDocument.company."})
