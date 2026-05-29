@@ -60,11 +60,12 @@ def _scope_not_found_payload(*, entity: str) -> dict:
 
 def _ticket_to_dict(ticket: PosTicket) -> dict:
     ticket = (
-        PosTicket.objects.select_related("session", "shift", "sale", "payment_intent", "cash_movement")
+        PosTicket.objects.select_related("session", "shift", "customer_party", "sale", "payment_intent", "cash_movement")
         .prefetch_related("lines")
         .get(id=ticket.id)
     )
     payment_intent = ticket.payment_intent
+    customer_party = ticket.customer_party
     return {
         "id": int(ticket.id),
         "status": str(ticket.status),
@@ -77,6 +78,8 @@ def _ticket_to_dict(ticket: PosTicket) -> dict:
         "total_amount": str(ticket.total_amount),
         "customer_name": str(ticket.customer_name or ""),
         "customer_ref": str(ticket.customer_ref or ""),
+        "customer_party_id": int(ticket.customer_party_id) if ticket.customer_party_id else None,
+        "customer_party_display_name": str(customer_party.display_name) if customer_party else "",
         "sale_id": int(ticket.sale_id) if ticket.sale_id else None,
         "payment_intent_id": str(payment_intent.payment_id) if payment_intent else "",
         "cash_movement_id": int(ticket.cash_movement_id) if ticket.cash_movement_id else None,
@@ -243,6 +246,7 @@ class PosTicketListCreateView(APIView):
                 external_ref=str(ser.validated_data.get("external_ref") or ""),
                 customer_name=str(ser.validated_data.get("customer_name") or ""),
                 customer_ref=str(ser.validated_data.get("customer_ref") or ""),
+                customer_party_id=ser.validated_data.get("customer_party_id"),
                 sale_type=str(ser.validated_data.get("sale_type")),
                 payment_method=str(ser.validated_data.get("payment_method")),
             )

@@ -4,6 +4,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -136,6 +137,13 @@ class PosTicket(models.Model):
 
     customer_name = models.CharField(max_length=200, blank=True, default="")
     customer_ref = models.CharField(max_length=96, blank=True, default="")
+    customer_party = models.ForeignKey(
+        "parties.Party",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="pos_tickets",
+    )
 
     sale_type = models.CharField(max_length=16, choices=FuelSaleType.choices, default=FuelSaleType.PUBLIC)
     payment_method = models.CharField(max_length=16, choices=FuelPaymentMethod.choices, default=FuelPaymentMethod.CASH)
@@ -192,6 +200,7 @@ class PosTicket(models.Model):
             models.Index(fields=["company", "branch", "status", "created_at"]),
             models.Index(fields=["status", "updated_at"]),
             models.Index(fields=["status", "compensation_pending", "compensation_next_retry_at", "updated_at"]),
+            models.Index(fields=["company", "customer_party"], name="ix_pos_ticket_co_cust_party"),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -219,6 +228,11 @@ class PosTicket(models.Model):
                 name="ck_pos_ticket_closed_no_next_retry",
             ),
         ]
+
+    def clean(self):
+        super().clean()
+        if self.customer_party_id and self.company_id and self.customer_party.company_id != self.company_id:
+            raise ValidationError({"customer_party": "customer_party debe pertenecer a PosTicket.company."})
 
 
 class PosTicketLine(models.Model):

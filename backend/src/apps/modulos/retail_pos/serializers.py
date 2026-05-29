@@ -26,6 +26,7 @@ class PosTicketOpenIn(serializers.Serializer):
     external_ref = serializers.CharField(required=False, allow_blank=True, default="")
     customer_name = serializers.CharField(required=False, allow_blank=True, default="")
     customer_ref = serializers.CharField(required=False, allow_blank=True, default="")
+    customer_party_id = serializers.IntegerField(required=False, allow_null=True, min_value=1)
     sale_type = serializers.ChoiceField(choices=FuelSaleType.choices, required=False, default=FuelSaleType.PUBLIC)
     payment_method = serializers.ChoiceField(choices=FuelPaymentMethod.choices, required=False, default=FuelPaymentMethod.CASH)
 
@@ -134,6 +135,8 @@ class PosTicketOut(serializers.Serializer):
     total_amount = serializers.CharField()
     customer_name = serializers.CharField(allow_blank=True)
     customer_ref = serializers.CharField(allow_blank=True)
+    customer_party_id = serializers.IntegerField(allow_null=True)
+    customer_party_display_name = serializers.CharField(allow_blank=True)
     sale_id = serializers.IntegerField(allow_null=True)
     payment_intent_id = serializers.CharField(allow_blank=True)
     cash_movement_id = serializers.IntegerField(allow_null=True)

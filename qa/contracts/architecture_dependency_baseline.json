@@ -101,6 +101,7 @@
     "modulos.retail_pos->modulos.estacion_servicios",
     "modulos.retail_pos->modulos.iam",
     "modulos.retail_pos->modulos.integration",
+    "modulos.retail_pos->modulos.parties",
     "modulos.sync->modulos.sync_engine",
     "modulos.sync_engine->kernels.inventarios",
     "modulos.sync_engine->kernels.payments",

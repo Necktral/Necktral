@@ -20,6 +20,7 @@ from apps.modulos.integration.models import OutboxEvent
 from apps.modulos.integration.services import publish_outbox_event
 from apps.modulos.estacion_servicios.models import FuelPaymentMethod, FuelSale, FuelSaleStatus, FuelShift
 from apps.modulos.estacion_servicios.services import cancel_sale, create_sale, record_dispense
+from apps.modulos.parties.models import Party
 from apps.kernels.payments.models import CashMovement
 from apps.kernels.payments.services import (
     capture_payment_intent,
@@ -118,6 +119,21 @@ def _ttl_seconds(name: str, default: int) -> int:
         return raw
     except Exception:  # noqa: BLE001
         return default
+
+
+def _load_pos_customer_party(*, company, customer_party_id: int | None) -> Party | None:
+    if customer_party_id is None:
+        return None
+    try:
+        party_id = int(customer_party_id)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("customer_party_id inválido") from exc
+    if party_id <= 0:
+        raise ValueError("customer_party_id inválido")
+    party = Party.objects.filter(id=party_id, company=company).first()
+    if party is None:
+        raise ValueError("customer_party_id inválido para esta company")
+    return party
 
 
 def _int_setting(name: str, default: int, minimum: int = 1, maximum: int | None = None) -> int:
@@ -466,6 +482,7 @@ def open_ticket(
     external_ref: str = "",
     customer_name: str = "",
     customer_ref: str = "",
+    customer_party_id: int | None = None,
     sale_type: str,
     payment_method: str,
 ) -> OpenPosTicketResult:
@@ -489,6 +506,8 @@ def open_ticket(
     if shift is None:
         raise ValueError("Shift inválido para POS")
 
+    customer_party = _load_pos_customer_party(company=company, customer_party_id=customer_party_id)
+
     ticket = PosTicket.objects.create(
         company=company,
         branch=branch,
@@ -501,6 +520,7 @@ def open_ticket(
         external_ref=external_ref or "",
         customer_name=customer_name or "",
         customer_ref=customer_ref or "",
+        customer_party=customer_party,
         sale_type=sale_type,
         payment_method=payment_method,
         created_by=actor,
@@ -521,6 +541,7 @@ def open_ticket(
             "status": ticket.status,
             "payment_method": ticket.payment_method,
             "sale_type": ticket.sale_type,
+            "customer_party_id": int(ticket.customer_party_id) if ticket.customer_party_id else None,
         },
         actor_user=actor,
         company=company,
@@ -734,6 +755,7 @@ def checkout_ticket(*, request, actor_user, ticket: PosTicket, line_payload: dic
                 payment_method=ticket.payment_method,
                 customer_name=ticket.customer_name,
                 customer_ref=ticket.customer_ref,
+                customer_party_id=ticket.customer_party_id,
                 is_fiscal=False,
                 idempotency_key=sale_idempotency_key,
             )
@@ -812,6 +834,7 @@ def checkout_ticket(*, request, actor_user, ticket: PosTicket, line_payload: dic
                 "payment_id": str(intent.payment_id),
                 "amount": str(ticket.total_amount),
                 "cash_movement_id": int(cash_movement.id) if cash_movement else None,
+                "customer_party_id": int(ticket.customer_party_id) if ticket.customer_party_id else None,
             },
             actor_user=actor,
             ticket=ticket,
@@ -827,6 +850,7 @@ def checkout_ticket(*, request, actor_user, ticket: PosTicket, line_payload: dic
                 "sale_id": int(sale.id),
                 "payment_id": str(intent.payment_id),
                 "total_amount": str(ticket.total_amount),
+                "customer_party_id": int(ticket.customer_party_id) if ticket.customer_party_id else None,
             },
             actor_user=actor,
             ticket=ticket,
@@ -890,6 +914,7 @@ def checkout_ticket(*, request, actor_user, ticket: PosTicket, line_payload: dic
                 "error": ticket.last_error,
                 "attempt": int(ticket.compensation_attempts),
                 "retryable": bool(ticket.compensation_pending),
+                "customer_party_id": int(ticket.customer_party_id) if ticket.customer_party_id else None,
                 "next_retry_at": (
                     ticket.compensation_next_retry_at.isoformat() if ticket.compensation_next_retry_at else None
                 ),
@@ -927,6 +952,7 @@ def void_ticket(*, request, actor_user, ticket: PosTicket, reason: str = "VOID")
             "ticket_id": int(ticket.id),
             "reason": reason,
             "status": ticket.status,
+            "customer_party_id": int(ticket.customer_party_id) if ticket.customer_party_id else None,
         },
         actor_user=actor,
         ticket=ticket,
@@ -996,6 +1022,7 @@ def retry_ticket_compensation(*, request, actor_user, ticket: PosTicket, reason:
             "ticket_id": int(ticket.id),
             "reason": reason or "",
             "attempt": int(ticket.compensation_attempts) + 1,
+            "customer_party_id": int(ticket.customer_party_id) if ticket.customer_party_id else None,
         },
         actor_user=actor,
         company=ticket.company,
