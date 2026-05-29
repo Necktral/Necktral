@@ -93,15 +93,29 @@ docker compose exec -T backend python manage.py seed_auth_users
 
 ## Ejecucion local
 
+### Configuración previa
+
+Genera tus propios valores seguros:
+
+```bash
+# Generar TOTP secret único
+python3 -c "import base64, os; print('ADMIN_TOTP_SECRET=' + base64.b32encode(os.urandom(20)).decode())"
+
+# Configurar en .env.local o exportar en tu shell
+export K6_ADMIN_PASSWORD="tu_password_fuerte"
+export K6_ADMIN_TOTP_SECRET="tu_secret_generado"
+export K6_USER_PASSWORD="tu_password_fuerte"
+```
+
 ### Script base (rapido)
 
 ```bash
 BASE_URL=http://localhost:8000/api \
 ADMIN_USERNAME=k6_admin \
-ADMIN_PASSWORD=<SET_STRONG_PASSWORD> \
-ADMIN_TOTP_SECRET=JBSWY3DPEHPK3PXP \
+ADMIN_PASSWORD=${K6_ADMIN_PASSWORD} \
+ADMIN_TOTP_SECRET=${K6_ADMIN_TOTP_SECRET} \
 USER_USERNAME=k6_user \
-USER_PASSWORD=<SET_STRONG_PASSWORD> \
+USER_PASSWORD=${K6_USER_PASSWORD} \
 CSRF_COOKIE_NAME=nt_csrf \
 k6 run simulacion/auth_load_simulation.js
 ```
@@ -111,10 +125,10 @@ k6 run simulacion/auth_load_simulation.js
 ```bash
 BASE_URL=http://localhost:8000/api \
 ADMIN_USERNAME=k6_admin \
-ADMIN_PASSWORD=<SET_STRONG_PASSWORD> \
-ADMIN_TOTP_SECRET=JBSWY3DPEHPK3PXP \
+ADMIN_PASSWORD=${K6_ADMIN_PASSWORD} \
+ADMIN_TOTP_SECRET=${K6_ADMIN_TOTP_SECRET} \
 USER_USERNAME=k6_user \
-USER_PASSWORD=<SET_STRONG_PASSWORD> \
+USER_PASSWORD=${K6_USER_PASSWORD} \
 CSRF_COOKIE_NAME=nt_csrf \
 VUS=12 \
 DURATION=60s \
@@ -122,6 +136,8 @@ ADMIN_2FA_VUS=1 \
 ADMIN_2FA_SLEEP=15 \
 k6 run simulacion/auth_load_simulation_extended.js
 ```
+
+> **Nota**: Para CI/CD, los valores están configurados en `.env.loadtest` y GitHub Secrets.
 
 ## Variables de entorno
 

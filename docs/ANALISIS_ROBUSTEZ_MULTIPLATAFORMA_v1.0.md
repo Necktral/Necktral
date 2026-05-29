@@ -191,10 +191,13 @@ class Command(BaseCommand):
 #### S04: Agregar throttle a sync batch
 ```python
 # settings/base.py
-"DEFAULT_THROTTLE_RATES": {
-    ...
-    "sync_batch": "30/min",  # por device
-    "accounting_report": "20/min",
+# Fragmento a agregar en REST_FRAMEWORK settings:
+REST_FRAMEWORK = {
+    # ... otras configuraciones existentes ...
+    "DEFAULT_THROTTLE_RATES": {
+        "sync_batch": "30/min",  # por device
+        "accounting_report": "20/min",
+    }
 }
 ```
 
@@ -234,7 +237,7 @@ def transition(document, target_state):
 ```
 
 #### S07: Generar tipos TypeScript desde OpenAPI
-```json
+```javascript
 // package.json scripts
 {
   "generate:api": "openapi-typescript http://localhost:8000/api/schema/ -o src/api/types.ts"
