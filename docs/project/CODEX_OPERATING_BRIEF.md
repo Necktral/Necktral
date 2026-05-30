@@ -31,11 +31,14 @@ Antes de cualquier tarea Necktral, Codex debe leer o verificar:
 1. `docs/project/NECKTRAL_CONTEXT_CARD.md`.
 2. `docs/project/NECKTRAL_MASTER_ROADMAP.md`, si existe.
 3. `docs/project/NECKTRAL_DECISION_LOG.md`, si existe.
-4. El brief actual: `docs/project/CODEX_OPERATING_BRIEF.md`.
-5. Archivos reales del repo relacionados con la tarea.
-6. Tests existentes cercanos al dominio.
-7. Migraciones existentes si el cambio toca modelos o persistencia.
-8. Contratos de auditoria, outbox, eventos, API o reporting si aplica.
+4. `docs/project/EXECUTION_FRONTS_STRATEGY.md`.
+5. El brief actual: `docs/project/CODEX_OPERATING_BRIEF.md`.
+6. Archivos reales del repo relacionados con la tarea.
+7. Tests existentes cercanos al dominio.
+8. Migraciones existentes si el cambio toca modelos o persistencia.
+9. Contratos de auditoria, outbox, eventos, API o reporting si aplica.
+
+Codex opera como **Frente 2 (Local)**: su responsabilidad principal es ejecutar tests, validar con PostgreSQL real y aprobar/rechazar cortes. No implementa logica nueva desde cero (eso es Frente 1 / Cloud Agent).
 
 Si el documento rector y el codigo real no coinciden, el codigo real manda para diagnostico y el documento debe actualizarse o la discrepancia debe reportarse.
 

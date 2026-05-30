@@ -344,3 +344,40 @@ Siguiente mantenimiento esperado:
 - registrar decision sobre Corte 1 Party/Counterparty cuando entre formalmente a `master`;
 - registrar decision sobre Corte 2 HR -> Party cuando su PR sea aprobado/mergeado;
 - registrar decisiones de Tax/RUC, Financial Portfolio y Cost Backbone antes de implementarlos.
+
+## DL-20260530-005 - Estrategia de 3 frentes de ejecucion
+
+Estado: Aprobada
+
+Fecha: 2026-05-30
+
+Decision: La ejecucion de Necktral se divide en 3 frentes con responsabilidades no solapadas: Frente 1 (Cloud/Copilot Coding Agent) implementa logica y bloques de codigo; Frente 2 (Local/Codex) ejecuta tests y validacion con PostgreSQL real; Frente 3 (Frontend) solo conecta APIs ya certificadas y es fase posterior.
+
+Contexto: Se requiere paralelizar el avance sin conflictos entre plataformas. El frontend no avanza hasta que los endpoints esten validados por los frentes 1 y 2.
+
+Razon: Maximiza throughput evitando bloqueos entre implementacion, testing y consumo. Cada frente tiene scope cerrado y entregables claros.
+
+Impacto:
+
+- Datos: ninguno runtime directo.
+- Auditoria: no aplica.
+- Shadow Ledger: no aplica.
+- CEC: no aplica.
+- Contador: no aplica.
+- Codex: Codex queda asignado formalmente como Frente 2 (testing y validacion local).
+
+Permite:
+
+- Cloud Agent implementa logica sin esperar DB real.
+- Codex valida con PostgreSQL real sin implementar logica nueva.
+- Frontend solo consume APIs estables.
+
+Bloquea:
+
+- Frontend no avanza hasta que Frentes 1 y 2 certifiquen endpoints.
+- Codex no implementa logica de negocio nueva (eso es Frente 1).
+- Cloud Agent no aprueba persistencia critica sin evidencia de Frente 2.
+
+Evidencia: `docs/project/EXECUTION_FRONTS_STRATEGY.md`, actualizaciones en `CODEX_OPERATING_BRIEF.md` y `COPILOT_CODING_AGENT.md`.
+
+Revisar si: se agrega un cuarto frente (mobile, analytics) o cambian las condiciones de entrada del Frente 3.

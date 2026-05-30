@@ -84,6 +84,12 @@ steps:
 
 ## Relación con el flujo de desarrollo Necktral
 
+El agente cloud opera como **Frente 1** de la estrategia de ejecución de 3 frentes (ver `docs/project/EXECUTION_FRONTS_STRATEGY.md`):
+
+- **Frente 1 (Cloud Agent)**: Implementa lógica, bloques de código, contratos API y documentación.
+- **Frente 2 (Codex Local)**: Ejecuta tests con PostgreSQL real y valida persistencia.
+- **Frente 3 (Frontend)**: Conecta APIs certificadas — fase posterior.
+
 El agente respeta las convenciones del repositorio:
 
 - **Idioma**: Documentación y commits en español.

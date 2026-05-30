@@ -45,7 +45,13 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 
 ## Agente de codificación
 
-- [COPILOT_CODING_AGENT.md](COPILOT_CODING_AGENT.md) — Funcionalidad, flujo y configuración del Copilot Coding Agent.
+- [COPILOT_CODING_AGENT.md](COPILOT_CODING_AGENT.md) — Funcionalidad, flujo y configuración del Copilot Coding Agent (Frente 1).
+
+## Estrategia de ejecución
+
+- [project/EXECUTION_FRONTS_STRATEGY.md](project/EXECUTION_FRONTS_STRATEGY.md) — División de trabajo en 3 frentes: Cloud (lógica), Local/Codex (tests), Frontend (APIs, fase posterior).
+- [project/CODEX_OPERATING_BRIEF.md](project/CODEX_OPERATING_BRIEF.md) — Protocolo operacional para Codex (Frente 2).
+- [project/NECKTRAL_MASTER_ROADMAP.md](project/NECKTRAL_MASTER_ROADMAP.md) — Secuencia priorizada de objetivos.
 
 ## Análisis y diagnóstico
 
