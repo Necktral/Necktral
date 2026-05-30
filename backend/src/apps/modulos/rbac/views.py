@@ -9,6 +9,15 @@ from apps.modulos.iam.models import OrgUnit
 from .models import Role, Permission, RoleAssignment, RolePermission
 from .selectors import get_effective_permissions, get_effective_permissions_for_scope
 
+
+def _validation_error_detail(exc: DjangoValidationError):
+    """Extract safe error messages from DjangoValidationError without exposing stack traces."""
+    if hasattr(exc, "message_dict"):
+        return exc.message_dict
+    if hasattr(exc, "messages"):
+        return {"non_field_errors": exc.messages}
+    return {"non_field_errors": [str(exc.message)]}
+
 # --- Listado de roles y permisos (read-only, protegidos) ---
 
 
@@ -240,7 +249,7 @@ class RoleAssignmentListView(APIView):
             ra.save()
         except DjangoValidationError as exc:
             return Response(
-                {"detail": exc.message_dict if hasattr(exc, "message_dict") else str(exc)},
+                {"detail": _validation_error_detail(exc)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

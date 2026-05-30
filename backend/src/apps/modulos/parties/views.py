@@ -14,9 +14,19 @@ from .serializers import (
     PartyListSerializer,
     PartyRoleAssignSerializer,
     PartyRoleRevokeSerializer,
+    PartyRoleSerializer,
     PartyUpdateSerializer,
 )
 from .services import assign_party_role, create_party, revoke_party_role, update_party
+
+
+def _validation_error_detail(exc: DjangoValidationError) -> dict | str:
+    """Extract safe error messages from DjangoValidationError without exposing stack traces."""
+    if hasattr(exc, "message_dict"):
+        return exc.message_dict
+    if hasattr(exc, "messages"):
+        return {"non_field_errors": exc.messages}
+    return {"non_field_errors": [str(exc.message)]}
 
 
 class PartyListCreateView(APIView):
@@ -82,7 +92,7 @@ class PartyListCreateView(APIView):
                 **serializer.validated_data,
             )
         except DjangoValidationError as exc:
-            return Response({"detail": exc.message_dict if hasattr(exc, "message_dict") else str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _validation_error_detail(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         out = PartyListSerializer(party).data
         return Response(out, status=status.HTTP_201_CREATED)
@@ -133,7 +143,7 @@ class PartyDetailView(APIView):
         try:
             party = update_party(party=party, request=request, actor=request.user, **updates)
         except DjangoValidationError as exc:
-            return Response({"detail": exc.message_dict if hasattr(exc, "message_dict") else str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _validation_error_detail(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(PartyListSerializer(party).data)
 
@@ -168,7 +178,6 @@ class PartyRoleView(APIView):
         if err:
             return err
         roles = PartyRole.objects.filter(party=party).order_by("-created_at")
-        from .serializers import PartyRoleSerializer
 
         return Response(PartyRoleSerializer(roles, many=True).data)
 
@@ -198,9 +207,8 @@ class PartyRoleAssignView(APIView):
                 actor=request.user,
             )
         except DjangoValidationError as exc:
-            return Response({"detail": exc.message_dict if hasattr(exc, "message_dict") else str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _validation_error_detail(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        from .serializers import PartyRoleSerializer
 
         return Response(PartyRoleSerializer(role_obj).data, status=status.HTTP_201_CREATED)
 
@@ -230,8 +238,7 @@ class PartyRoleRevokeView(APIView):
                 actor=request.user,
             )
         except DjangoValidationError as exc:
-            return Response({"detail": exc.message_dict if hasattr(exc, "message_dict") else str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": _validation_error_detail(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        from .serializers import PartyRoleSerializer
 
         return Response(PartyRoleSerializer(role_obj).data)
