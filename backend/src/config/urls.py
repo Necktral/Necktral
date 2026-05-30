@@ -49,6 +49,8 @@ urlpatterns = [
     path("api/accounting/", include("apps.kernels.accounting.urls")),
     # Payments/Cash
     path("api/payments/", include("apps.kernels.payments.urls")),
+    # Portfolio (CxC, CxP, Credits)
+    path("api/portfolio/", include("apps.kernels.portfolio.urls")),
     # Reporting kernel
     path("api/reporting/", include("apps.kernels.reporting.urls")),
     # Dashboard gateway (embed + workspaces)

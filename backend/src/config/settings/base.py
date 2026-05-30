@@ -252,6 +252,7 @@ INSTALLED_APPS = [
     "apps.modulos.hr.apps.HrConfig",  # <-- NUEVO
     "apps.kernels.accounting.apps.AccountingConfig",
     "apps.kernels.payments.apps.PaymentsConfig",
+    "apps.kernels.portfolio.apps.PortfolioConfig",  # Financial Portfolio Kernel
     "apps.kernels.reporting.apps.ReportingConfig",
     "apps.modulos.cec.apps.CecConfig",
     "apps.modulos.integration.apps.IntegrationConfig",
