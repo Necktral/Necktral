@@ -35,6 +35,8 @@ urlpatterns = [
     path("api/iam/", include("apps.modulos.iam.urls")),
     # RBAC
     path("api/rbac/", include("apps.modulos.rbac.urls")),
+    # Parties (Identity Backbone)
+    path("api/parties/", include("apps.modulos.parties.urls")),
     path("api/sync/", include("apps.modulos.sync_engine.urls")),
     path("api/sync-hmac/", include("apps.modulos.sync.urls")),
     # Auditoría
