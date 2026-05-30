@@ -191,7 +191,7 @@ class Obligation(models.Model):
 
     # Accounting projection
     accounting_status = models.CharField(
-        max_length=24,theory
+        max_length=24,
         choices=AccountingStatus.choices,
         default=AccountingStatus.PENDING_RULESET,
         db_index=True,

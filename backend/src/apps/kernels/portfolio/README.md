@@ -242,54 +242,38 @@ python manage.py update_portfolio_aging --company-id=1 --as-of-date=2026-05-30
 
 ## Integración con Otros Kernels
 
-### Billing → Receivables (Automática)
-Cuando se emite una factura a crédito, automáticamente se crea una CxC:
+### Billing → Receivables (Event-Driven)
+Cuando se emite una factura a crédito, el evento `BILLING.DocumentIssued` es consumido
+por `portfolio.handlers` para crear automáticamente una CxC:
 
 ```python
-# En apps/kernels/facturacion/services.py
-from apps.kernels.portfolio import services as portfolio_services
-
-def post_billing_document(doc, user):
-    # ... código actual ...
-
-    if doc.payment_method == "CREDIT" and settings.sync_with_billing:
-        receivable = portfolio_services.create_receivable(
-            company=doc.company,
-            party=doc.customer_party,
-            reference_type="BILLING_DOCUMENT",
-            reference_id=doc.id,
-            principal_amount=doc.total,
-            currency=doc.currency,
-            issue_date=doc.issued_at.date(),
-            due_date=doc.issued_at.date() + timedelta(days=30),
-            invoice_number=f"{doc.series}-{doc.number}",
-            created_by=user,
-        )
+# Consumo automático vía event handler:
+# apps/kernels/portfolio/handlers.py → handle_billing_document_issued()
+#
+# Condiciones para crear Receivable:
+# 1. PortfolioSettings.sync_with_billing = True
+# 2. customer_party_id presente en el payload
+# 3. payment_method NO es CASH ni CARD (venta a crédito)
+#
+# Ejecutar consumer:
+# python manage.py process_portfolio_events
 ```
 
-### Procurement → Payables (Automática)
-Cuando se recibe factura de proveedor, automáticamente se crea una CxP:
+### Procurement → Payables (Event-Driven)
+Cuando se postea un documento de compra, el evento `PROCUREMENT.ProcurementDocumentPosted`
+es consumido por `portfolio.handlers` para crear automáticamente una CxP:
 
 ```python
-# En apps/modulos/compras/services.py
-from apps.kernels.portfolio import services as portfolio_services
-
-def post_purchase_document(doc, user):
-    # ... código actual ...
-
-    if doc.doc_type == "SUPPLIER_INVOICE" and settings.sync_with_procurement:
-        payable = portfolio_services.create_payable(
-            company=doc.company,
-            party=doc.supplier_party,
-            reference_type="PURCHASE_DOCUMENT",
-            reference_id=doc.id,
-            principal_amount=doc.total,
-            currency=doc.currency,
-            issue_date=doc.posted_at.date(),
-            due_date=doc.posted_at.date() + timedelta(days=45),
-            supplier_invoice_number=doc.external_ref,
-            created_by=user,
-        )
+# Consumo automático vía event handler:
+# apps/kernels/portfolio/handlers.py → handle_procurement_document_posted()
+#
+# Condiciones para crear Payable:
+# 1. PortfolioSettings.sync_with_procurement = True
+# 2. supplier_party_id presente en el payload
+# 3. total > 0
+#
+# Ejecutar consumer:
+# python manage.py process_portfolio_events
 ```
 
 ### Payments → Allocation (Manual o Auto)
@@ -378,9 +362,9 @@ El kernel incluye una interfaz de administración completa:
 1. **Crear migración**: `python manage.py makemigrations portfolio`
 2. **Aplicar migración**: `python manage.py migrate portfolio`
 3. **Configurar company**: Crear PortfolioSettings para cada company
-4. **Integrar con Billing**: Modificar `post_billing_document()` para crear CxC
-5. **Integrar con Procurement**: Modificar `post_purchase_document()` para crear CxP
-6. **Configurar cron jobs**: Para `accrue_credit_interest` y `update_portfolio_aging`
+4. ~~**Integrar con Billing**: Modificar `post_billing_document()` para crear CxC~~ ✅ Implementado via event handler
+5. ~~**Integrar con Procurement**: Modificar `post_purchase_document()` para crear CxP~~ ✅ Implementado via event handler
+6. **Configurar cron jobs**: Para `accrue_credit_interest`, `update_portfolio_aging` y `process_portfolio_events`
 7. **Definir PostingRuleSets**: Para eventos Portfolio en Shadow Ledger
 
 ## Notas Importantes
