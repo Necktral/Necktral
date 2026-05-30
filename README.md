@@ -198,6 +198,14 @@ Logs útiles:
 
 ## ✅ Tests y análisis
 
+### Política de cobertura
+
+- **Umbral mínimo global:** 95% (`fail_under = 95` en `.coveragerc`)
+- **Objetivo:** 95%–100% en todos los dominios críticos
+- **Dominios enforced:** `sync_engine`, `accounting`, `reporting`, `accounts`, `dashboard`, `estacion_servicios`, `integration`
+- **Archivos tocados en PR:** requieren ≥95% de cobertura individual
+- **Enforcement:** `make qa-coverage-by-domain-guard` (Gate 2)
+
 ## ✅ QA Runner (Gates 1–3)
 
 El repo incluye un runner determinista para CI/local (lint + typecheck + tests + verificación de integridad de auditoría) con reportes en `qa/reports/`.
@@ -562,4 +570,4 @@ Guías de organización:
 
 ---
 
-Actualizado: 2026-03-10.
+Actualizado: 2026-05-30.

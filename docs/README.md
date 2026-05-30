@@ -51,7 +51,7 @@ Esta carpeta contiene la documentación funcional y técnica del proyecto.
 
 - [ANALISIS_ROBUSTEZ_MULTIPLATAFORMA_v1.0.md](ANALISIS_ROBUSTEZ_MULTIPLATAFORMA_v1.0.md) — Fallos, cuellos de botella, inconsistencias, huecos y sugerencias para robustecer el sistema.
 - [DIAGNOSTICO_SISTEMA_2026-03.md](DIAGNOSTICO_SISTEMA_2026-03.md) — Diagnóstico de madurez del sistema (marzo 2026).
-- [QUALITY_COVERAGE_DIAGNOSTIC.md](QUALITY_COVERAGE_DIAGNOSTIC.md) — Estado de cobertura y calidad.
+- [QUALITY_COVERAGE_DIAGNOSTIC.md](QUALITY_COVERAGE_DIAGNOSTIC.md) — Estado de cobertura y calidad (objetivo: 95%–100% en todos los dominios).
 
 ## CI / QA
 

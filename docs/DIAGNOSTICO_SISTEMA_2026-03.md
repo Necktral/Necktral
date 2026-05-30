@@ -17,7 +17,7 @@
 | **Frontend (Vue/Quasar)** | 🔶 Scaffolding avanzado | 6,608 líneas (Vue+TS+SCSS), ~20 páginas funcionales |
 | **Módulos de dominio** | 🔶 Parcial | FUEL operativo, Facturación e Inventarios en scaffolding |
 | **Seguridad** | ✅ Robusta | RBAC, 2FA TOTP, HMAC, Argon2, CSP, django-axes |
-| **Testing** | ✅ Extenso | 48 archivos de test, cobertura sync_engine >95% |
+| **Testing** | ✅ Extenso | 48 archivos de test, cobertura ≥95% en todos los dominios críticos |
 | **CI/CD** | ✅ Completo | 6 workflows GitHub Actions, deploy a GHCR+VPS |
 | **Infraestructura** | ✅ Producción-ready | Docker multi-stage, Nginx, Grafana/k6 |
 | **Documentación** | ✅ Buena | 15+ documentos técnicos y operativos |
@@ -133,7 +133,7 @@ login_module/
 1. **Duplicación de tests:** Existen tests tanto en `login_module/tests/` como en `login_module/src/tests/` — potencial confusión sobre cuáles son los "oficiales"
 2. **sys.path hack:** En `base.py` se modifica `sys.path` para importar `modulos.*` — funcional pero no ideal para empaquetado
 3. **Dos archivos manage.py:** Uno en `login_module/manage.py` y otro en `login_module/src/manage.py` — puede causar confusión
-4. **Cobertura limitada:** Configurada solo para `sync_engine` (>95%), otros módulos no tienen objetivo de cobertura definido
+4. **Cobertura expandida:** Política de cobertura ≥95% aplicada a todos los dominios críticos (`sync_engine`, `accounting`, `reporting`, `accounts`, `dashboard`, `estacion_servicios`, `integration`) con enforcement automático por `coverage_by_domain_guard`
 5. **Módulos facturación/inventarios:** Solo scaffolding, sin lógica de negocio real implementada
 
 ### 🔴 Problemas potenciales
@@ -342,7 +342,7 @@ modulos/
 | Gate | Qué verifica | Herramientas |
 |------|-------------|-------------|
 | Gate 1 | Calidad estática | ruff lint + mypy typecheck + frontend lint/typecheck |
-| Gate 2 | Tests + cobertura | pytest + coverage (sync_engine ≥95%) |
+| Gate 2 | Tests + cobertura | pytest + coverage (todos los dominios ≥95%, `fail_under=95`) |
 | Gate 3 | Integridad auditoría | audit_verify_chain |
 
 ### 🟡 Observaciones del CI
@@ -465,7 +465,7 @@ modulos/
 | **Backend - Módulos** | 5/10 | FUEL completo, Billing/Inventory solo scaffolding |
 | **Frontend** | 6/10 | Existe y es funcional, pero necesita testing y pulido |
 | **Seguridad** | 9/10 | RBAC, 2FA, HMAC, CSP, Argon2, anti-fuerza bruta |
-| **Testing Backend** | 8/10 | 48 archivos, pero cobertura formal solo en sync_engine |
+| **Testing Backend** | 8/10 | 48 archivos, cobertura ≥95% en todos los dominios críticos |
 | **Testing Frontend** | 2/10 | Solo 1 archivo de test |
 | **CI/CD** | 7/10 | Pipeline completo pero con fallos históricos en master |
 | **Docker/Infra** | 8/10 | Dev + Prod separados, multi-stage, healthchecks |

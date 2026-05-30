@@ -1,6 +1,7 @@
 # Diagnóstico de cobertura (Gate 2)
 
-Fecha: 2026-02-01
+Fecha: 2026-05-30 (actualizado)
+Fecha original: 2026-02-01
 
 ## Resumen ejecutivo
 
@@ -98,9 +99,13 @@ Priorizar tests en:
 - Gate 2 y Gate 3 pasan.
 - Cobertura global actual: **85%**.
 - Objetivo solicitado: **95%–100%**.
+- `.coveragerc` configurado con `fail_under = 95`.
+- `coverage_by_domain_baseline.json` actualizado: todos los dominios con `floor_pct: 95.0` y `changed_files_floor_pct: 95.0`.
 
 ---
 
 ## Siguiente paso recomendado
 
-Autorizar el ajuste de cobertura para aplicar `.coveragerc` correctamente y añadir tests dirigidos en `sync_engine`.
+1. Aplicar `.coveragerc` correctamente en el runner de Gate 2 para que excluya archivos no relevantes.
+2. Añadir tests dirigidos en `sync_engine` (ramas de error, idempotencia, firma).
+3. Expandir tests a todos los dominios críticos hasta alcanzar 95%–100% real.
