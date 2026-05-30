@@ -14,7 +14,7 @@ La cobertura total reportada por Gate 2 es **85%**. La caída proviene de dos fa
 1. **Cobertura aplicada a módulos fuera del objetivo** (migraciones, admin, urls, views, etc.).
 2. **Ramas defensivas no ejercitadas** en `sync_engine` (errores, paths raros, verificación de firma y fallos de persistencia).
 
-Con tests dirigidos y un ajuste mínimo del alcance de cobertura, es razonable subir a **95%** sin degradar calidad.
+Con tests dirigidos y un ajuste mínimo del alcance de cobertura, el objetivo es alcanzar **95%–100%** sin degradar calidad.
 
 ---
 
@@ -65,7 +65,7 @@ Las rutas típicas (casos felices) están bien cubiertas, pero hay **poca cobert
 
 ---
 
-## Plan recomendado para llegar a 95%
+## Plan recomendado para llegar a 95%–100%
 
 ### A) Corrección de alcance (rápido, sin bajar calidad)
 
@@ -97,7 +97,7 @@ Priorizar tests en:
 
 - Gate 2 y Gate 3 pasan.
 - Cobertura global actual: **85%**.
-- Objetivo solicitado: **95%**.
+- Objetivo solicitado: **95%–100%**.
 
 ---
 
