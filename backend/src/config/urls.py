@@ -73,4 +73,5 @@ urlpatterns += [
     path("api/billing/", include("apps.kernels.facturacion.urls")),
     path("api/legacy/billing/", include("apps.kernels.facturacion.urls_legacy")),
     path("api/procurement/", include("apps.modulos.compras.urls")),
+    path("api/work/", include("apps.kernels.work_management.urls")),
 ]

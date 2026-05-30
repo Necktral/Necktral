@@ -254,6 +254,7 @@ INSTALLED_APPS = [
     "apps.kernels.payments.apps.PaymentsConfig",
     "apps.kernels.portfolio.apps.PortfolioConfig",  # Financial Portfolio Kernel
     "apps.kernels.reporting.apps.ReportingConfig",
+    "apps.kernels.work_management.apps.WorkManagementConfig",
     "apps.modulos.cec.apps.CecConfig",
     "apps.modulos.integration.apps.IntegrationConfig",
     "apps.modulos.dashboard.apps.DashboardConfig",
