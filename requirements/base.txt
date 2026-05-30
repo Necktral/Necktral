@@ -18,7 +18,7 @@ drf-spectacular-sidecar==2025.12.1
 django-filter==25.2
 
 # Variables de entorno (.env) y settings limpios
-django-environ==0.12.0
+django-environ==0.13.0
 
 # Seguridad anti-fuerza bruta para login
 django-axes==8.1.0
