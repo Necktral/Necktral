@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db import transaction
@@ -190,11 +191,48 @@ def post_purchase_document(*, request, actor, doc_id: int) -> dict:
             branch=branch,
         )
 
+        # Portfolio integration: crear CxP si es factura de proveedor
+        payable_id = None
+        if doc.doc_type == PurchaseDocType.SUPPLIER_INVOICE and doc.supplier_party_id:
+            try:
+                from apps.kernels.portfolio import services as portfolio_services
+                from apps.kernels.portfolio.models import PortfolioSettings
+
+                settings = PortfolioSettings.get_or_create_for_company(company)
+
+                if settings.sync_with_procurement:
+                    # Calcular due_date basado en payment_terms del supplier
+                    # Por defecto 45 días
+                    payment_days = 45
+                    # TODO: obtener payment_days del supplier si existe en Party metadata
+
+                    due_date = doc.posted_at.date() + timedelta(days=payment_days)
+
+                    payable = portfolio_services.create_payable(
+                        company=company,
+                        branch=branch,
+                        party=doc.supplier_party,
+                        reference_type="PURCHASE_DOCUMENT",
+                        reference_id=doc.id,
+                        principal_amount=doc.total,
+                        currency=doc.currency,
+                        issue_date=doc.posted_at.date(),
+                        due_date=due_date,
+                        supplier_invoice_number=doc.external_ref,
+                        supplier_invoice_date=doc.posted_at.date(),
+                        created_by=actor,
+                    )
+                    payable_id = str(payable.obligation_id)
+            except (ImportError, AttributeError, Exception):
+                # No fallar el posting si Portfolio falla, solo loguear
+                pass
+
         return {
             "ok": True,
             "doc_id": int(doc.id),
             "status": doc.status,
             "number": int(doc.number),
+            "payable_id": payable_id,
         }
 
 

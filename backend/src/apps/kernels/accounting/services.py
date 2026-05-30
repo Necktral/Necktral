@@ -60,6 +60,22 @@ SUPPORTED_ECONOMIC_EVENTS = {
     ("PAYMENTS", "CashSessionClosed"),
     ("PROCUREMENT", "ProcurementDocumentPosted"),
     ("PROCUREMENT", "ProcurementDocumentVoided"),
+    # Portfolio Kernel events
+    ("PORTFOLIO", "ReceivableCreated"),
+    ("PORTFOLIO", "ReceivableAdjusted"),
+    ("PORTFOLIO", "ReceivableAllocated"),
+    ("PORTFOLIO", "ReceivableWrittenOff"),
+    ("PORTFOLIO", "PayableCreated"),
+    ("PORTFOLIO", "PayableAdjusted"),
+    ("PORTFOLIO", "PayableAllocated"),
+    ("PORTFOLIO", "CreditApproved"),
+    ("PORTFOLIO", "CreditDisbursed"),
+    ("PORTFOLIO", "CreditRepaymentReceived"),
+    ("PORTFOLIO", "InterestAccrued"),
+    ("PORTFOLIO", "InterestCapitalized"),
+    ("PORTFOLIO", "CreditRestructured"),
+    ("PORTFOLIO", "CreditPaidOff"),
+    ("PORTFOLIO", "CreditDefaulted"),
 }
 TRANSFER_PAYMENT_ACCOUNTING_EVENTS = {
     ("PAYMENTS", "PaymentCaptured"),

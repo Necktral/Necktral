@@ -654,6 +654,61 @@ def issue_doc(
                 status=BillingDocument.AccountingStatus.DRAFT_EXCEPTION,
                 error=f"{wrapped.code}:{exc}",
             )
+
+        # Portfolio integration: crear CxC si pago es a crédito
+        receivable_id = None
+        if doc.payment_method == "CREDIT" and doc.customer_party_id:
+            try:
+                from apps.kernels.portfolio import services as portfolio_services
+                from apps.kernels.portfolio.models import PortfolioSettings
+
+                settings = PortfolioSettings.get_or_create_for_company(company)
+
+                if settings.sync_with_billing:
+                    # Calcular due_date basado en credit_days del customer si está disponible
+                    # Por defecto 30 días
+                    credit_days = 30
+                    # TODO: obtener credit_days del customer si existe en Party metadata
+
+                    due_date = doc.issued_at.date() + timedelta(days=credit_days)
+
+                    receivable = portfolio_services.create_receivable(
+                        company=company,
+                        branch=branch,
+                        party=doc.customer_party,
+                        reference_type="BILLING_DOCUMENT",
+                        reference_id=doc.id,
+                        principal_amount=doc.total,
+                        currency=doc.currency,
+                        issue_date=doc.issued_at.date(),
+                        due_date=due_date,
+                        invoice_number=f"{doc.series}-{doc.number}",
+                        invoice_date=doc.issued_at.date(),
+                        created_by=actor,
+                    )
+                    receivable_id = str(receivable.obligation_id)
+                    logger.info(
+                        "portfolio_receivable_created_from_billing",
+                        extra={
+                            "doc_id": doc.id,
+                            "receivable_id": receivable_id,
+                            "company_id": company.id,
+                            "party_id": doc.customer_party_id,
+                            "amount": str(doc.total),
+                        }
+                    )
+            except (ImportError, AttributeError, Exception) as exc:
+                logger.exception(
+                    "portfolio_receivable_creation_failed",
+                    extra={
+                        "doc_id": doc.id,
+                        "company_id": company.id,
+                        "party_id": doc.customer_party_id,
+                        "error": str(exc),
+                    }
+                )
+                # No fallar la emisión si Portfolio falla, solo loguear
+
         publish_outbox_event(
             request=request,
             source_module="BILLING",
@@ -686,6 +741,8 @@ def issue_doc(
                 "journal_entry_id": doc.accounting_journal_entry_id,
             }
         )
+        if receivable_id:
+            out["receivable_id"] = receivable_id
         if queued_job_id is not None:
             out["print_job_id"] = queued_job_id
         return out
