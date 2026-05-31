@@ -3,6 +3,11 @@
   "generated_at": "2026-05-30T00:00:00Z",
   "changed_files_floor_pct": 95.0,
   "domains": {
+    "apps.kernels.portfolio": {
+      "baseline_pct": 95.0,
+      "floor_pct": 95.0,
+      "classification": "C1"
+    },
     "apps.kernels.accounting": {
       "baseline_pct": 95.0,
       "floor_pct": 95.0
