@@ -17,6 +17,7 @@ class DomainScope:
 
 
 CRITICAL_DOMAIN_SCOPES: tuple[DomainScope, ...] = (
+    DomainScope("apps.kernels.portfolio", "backend/src/apps/kernels/portfolio/"),
     DomainScope("apps.modulos.sync_engine", "backend/src/apps/modulos/sync_engine/"),
     DomainScope("apps.kernels.reporting", "backend/src/apps/kernels/reporting/"),
     DomainScope("apps.kernels.accounting", "backend/src/apps/kernels/accounting/"),

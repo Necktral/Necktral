@@ -1,5 +1,6 @@
 [run]
 source =
+    src/apps/kernels/portfolio
     src/apps/modulos/sync_engine
     src/apps/kernels/reporting
     src/apps/kernels/accounting
