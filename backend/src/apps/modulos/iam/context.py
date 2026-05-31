@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass
 from typing import Optional
 
@@ -43,3 +44,26 @@ def attach_request_context(
     raw = getattr(request, "_request", None)
     if raw is not None:
         setattr(raw, "ctx", ctx)
+
+
+def require_company_context(func):
+    """Decorador para métodos de ViewSet que requieren contexto de empresa.
+
+    Extrae request.company y request.branch del request inyectado por
+    JWTAuthWithOrgContext / OrgContextMiddleware y los pasa como kwargs
+    a la función decorada.
+
+    Uso:
+        @require_company_context
+        def get_queryset(self, company=None, **ctx):
+            return MyModel.objects.filter(company=company)
+    """
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        request = getattr(self, "request", None)
+        company = getattr(request, "company", None)
+        branch = getattr(request, "branch", None)
+        return func(self, *args, company=company, branch=branch, **kwargs)
+
+    return wrapper
