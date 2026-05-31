@@ -71,3 +71,4 @@ ERP_CRM_backup_*.tar.gz
 docs/repo/Necktral-master.zip
 docs/repo/Necktral-master.zip:Zone.Identifier
 *:Zone.Identifier
+*.egg-info/

@@ -65,13 +65,13 @@ class Obligation(models.Model):
 
     # Scope organizacional
     company = models.ForeignKey(
-        "org.OrgUnit",
+        "iam.OrgUnit",
         on_delete=models.PROTECT,
         related_name="%(class)s_company",
         help_text="Empresa propietaria"
     )
     branch = models.ForeignKey(
-        "org.OrgUnit",
+        "iam.OrgUnit",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
@@ -810,7 +810,7 @@ class PaymentAllocation(models.Model):
 
     # Scope
     company = models.ForeignKey(
-        "org.OrgUnit",
+        "iam.OrgUnit",
         on_delete=models.PROTECT,
         related_name="payment_allocations_company"
     )
@@ -1083,7 +1083,7 @@ class PortfolioSettings(models.Model):
     """
 
     company = models.OneToOneField(
-        "org.OrgUnit",
+        "iam.OrgUnit",
         on_delete=models.CASCADE,
         primary_key=True,
         related_name="portfolio_settings"
