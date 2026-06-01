@@ -78,12 +78,11 @@ def create_receivable(
             f"Due date ({due_date}) cannot be before issue date ({issue_date})"
         )
 
-    if hasattr(party, 'company_id') and party.company_id and company:
-        if party.company_id != company.id:
-            raise PortfolioDomainError(
-                "PARTY_COMPANY_MISMATCH",
-                "Party does not belong to the specified company"
-            )
+    if hasattr(party, 'company_id') and party.company_id and company and party.company_id != company.id:
+        raise PortfolioDomainError(
+            "PARTY_COMPANY_MISMATCH",
+            "Party does not belong to the specified company"
+        )
 
     with transaction.atomic():
         receivable = Receivable(
@@ -271,12 +270,11 @@ def create_payable(
             f"Due date ({due_date}) cannot be before issue date ({issue_date})"
         )
 
-    if hasattr(party, 'company_id') and party.company_id and company:
-        if party.company_id != company.id:
-            raise PortfolioDomainError(
-                "PARTY_COMPANY_MISMATCH",
-                "Party does not belong to the specified company"
-            )
+    if hasattr(party, 'company_id') and party.company_id and company and party.company_id != company.id:
+        raise PortfolioDomainError(
+            "PARTY_COMPANY_MISMATCH",
+            "Party does not belong to the specified company"
+        )
 
     # Calcular withholding si aplica
     withholding_amount = Decimal("0.00")
