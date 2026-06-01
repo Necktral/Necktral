@@ -551,3 +551,98 @@ class TestModelStrMethods:
 
         result = PortfolioSettings.__str__(obj)
         assert "Portfolio Settings" in result
+
+
+class TestObligationFieldDefaults:
+    """Tests para asegurar cobertura de los campos con defaults en Obligation."""
+
+    def test_model_field_defaults(self):
+        """Importar y verificar que los modelos tienen los defaults correctos."""
+        from apps.kernels.portfolio.models import (
+            Obligation,
+            Receivable,
+            Payable,
+            Credit,
+            PaymentAllocation,
+            InterestAccrual,
+            PortfolioSettings,
+            ObligationType,
+            ObligationStatus,
+            AccountingStatus,
+            CreditType,
+            CreditStatus,
+            InterestCalculationMethod,
+            PaymentFrequency,
+            AllocationStatus,
+        )
+
+        # Verify TextChoices enums have expected values
+        assert ObligationType.RECEIVABLE == "RECEIVABLE"
+        assert ObligationType.PAYABLE == "PAYABLE"
+        assert ObligationType.CREDIT == "CREDIT"
+        assert ObligationType.LOAN == "LOAN"
+
+        assert ObligationStatus.PENDING == "PENDING"
+        assert ObligationStatus.PARTIAL == "PARTIAL"
+        assert ObligationStatus.PAID == "PAID"
+        assert ObligationStatus.OVERDUE == "OVERDUE"
+        assert ObligationStatus.WRITTEN_OFF == "WRITTEN_OFF"
+        assert ObligationStatus.DISPUTED == "DISPUTED"
+        assert ObligationStatus.RESTRUCTURED == "RESTRUCTURED"
+        assert ObligationStatus.CANCELLED == "CANCELLED"
+
+        assert AccountingStatus.PENDING_RULESET == "PENDING_RULESET"
+        assert AccountingStatus.PENDING_RULE == "PENDING_RULE"
+        assert AccountingStatus.DRAFT_GENERATED == "DRAFT_GENERATED"
+        assert AccountingStatus.DRAFT_EXCEPTION == "DRAFT_EXCEPTION"
+        assert AccountingStatus.POSTED == "POSTED"
+
+        assert CreditType.WORKING_CAPITAL == "WORKING_CAPITAL"
+        assert CreditType.FACTORING == "FACTORING"
+
+        assert CreditStatus.DRAFT == "DRAFT"
+        assert CreditStatus.APPROVED == "APPROVED"
+        assert CreditStatus.DISBURSED == "DISBURSED"
+        assert CreditStatus.ACTIVE == "ACTIVE"
+        assert CreditStatus.PAID_OFF == "PAID_OFF"
+        assert CreditStatus.DEFAULTED == "DEFAULTED"
+
+        assert InterestCalculationMethod.SIMPLE == "SIMPLE"
+        assert InterestCalculationMethod.COMPOUND == "COMPOUND"
+        assert InterestCalculationMethod.FLAT == "FLAT"
+
+        assert PaymentFrequency.MONTHLY == "MONTHLY"
+        assert PaymentFrequency.QUARTERLY == "QUARTERLY"
+        assert PaymentFrequency.ANNUALLY == "ANNUALLY"
+
+        assert AllocationStatus.PENDING == "PENDING"
+        assert AllocationStatus.APPLIED == "APPLIED"
+        assert AllocationStatus.REVERSED == "REVERSED"
+
+    def test_model_meta_via_internal(self):
+        """Tests _meta attributes of Django models."""
+        from apps.kernels.portfolio.models import (
+            Receivable,
+            Payable,
+            Credit,
+            PaymentAllocation,
+            InterestAccrual,
+            PortfolioSettings,
+        )
+
+        assert Receivable._meta.db_table == "portfolio_receivable"
+        assert Payable._meta.db_table == "portfolio_payable"
+        assert Credit._meta.db_table == "portfolio_credit"
+        assert PaymentAllocation._meta.db_table == "portfolio_payment_allocation"
+        assert InterestAccrual._meta.db_table == "portfolio_interest_accrual"
+        assert PortfolioSettings._meta.db_table == "portfolio_settings"
+
+    def test_model_ordering(self):
+        """Tests ordering configuration."""
+        from apps.kernels.portfolio.models import (
+            PaymentAllocation,
+            InterestAccrual,
+        )
+
+        assert PaymentAllocation._meta.ordering == ["-allocation_date", "-created_at"]
+        assert InterestAccrual._meta.ordering == ["-accrual_date"]
