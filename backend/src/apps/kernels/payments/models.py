@@ -114,6 +114,12 @@ class CashSession(models.Model):
         indexes = [
             models.Index(fields=["company", "branch", "status", "opened_at"]),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(opening_amount__gte=0),
+                name="ck_cash_session_opening_non_negative",
+            ),
+        ]
 
     def clean(self):
         if self.status == self.Status.CLOSED and self.closed_at is None:
@@ -121,6 +127,10 @@ class CashSession(models.Model):
         expected_difference = self.counted_amount - self.expected_amount
         if self.difference_amount != expected_difference:
             raise ValidationError("difference_amount debe ser counted_amount - expected_amount.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class CashMovement(models.Model):

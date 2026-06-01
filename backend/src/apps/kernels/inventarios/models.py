@@ -74,6 +74,10 @@ class StockBalance(models.Model):
                 fields=["company", "branch", "warehouse", "item"],
                 name="uniq_inv_bal_scope",
             ),
+            models.CheckConstraint(
+                condition=models.Q(qty_on_hand__gte=0),
+                name="ck_inv_bal_qty_non_negative",
+            ),
         ]
         indexes = [
             models.Index(fields=["company", "branch", "warehouse", "item"], name="ix_invbal_scope"),

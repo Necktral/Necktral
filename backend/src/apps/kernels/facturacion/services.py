@@ -6,7 +6,7 @@ from decimal import Decimal, ROUND_HALF_UP
 import logging
 from typing import Any
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -286,29 +286,37 @@ def create_draft(
             if existing:
                 return CreateResult(existing.id)
 
-        doc = BillingDocument.objects.create(
-            company=company,
-            branch=branch,
-            doc_type=doc_type,
-            status=DocStatus.DRAFT,
-            series=series or "A",
-            number=0,
-            currency=currency or "NIO",
-            customer_name=customer_name or "",
-            customer_ref=customer_ref or "",
-            customer_party=customer_party,
-            subtotal=subtotal,
-            tax_total=tax_total,
-            total=total,
-            is_fiscal=bool(is_fiscal),
-            idempotency_key=idempotency_key or "",
-            payment_method=normalized_payment_method,
-            source_module=source_module or "",
-            source_type=source_type or "",
-            source_id=source_id or "",
-            created_by=actor,
-            fiscal_mode_resolved=FiscalMode.NOOP,
-        )
+        try:
+            doc = BillingDocument.objects.create(
+                company=company,
+                branch=branch,
+                doc_type=doc_type,
+                status=DocStatus.DRAFT,
+                series=series or "A",
+                number=0,
+                currency=currency or "NIO",
+                customer_name=customer_name or "",
+                customer_ref=customer_ref or "",
+                customer_party=customer_party,
+                subtotal=subtotal,
+                tax_total=tax_total,
+                total=total,
+                is_fiscal=bool(is_fiscal),
+                idempotency_key=idempotency_key or "",
+                payment_method=normalized_payment_method,
+                source_module=source_module or "",
+                source_type=source_type or "",
+                source_id=source_id or "",
+                created_by=actor,
+                fiscal_mode_resolved=FiscalMode.NOOP,
+            )
+        except IntegrityError:
+            # Race condition: concurrent request created it between our check and insert
+            if idempotency_key:
+                existing = BillingDocument.objects.filter(company=company, idempotency_key=idempotency_key).first()
+                if existing:
+                    return CreateResult(existing.id)
+            raise ConflictError("Conflicto de unicidad al crear documento de facturación.")
         if customer_party is not None:
             _ensure_customer_party_role(party=customer_party, request=request, actor=actor)
 

@@ -154,6 +154,10 @@ class BillingDocument(models.Model):
                 name="uniq_bill_idempotency_per_company",
             ),
             models.UniqueConstraint(fields=["company", "branch", "doc_type", "series", "number"], name="uniq_bill_number"),
+            models.CheckConstraint(
+                condition=models.Q(total=models.F("subtotal") + models.F("tax_total")),
+                name="ck_bill_doc_total_integrity",
+            ),
         ]
 
     def clean(self):

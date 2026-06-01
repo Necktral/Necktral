@@ -72,30 +72,44 @@ def create_receivable(
             f"Principal amount must be positive: {principal_amount}"
         )
 
-    receivable = Receivable(
-        company=company,
-        branch=branch,
-        party=party,
-        reference_type=reference_type,
-        reference_id=reference_id,
-        currency=currency,
-        principal_amount=principal_amount,
-        issue_date=issue_date,
-        due_date=due_date,
-        invoice_number=invoice_number,
-        invoice_date=invoice_date or issue_date,
-        credit_limit=credit_limit,
-        credit_days=credit_days,
-        created_by=created_by,
-        metadata_json=metadata or {},
-        accounting_status=AccountingStatus.PENDING_RULESET,
-    )
+    if due_date < issue_date:
+        raise PortfolioDomainError(
+            "INVALID_DATES",
+            f"Due date ({due_date}) cannot be before issue date ({issue_date})"
+        )
 
-    receivable.full_clean()
-    receivable.save()
+    if hasattr(party, 'company_id') and party.company_id and company:
+        if party.company_id != company.id:
+            raise PortfolioDomainError(
+                "PARTY_COMPANY_MISMATCH",
+                "Party does not belong to the specified company"
+            )
 
-    # Publicar evento para Shadow Ledger
-    _publish_receivable_created_event(receivable)
+    with transaction.atomic():
+        receivable = Receivable(
+            company=company,
+            branch=branch,
+            party=party,
+            reference_type=reference_type,
+            reference_id=reference_id,
+            currency=currency,
+            principal_amount=principal_amount,
+            issue_date=issue_date,
+            due_date=due_date,
+            invoice_number=invoice_number,
+            invoice_date=invoice_date or issue_date,
+            credit_limit=credit_limit,
+            credit_days=credit_days,
+            created_by=created_by,
+            metadata_json=metadata or {},
+            accounting_status=AccountingStatus.PENDING_RULESET,
+        )
+
+        receivable.full_clean()
+        receivable.save()
+
+        # Publicar evento para Shadow Ledger
+        _publish_receivable_created_event(receivable)
 
     return receivable
 
@@ -251,6 +265,19 @@ def create_payable(
             f"Principal amount must be positive: {principal_amount}"
         )
 
+    if due_date < issue_date:
+        raise PortfolioDomainError(
+            "INVALID_DATES",
+            f"Due date ({due_date}) cannot be before issue date ({issue_date})"
+        )
+
+    if hasattr(party, 'company_id') and party.company_id and company:
+        if party.company_id != company.id:
+            raise PortfolioDomainError(
+                "PARTY_COMPANY_MISMATCH",
+                "Party does not belong to the specified company"
+            )
+
     # Calcular withholding si aplica
     withholding_amount = Decimal("0.00")
     if withholding_tax_rate > 0:
@@ -261,33 +288,34 @@ def create_payable(
     if early_payment_discount_days > 0:
         early_payment_date = issue_date + timedelta(days=early_payment_discount_days)
 
-    payable = Payable(
-        company=company,
-        branch=branch,
-        party=party,
-        reference_type=reference_type,
-        reference_id=reference_id,
-        currency=currency,
-        principal_amount=principal_amount,
-        issue_date=issue_date,
-        due_date=due_date,
-        supplier_invoice_number=supplier_invoice_number,
-        supplier_invoice_date=supplier_invoice_date or issue_date,
-        early_payment_discount_rate=early_payment_discount_rate,
-        early_payment_discount_days=early_payment_discount_days,
-        early_payment_discount_date=early_payment_date,
-        withholding_tax_rate=withholding_tax_rate,
-        withholding_tax_amount=withholding_amount,
-        created_by=created_by,
-        metadata_json=metadata or {},
-        accounting_status=AccountingStatus.PENDING_RULESET,
-    )
+    with transaction.atomic():
+        payable = Payable(
+            company=company,
+            branch=branch,
+            party=party,
+            reference_type=reference_type,
+            reference_id=reference_id,
+            currency=currency,
+            principal_amount=principal_amount,
+            issue_date=issue_date,
+            due_date=due_date,
+            supplier_invoice_number=supplier_invoice_number,
+            supplier_invoice_date=supplier_invoice_date or issue_date,
+            early_payment_discount_rate=early_payment_discount_rate,
+            early_payment_discount_days=early_payment_discount_days,
+            early_payment_discount_date=early_payment_date,
+            withholding_tax_rate=withholding_tax_rate,
+            withholding_tax_amount=withholding_amount,
+            created_by=created_by,
+            metadata_json=metadata or {},
+            accounting_status=AccountingStatus.PENDING_RULESET,
+        )
 
-    payable.full_clean()
-    payable.save()
+        payable.full_clean()
+        payable.save()
 
-    # Publicar evento
-    _publish_payable_created_event(payable)
+        # Publicar evento
+        _publish_payable_created_event(payable)
 
     return payable
 

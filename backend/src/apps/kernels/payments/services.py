@@ -119,16 +119,25 @@ def create_payment_intent_for_scope(
             if existing is not None:
                 return existing, True
 
-        intent = PaymentIntent.objects.create(
-            company=company,
-            branch=branch,
-            amount=amount,
-            currency=currency or "NIO",
-            idempotency_key=idempotency_key or "",
-            external_ref=external_ref or "",
-            provider=provider or "",
-            payment_method=normalized_payment_method,
-        )
+        try:
+            intent = PaymentIntent.objects.create(
+                company=company,
+                branch=branch,
+                amount=amount,
+                currency=currency or "NIO",
+                idempotency_key=idempotency_key or "",
+                external_ref=external_ref or "",
+                provider=provider or "",
+                payment_method=normalized_payment_method,
+            )
+        except IntegrityError:
+            # Race condition: concurrent request created it between our check and insert
+            if idempotency_key:
+                existing = PaymentIntent.objects.filter(company=company, idempotency_key=idempotency_key).first()
+                if existing is not None:
+                    return existing, True
+            raise PaymentsConflictError("Conflicto de unicidad al crear payment intent.")
+
         publish_outbox_event(
             request=request,
             source_module="PAYMENTS",

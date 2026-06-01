@@ -191,7 +191,7 @@ class Obligation(models.Model):
 
     # Accounting projection
     accounting_status = models.CharField(
-        max_length=24,theory
+        max_length=24,
         choices=AccountingStatus.choices,
         default=AccountingStatus.PENDING_RULESET,
         db_index=True,
@@ -248,6 +248,22 @@ class Obligation(models.Model):
             models.CheckConstraint(
                 condition=models.Q(allocated_amount__gte=0),
                 name="%(class)s_allocated_non_negative"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(interest_amount__gte=0),
+                name="%(class)s_interest_non_negative"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(fee_amount__gte=0),
+                name="%(class)s_fee_non_negative"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(penalty_amount__gte=0),
+                name="%(class)s_penalty_non_negative"
+            ),
+            models.UniqueConstraint(
+                fields=["company", "reference_type", "reference_id"],
+                name="%(class)s_unique_company_ref"
             ),
         ]
 
