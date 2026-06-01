@@ -40,4 +40,4 @@ whitenoise==6.11.0
 argon2-cffi==25.1.0
 
 # Driver PostgreSQL
-psycopg[binary]==3.3.2
+psycopg[binary]==3.3.3
