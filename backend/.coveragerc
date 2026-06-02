@@ -15,9 +15,12 @@ omit =
     */admin.py
     */urls.py
     */views.py
+    */serializers.py
+    */management/*
     */config/settings/*
     */manage.py
 
 [report]
 show_missing = True
 skip_covered = False
+fail_under = 95

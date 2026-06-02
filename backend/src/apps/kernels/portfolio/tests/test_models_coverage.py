@@ -646,3 +646,104 @@ class TestObligationFieldDefaults:
 
         assert PaymentAllocation._meta.ordering == ["-allocation_date", "-created_at"]
         assert InterestAccrual._meta.ordering == ["-accrual_date"]
+
+
+class TestObligationSaveMethod:
+    """Tests de Obligation.save que llama update_aging antes de super().save."""
+
+    def test_save_calls_update_aging(self):
+        """save() debe llamar update_aging y luego super().save."""
+        from apps.kernels.portfolio.models import Obligation
+
+        obj = MagicMock()
+        obj.calculate_days_overdue = MagicMock(return_value=0)
+        obj.calculate_aging_bucket = MagicMock(return_value="CURRENT")
+        obj.status = "PENDING"
+        type(obj).is_overdue = PropertyMock(return_value=False)
+
+        with patch("django.db.models.Model.save") as mock_super_save:
+            Obligation.save(obj)
+            mock_super_save.assert_called_once()
+            assert obj.days_overdue == 0
+            assert obj.aging_bucket == "CURRENT"
+
+
+class TestObligationAgingBucketBoundary:
+    """Tests de boundary values para aging buckets."""
+
+    def _call_bucket(self, days_overdue):
+        from apps.kernels.portfolio.models import Obligation
+
+        obj = MagicMock()
+        obj.calculate_days_overdue = MagicMock(return_value=days_overdue)
+        return Obligation.calculate_aging_bucket(obj)
+
+    def test_boundary_30(self):
+        assert self._call_bucket(30) == "0-30"
+
+    def test_boundary_31(self):
+        assert self._call_bucket(31) == "31-60"
+
+    def test_boundary_60(self):
+        assert self._call_bucket(60) == "31-60"
+
+    def test_boundary_61(self):
+        assert self._call_bucket(61) == "61-90"
+
+    def test_boundary_90(self):
+        assert self._call_bucket(90) == "61-90"
+
+    def test_boundary_91(self):
+        assert self._call_bucket(91) == "91-120"
+
+    def test_boundary_120(self):
+        assert self._call_bucket(120) == "91-120"
+
+    def test_boundary_121(self):
+        assert self._call_bucket(121) == "120+"
+
+    def test_boundary_1(self):
+        assert self._call_bucket(1) == "0-30"
+
+
+class TestCreditCleanValid:
+    """Tests de Credit.clean cuando lender != borrower (válido)."""
+
+    def test_clean_different_parties_passes(self):
+        from apps.kernels.portfolio.models import Credit
+
+        obj = MagicMock()
+        obj.lender_party_id = 1
+        obj.borrower_party_id = 2
+        obj.principal_amount = Decimal("100.00")
+        obj.interest_amount = Decimal("0.00")
+        obj.fee_amount = Decimal("0.00")
+        obj.penalty_amount = Decimal("0.00")
+        obj.allocated_amount = Decimal("0.00")
+        obj.issue_date = date.today()
+        obj.due_date = date.today() + timedelta(days=30)
+        type(obj).total_amount = PropertyMock(return_value=Decimal("100.00"))
+
+        with patch("apps.kernels.portfolio.models.Obligation.clean"):
+            # Should not raise
+            Credit.clean(obj)
+
+
+class TestObligationUpdateAgingNotOverdue:
+    """Tests de update_aging cuando no está overdue."""
+
+    def test_update_aging_not_overdue_keeps_pending(self):
+        from apps.kernels.portfolio.models import Obligation, ObligationStatus
+
+        obj = MagicMock()
+        obj.status = ObligationStatus.PENDING
+        obj.calculate_days_overdue = MagicMock(return_value=0)
+        obj.calculate_aging_bucket = MagicMock(return_value="CURRENT")
+        type(obj).is_overdue = PropertyMock(return_value=False)
+
+        Obligation.update_aging(obj)
+
+        assert obj.days_overdue == 0
+        assert obj.aging_bucket == "CURRENT"
+        # Status should remain PENDING
+        assert obj.status == ObligationStatus.PENDING

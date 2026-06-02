@@ -530,6 +530,194 @@ class TestHandleBillingDocumentIssued:
         assert "not found" in result["error"]
 
 
+class TestHandleProcurementSuccess:
+    """Tests de handle_procurement_document_posted con éxito."""
+
+    @patch("apps.kernels.portfolio.handlers.transaction")
+    @patch("apps.kernels.portfolio.handlers._mark_inbox_processed")
+    @patch("apps.kernels.portfolio.handlers.create_payable")
+    @patch("apps.kernels.portfolio.handlers.Party")
+    @patch("apps.kernels.portfolio.handlers._extract_event_data")
+    @patch("apps.kernels.portfolio.handlers.PortfolioSettings")
+    @patch("apps.kernels.portfolio.handlers.create_or_get_inbox_event")
+    def test_success_creates_payable(self, mock_inbox, mock_settings, mock_extract, mock_party, mock_create, mock_mark, mock_tx):
+        from apps.kernels.portfolio.handlers import handle_procurement_document_posted
+
+        inbox = MagicMock()
+        inbox.status = "RECEIVED"
+        mock_inbox.return_value = (inbox, True)
+
+        settings = MagicMock()
+        settings.sync_with_procurement = True
+        settings.settings_json = {"default_payable_credit_days": 45}
+        mock_settings.get_or_create_for_company.return_value = settings
+
+        mock_extract.return_value = {
+            "supplier_party_id": 10,
+            "total": "5000.00",
+            "currency": "NIO",
+            "doc_id": 42,
+            "supplier_ref": "PROV-100",
+            "series": "CP",
+            "number": "00042",
+        }
+
+        party_obj = MagicMock()
+        party_obj.id = 10
+        mock_party.objects.filter.return_value.first.return_value = party_obj
+
+        payable_obj = MagicMock()
+        payable_obj.obligation_id = "uuid-payable-1"
+        mock_create.return_value = payable_obj
+
+        mock_tx.atomic.return_value.__enter__ = MagicMock()
+        mock_tx.atomic.return_value.__exit__ = MagicMock(return_value=False)
+
+        event = MagicMock()
+        event.company = MagicMock()
+        event.branch = MagicMock()
+        event.event_id = "evt-1"
+
+        result = handle_procurement_document_posted(event)
+        assert result["ok"] is True
+        assert result["payable_id"] == "uuid-payable-1"
+        assert result["party_id"] == 10
+        mock_create.assert_called_once()
+
+    @patch("apps.kernels.portfolio.handlers._mark_inbox_error")
+    @patch("apps.kernels.portfolio.handlers._extract_event_data")
+    @patch("apps.kernels.portfolio.handlers.PortfolioSettings")
+    @patch("apps.kernels.portfolio.handlers.create_or_get_inbox_event")
+    def test_zero_total_amount(self, mock_inbox, mock_settings, mock_extract, mock_error):
+        from apps.kernels.portfolio.handlers import handle_procurement_document_posted
+
+        inbox = MagicMock()
+        inbox.status = "RECEIVED"
+        mock_inbox.return_value = (inbox, True)
+
+        settings = MagicMock()
+        settings.sync_with_procurement = True
+        mock_settings.get_or_create_for_company.return_value = settings
+        mock_extract.return_value = {"supplier_party_id": 1, "total": "0"}
+
+        event = MagicMock()
+        event.company = MagicMock()
+        event.branch = MagicMock()
+
+        result = handle_procurement_document_posted(event)
+        assert result["ok"] is False
+        assert "invalid total" in result["error"]
+
+
+class TestHandleBillingSuccess:
+    """Tests de handle_billing_document_issued con éxito."""
+
+    @patch("apps.kernels.portfolio.handlers.transaction")
+    @patch("apps.kernels.portfolio.handlers._mark_inbox_processed")
+    @patch("apps.kernels.portfolio.handlers.create_receivable")
+    @patch("apps.kernels.portfolio.handlers.Party")
+    @patch("apps.kernels.portfolio.handlers._extract_event_data")
+    @patch("apps.kernels.portfolio.handlers.PortfolioSettings")
+    @patch("apps.kernels.portfolio.handlers.create_or_get_inbox_event")
+    def test_success_creates_receivable(self, mock_inbox, mock_settings, mock_extract, mock_party, mock_create, mock_mark, mock_tx):
+        from apps.kernels.portfolio.handlers import handle_billing_document_issued
+
+        inbox = MagicMock()
+        inbox.status = "RECEIVED"
+        mock_inbox.return_value = (inbox, True)
+
+        settings = MagicMock()
+        settings.sync_with_billing = True
+        settings.settings_json = {"default_receivable_credit_days": 30}
+        mock_settings.get_or_create_for_company.return_value = settings
+
+        mock_extract.return_value = {
+            "payment_method": "CREDIT",
+            "customer_party_id": 5,
+            "total": "3000.00",
+            "currency": "USD",
+            "doc_id": 99,
+            "series": "FA",
+            "number": "00099",
+            "is_fiscal": True,
+        }
+
+        party_obj = MagicMock()
+        party_obj.id = 5
+        mock_party.objects.filter.return_value.first.return_value = party_obj
+
+        receivable_obj = MagicMock()
+        receivable_obj.obligation_id = "uuid-recv-1"
+        mock_create.return_value = receivable_obj
+
+        mock_tx.atomic.return_value.__enter__ = MagicMock()
+        mock_tx.atomic.return_value.__exit__ = MagicMock(return_value=False)
+
+        event = MagicMock()
+        event.company = MagicMock()
+        event.branch = MagicMock()
+        event.event_id = "evt-billing-1"
+
+        result = handle_billing_document_issued(event)
+        assert result["ok"] is True
+        assert result["receivable_id"] == "uuid-recv-1"
+        assert result["party_id"] == 5
+        mock_create.assert_called_once()
+
+    @patch("apps.kernels.portfolio.handlers._mark_inbox_skipped")
+    @patch("apps.kernels.portfolio.handlers._extract_event_data")
+    @patch("apps.kernels.portfolio.handlers.PortfolioSettings")
+    @patch("apps.kernels.portfolio.handlers.create_or_get_inbox_event")
+    def test_card_payment_skipped(self, mock_inbox, mock_settings, mock_extract, mock_skip):
+        """CARD payment method should be skipped (cash sale)."""
+        from apps.kernels.portfolio.handlers import handle_billing_document_issued
+
+        inbox = MagicMock()
+        inbox.status = "RECEIVED"
+        mock_inbox.return_value = (inbox, True)
+
+        settings = MagicMock()
+        settings.sync_with_billing = True
+        mock_settings.get_or_create_for_company.return_value = settings
+        mock_extract.return_value = {"payment_method": "CARD", "total": "500"}
+
+        event = MagicMock()
+        event.company = MagicMock()
+        event.branch = MagicMock()
+
+        result = handle_billing_document_issued(event)
+        assert result["skipped"] is True
+        assert "cash sale" in result["reason"]
+
+    @patch("apps.kernels.portfolio.handlers._mark_inbox_error")
+    @patch("apps.kernels.portfolio.handlers._extract_event_data")
+    @patch("apps.kernels.portfolio.handlers.PortfolioSettings")
+    @patch("apps.kernels.portfolio.handlers.create_or_get_inbox_event")
+    def test_zero_total_billing(self, mock_inbox, mock_settings, mock_extract, mock_error):
+        from apps.kernels.portfolio.handlers import handle_billing_document_issued
+
+        inbox = MagicMock()
+        inbox.status = "RECEIVED"
+        mock_inbox.return_value = (inbox, True)
+
+        settings = MagicMock()
+        settings.sync_with_billing = True
+        mock_settings.get_or_create_for_company.return_value = settings
+        mock_extract.return_value = {
+            "payment_method": "CREDIT",
+            "customer_party_id": 5,
+            "total": "0",
+        }
+
+        event = MagicMock()
+        event.company = MagicMock()
+        event.branch = MagicMock()
+
+        result = handle_billing_document_issued(event)
+        assert result["ok"] is False
+        assert "invalid total" in result["error"]
+
+
 class TestAppsConfig:
     """Tests de apps.py."""
 
