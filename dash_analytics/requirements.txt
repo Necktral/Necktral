@@ -2,3 +2,10 @@ dash==2.18.2
 plotly==5.24.1
 requests==2.32.5
 gunicorn==23.0.0
+# Advanced visualizations
+plotly-express==0.4.1
+# Export capabilities
+openpyxl==3.1.5
+reportlab==4.2.5
+# Performance
+redis==5.2.0
