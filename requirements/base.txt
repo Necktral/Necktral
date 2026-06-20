@@ -21,7 +21,7 @@ django-filter==25.2
 django-environ==0.12.0
 
 # Seguridad anti-fuerza bruta para login
-django-axes==8.1.0
+django-axes==8.3.1
 
 # Cabeceras CSP (endurecimiento de seguridad, especialmente si sirves algo web)
 django-csp==4.0
