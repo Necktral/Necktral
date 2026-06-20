@@ -1,7 +1,7 @@
 # Seguridad y firmas
 cryptography==46.0.5
 # Framework + API
-Django==5.2.12
+Django==6.0.3
 djangorestframework==3.16.1
 
 # Auth JWT (login para PWA)
